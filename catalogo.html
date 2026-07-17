@@ -34,8 +34,9 @@
         /* Grid de Produtos */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .card { background: white; border-radius: 16px; border: 1px solid #eef0f2; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .img-container { width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc; overflow: hidden; position: relative; }
-        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .img-container { width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc; overflow: hidden; position: relative; cursor: pointer; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+        .img-container img:hover { transform: scale(1.05); }
         .prod-title { font-size: 14px; font-weight: bold; margin-top: 8px; display: block; }
         .prod-price { font-size: 14px; font-weight: bold; color: var(--primary); margin: 4px 0; }
         
@@ -51,14 +52,20 @@
         .badge { position: absolute; top: -8px; right: -8px; background: red; color: white; font-size: 10px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .btn-ver-carrinho { background: var(--primary); color: white; padding: 10px 20px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* Modais (Carrinho, Login, Cadastro) */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; }
+        /* Modais (Geral) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: flex-end; }
         .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; max-height: 85vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .modal-title { font-size: 18px; font-weight: bold; color: var(--primary); }
         .close-btn { font-size: 20px; cursor: pointer; border: none; background: none; color: var(--text-muted); }
+
+        /* Modal para Imagem em Tela Cheia */
+        .modal-image-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; }
+        .modal-image-view img { max-width: 90%; max-height: 80%; border-radius: 8px; object-fit: contain; }
+        .modal-image-caption { color: white; margin-top: 15px; font-size: 16px; font-weight: bold; text-align: center; padding: 0 20px; }
+        .close-image-btn { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; background: none; border: none; cursor: pointer; }
 
         /* Inputs e Formulários */
         .form-group { margin-bottom: 12px; }
@@ -116,6 +123,13 @@
 </div>
 
 <!-- ================= MODAIS ================= -->
+
+<!-- Modal de Zoom de Foto em Tela Cheia -->
+<div class="modal-image-view" id="modal-foto-tela-cheia" onclick="fecharFotoTelaCheia()">
+    <button class="close-image-btn" onclick="fecharFotoTelaCheia()">&times;</button>
+    <img id="foto-ampliada" src="" alt="Produto Ampliado">
+    <div class="modal-image-caption" id="foto-legenda"></div>
+</div>
 
 <!-- 1. Modal do Carrinho -->
 <div class="modal" id="modal-carrinho">
@@ -226,7 +240,6 @@
 </div>
 
 <script>
-    // Inicialização de Dados Sincronizados com o App Principal
     let produtos = JSON.parse(localStorage.getItem('ti_v4_prod')) || [];
     let clientes = JSON.parse(localStorage.getItem('ti_v4_cli')) || [];
     
@@ -234,7 +247,7 @@
     let clienteLogado = null;
     let categoriaSelecionada = 'todas';
 
-    // Gerar Categorias Unicas
+    // Gerar Categorias
     function carregarCategorias() {
         const lista = document.getElementById('categorias-lista');
         const categoriasUnicas = [...new Set(produtos.map(p => p.categoria).filter(Boolean))];
@@ -256,7 +269,50 @@
         renderizarProdutos();
     }
 
-    // Renderizar Grade de Produtos
+    // Altera a foto do produto exibida dinamicamente de acordo com a variação selecionada
+    function alterarFotoVariacao(idProduto) {
+        const produto = produtos.find(p => p.id === idProduto);
+        const selectVar = document.getElementById(`var-select-${idProduto}`);
+        const variacaoIndex = parseInt(selectVar.value);
+        const variacao = produto.variacoes[variacaoIndex];
+        
+        const imgElement = document.getElementById(`img-prod-${idProduto}`);
+        
+        if (imgElement) {
+            if (variacao && variacao.foto) {
+                imgElement.src = variacao.foto;
+                imgElement.alt = `${produto.nome} - Tam: ${variacao.tamanho}`;
+            } else {
+                // Tenta achar qualquer variação com foto
+                const varComFoto = produto.variacoes.find(v => v.foto) || {};
+                if (varComFoto.foto) {
+                    imgElement.src = varComFoto.foto;
+                } else {
+                    imgElement.src = ""; // Volta para o ícone padrão se não houver nenhuma
+                }
+            }
+        }
+    }
+
+    // Abre a foto correspondente à variação selecionada em Tela Cheia
+    function abrirFotoTelaCheia(idProduto) {
+        const imgElement = document.getElementById(`img-prod-${idProduto}`);
+        const modal = document.getElementById('modal-foto-tela-cheia');
+        const fotoAmpliada = document.getElementById('foto-ampliada');
+        const legenda = document.getElementById('foto-legenda');
+
+        if (imgElement && imgElement.src && !imgElement.src.includes('undefined')) {
+            fotoAmpliada.src = imgElement.src;
+            legenda.innerText = imgElement.alt || "Visualização do Produto";
+            modal.style.display = 'flex';
+        }
+    }
+
+    function fecharFotoTelaCheia() {
+        document.getElementById('modal-foto-tela-cheia').style.display = 'none';
+    }
+
+    // Renderizar Produtos
     function renderizarProdutos() {
         const grade = document.getElementById('catalogo-grade');
         grade.innerHTML = '';
@@ -275,9 +331,14 @@
         ativos.forEach(p => {
             const varComFoto = p.variacoes.find(v => v.foto) || {};
             const menorPreco = Math.min(...p.variacoes.map(v => v.preco));
-            let itemFoto = varComFoto.foto ? `<img src="${varComFoto.foto}" alt="${p.nome}">` : `<i class="fa-solid fa-image fa-2x"></i>`;
+            
+            let itemFotoHtml = '';
+            if (varComFoto.foto) {
+                itemFotoHtml = `<img id="img-prod-${p.id}" src="${varComFoto.foto}" alt="${p.nome}" onclick="abrirFotoTelaCheia(${p.id})">`;
+            } else {
+                itemFotoHtml = `<i id="img-prod-${p.id}" class="fa-solid fa-image fa-2x" onclick="abrirFotoTelaCheia(${p.id})"></i>`;
+            }
 
-            // Criar seletor de variações (Ex: Tamanho M / Cor Preto)
             let opcoesVariacao = '';
             p.variacoes.forEach((v, idx) => {
                 if (v.quantidade > 0) {
@@ -288,10 +349,12 @@
             grade.innerHTML += `
                 <div class="card" id="prod-${p.id}">
                     <div>
-                        <div class="img-container">${itemFoto}</div>
+                        <div class="img-container" title="Clique para abrir em tela cheia">
+                            ${itemFotoHtml}
+                        </div>
                         <span class="prod-title">${p.nome}</span>
                         <div class="prod-price">A partir de R$ ${menorPreco.toFixed(2)}</div>
-                        <select class="variation-select" id="var-select-${p.id}">
+                        <select class="variation-select" id="var-select-${p.id}" onchange="alterarFotoVariacao(${p.id})">
                             ${opcoesVariacao}
                         </select>
                     </div>
@@ -300,17 +363,19 @@
                     </button>
                 </div>
             `;
+            
+            // Forçar primeira verificação de foto do seletor ativo
+            setTimeout(() => { alterarFotoVariacao(p.id); }, 50);
         });
     }
 
-    // Funções do Carrinho de Compras
+    // Carrinho de Compras
     function adicionarAoCarrinho(idProduto) {
         const produto = produtos.find(p => p.id === idProduto);
         const selectVar = document.getElementById(`var-select-${idProduto}`);
         const variacaoIndex = parseInt(selectVar.value);
         const variacao = produto.variacoes[variacaoIndex];
 
-        // Verificar se já está no carrinho com a mesma variação
         const itemExistente = carrinho.find(item => item.idProduto === idProduto && item.variacaoIndex === variacaoIndex);
 
         if (itemExistente) {
@@ -399,12 +464,11 @@
         document.getElementById('modal-carrinho').style.display = 'flex';
     }
 
-    // Modal Controle
     function fecharModal(id) {
         document.getElementById(id).style.display = 'none';
     }
 
-    function avançarCarrinho() {
+    function avancarCarrinho() {
         fecharModal('modal-carrinho');
         if (clienteLogado) {
             finalizarPedidoWhatsApp();
@@ -438,7 +502,6 @@
             return;
         }
 
-        // Procura cliente cadastrado por Nome ou E-mail
         const cliEncontrado = clientes.find(c => 
             (c.nome.toLowerCase() === identificador.toLowerCase() || (c.email && c.email.toLowerCase() === identificador.toLowerCase()))
             && c.senha === senha
@@ -453,7 +516,7 @@
         }
     }
 
-    // Cadastro de Novo Cliente
+    // Cadastro
     function efetuarCadastro() {
         const nome = document.getElementById('cad-nome').value.trim();
         const tel = document.getElementById('cad-tel').value.trim();
@@ -472,7 +535,6 @@
             return;
         }
 
-        // Criar Novo Código do Cliente baseado no último inserido
         let novoId = 1;
         if (clientes.length > 0) {
             const maiorId = Math.max(...clientes.map(c => c.id));
@@ -492,7 +554,6 @@
             divida: 0
         };
 
-        // Salva localmente para que apareça na aba de clientes do seu App principal!
         clientes.push(novoCliente);
         localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
 
@@ -503,7 +564,7 @@
         finalizarPedidoWhatsApp();
     }
 
-    // Solicitação de Recuperação de Senha via WhatsApp
+    // Recuperação de Senha
     function solicitarNovaSenha() {
         const whats = document.getElementById('rec-whats').value.trim();
         const novaSenha = document.getElementById('rec-nova-senha').value;
@@ -513,7 +574,6 @@
             return;
         }
 
-        // Procurar cliente correspondente ao telefone
         const cli = clientes.find(c => c.telefone.replace(/\D/g, '').includes(whats.replace(/\D/g, '')));
 
         if (!cli) {
@@ -521,7 +581,6 @@
             return;
         }
 
-        // Mensagem estruturada direcionando ao seu número (11) 95119-0804
         const msgWhats = encodeURIComponent(
             `*Recuperação de Senha - Toque Íntimo GS*\n\n` +
             `Olá! Gostaria de confirmar minha identidade para redefinir minha senha de acesso.\n\n` +
@@ -531,16 +590,15 @@
             `• *Solicitação:* Desejo alterar minha senha para: *${novaSenha}*`
         );
 
-        const url = `https://wa.me/5511951190804?text=${msgWhats}`;
+        const url = `https://api.whatsapp.com/send?phone=5511951190804&text=${msgWhats}`;
         window.open(url, '_blank');
         fecharModal('modal-esqueci');
         
-        // Atualiza temporariamente no LocalStorage (você pode aprovar ou não no contato direto com ela)
         cli.senha = novaSenha;
         localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
     }
 
-    // Enviar o Pedido Finalizado para o WhatsApp da Loja
+    // Enviar Pedido via WhatsApp (Modificado para usar API com link amigável e clicável)
     function finalizarPedidoWhatsApp() {
         let totalGeral = 0;
         let listaProdutosTexto = '';
@@ -551,6 +609,9 @@
             listaProdutosTexto += `• ${item.nome} (Tam: ${item.tamanho}) - ${item.qtd}x R$ ${item.preco.toFixed(2)} = R$ ${subtotal.toFixed(2)}\n`;
         });
 
+        // Captura a URL atual do catálogo para enviar de volta caso precise
+        const linkDoCatalogo = window.location.href;
+
         const textoMensagem = encodeURIComponent(
             `*Toque Íntimo GS - NOVO PEDIDO* 🎉\n\n` +
             `*DADOS DO CLIENTE:*\n` +
@@ -560,20 +621,19 @@
             `• *Telefone:* ${clienteLogado.telefone}\n\n` +
             `*ITENS DO PEDIDO:*\n${listaProdutosTexto}\n` +
             `*VALOR TOTAL:* R$ ${totalGeral.toFixed(2)}\n\n` +
+            `*Link da Loja:* ${linkDoCatalogo}\n\n` +
             `Aguardo a confirmação do pagamento e envio! 🥰`
         );
 
-        const linkWhats = `https://wa.me/5511951190804?text=${textoMensagem}`;
+        // Substituição pelo link universal "api.whatsapp.com" com número formatado, que força a clicabilidade
+        const linkWhats = `https://api.whatsapp.com/send?phone=5511951190804&text=${textoMensagem}`;
         
-        // Limpar carrinho
         carrinho = [];
         atualizarInterfaceCarrinho();
         
-        // Redireciona
         window.open(linkWhats, '_blank');
     }
 
-    // Inicialização do Aplicativo
     carregarCategorias();
     renderizarProdutos();
 </script>
