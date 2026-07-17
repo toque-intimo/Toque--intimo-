@@ -40,8 +40,27 @@
         .prod-title { font-size: 14px; font-weight: bold; margin-top: 8px; display: block; }
         .prod-price { font-size: 14px; font-weight: bold; color: var(--primary); margin: 4px 0 2px 0; }
         
-        /* Botão Ver Descrição */
-        .btn-ver-descricao { font-size: 11px; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; text-align: left; margin-bottom: 8px; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; width: 100%; padding: 4px 0; }
+            function abrirDescricao(idProduto) {
+        // Encontra o produto na lista
+        const produto = produtos.find(p => p.id === idProduto);
+        
+        if (produto) {
+            // Define o título com o nome do produto
+            document.getElementById('desc-modal-titulo').innerText = produto.nome;
+            
+            // Verifica se a descrição existe de verdade e não está vazia
+            if (produto.descricao && produto.descricao.trim() !== "") {
+                document.getElementById('desc-modal-texto').innerText = produto.descricao;
+            } else {
+                // Frase padrão caso o produto antigo não tenha descrição salva
+                document.getElementById('desc-modal-texto').innerText = "Este produto esbanja sofisticação e conforto, perfeito para momentos especiais.";
+            }
+            
+            // Abre o modal na tela
+            document.getElementById('modal-descricao').style.display = 'flex';
+        }
+    }
+
 
         /* Variações dentro do Card */
         .variation-select { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 11px; margin-bottom: 8px; background: #fff; }
