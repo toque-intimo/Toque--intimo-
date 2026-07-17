@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo - Toque Íntimo GS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #70293b;
+            --bg: #f8f9fa;
+            --text-dark: #2d2d2d;
+            --text-muted: #6c757d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-dark); padding-bottom: 40px; }
+        .header { background: white; padding: 20px; text-align: center; border-bottom: 1px solid #eee; }
+        .brand-title { font-size: 24px; font-weight: bold; color: #501926; }
+        .brand-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 5px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .card { background: white; border-radius: 16px; border: 1px solid #f0f0f0; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+        .img-container { width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc; overflow: hidden; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .prod-title { font-size: 14px; font-weight: bold; display: block; margin-top: 6px; }
+        .prod-cat { color: var(--text-muted); font-size: 11px; }
+        .prod-price { font-size: 14px; font-weight: bold; color: var(--primary); margin-top: 4px; }
+        .btn-pedir { background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="brand-title">Toque Íntimo GS</div>
+    <div class="brand-subtitle">Escolha seus modelos favoritos e faça seu pedido direto pelo WhatsApp!</div>
+</div>
+
+<div class="container">
+    <div class="grid" id="catalogo-grade"></div>
+</div>
+
+<script>
+    // Puxa os produtos que você cadastrou no aplicativo!
+    let produtos = JSON.parse(localStorage.getItem('ti_v4_prod')) || [];
+    const grade = document.getElementById('catalogo-grade');
+
+    if (!produtos.length) {
+        grade.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:40px; color:#999;">Nenhum produto disponível no momento.</p>';
+    } else {
+        produtos.forEach(p => {
+            // Verifica se tem alguma variação ativa com estoque e imagem
+            const varComFoto = p.variacoes.find(v => v.foto) || {};
+            const menorPreco = Math.min(...p.variacoes.map(v => v.preco));
+            const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
+
+            // Se o produto estiver totalmente esgotado, podemos ocultar ou mostrar um aviso
+            if (totalEstoque > 0) {
+                let itemFoto = `<i class="fa-solid fa-image fa-2x"></i>`;
+                if (varComFoto.foto) {
+                    itemFoto = `<img src="${varComFoto.foto}" alt="${p.nome}">`;
+                }
+
+                // Mensagem personalizada que vai direto para o seu WhatsApp quando o cliente clica
+                const textoMensagem = encodeURIComponent(`Olá! Gostaria de saber mais sobre o produto: ${p.nome} (Ref: ${p.categoria})`);
+                const linkWhats = `https://wa.me/5511951190804?text=${textoMensagem}`;
+
+                grade.innerHTML += `
+                    <div class="card">
+                        <div>
+                            <div class="img-container">${itemFoto}</div>
+                            <span class="prod-title">${p.nome}</span>
+                            <span class="prod-cat">${p.categoria}</span>
+                            <div class="prod-price">R$ ${menorPreco.toFixed(2)}</div>
+                        </div>
+                        <a href="${linkWhats}" target="_blank" class="btn-pedir">
+                            <i class="fa-brands fa-whatsapp"></i> Eu quero
+                        </a>
+                    </div>
+                `;
+            }
+        });
+    }
+</script>
+</body>
+</html>
