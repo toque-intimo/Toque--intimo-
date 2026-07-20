@@ -694,7 +694,7 @@
         }
     }
 
-    document.getElementById('formNovoProduto').addEventListener('submit', function(e) {
+        document.getElementById('formNovoProduto').addEventListener('submit', function(e) {
         e.preventDefault();
         const id = document.getElementById('cad-prod-id').value;
         const nome = document.getElementById('cad-nome').value;
@@ -704,13 +704,19 @@
         const variacoes = [];
         document.querySelectorAll('.variant-card').forEach(card => {
             const imgEl = card.querySelector('.preview-img-container img');
+            
+            // Garantindo que valores vazios ou inválidos virem números reais (0 ou 1)
+            const qtdInformada = parseInt(card.querySelector('.v-qtd').value);
+            const custoInformado = parseFloat(card.querySelector('.v-custo').value);
+            const precoInformado = parseFloat(card.querySelector('.v-preco').value);
+
             variacoes.push({
-                cor: card.querySelector('.v-cor').value,
-                tamanho: card.querySelector('.v-tamanho').value,
-                quantidade: parseInt(card.querySelector('.v-qtd').value),
-                codigo: card.querySelector('.v-codigo').value,
-                custo: parseFloat(card.querySelector('.v-custo').value),
-                preco: parseFloat(card.querySelector('.v-preco').value),
+                cor: card.querySelector('.v-cor').value || 'Padrão',
+                tamanho: card.querySelector('.v-tamanho').value || 'U',
+                quantidade: isNaN(qtdInformada) ? 1 : qtdInformada,
+                codigo: card.querySelector('.v-codigo').value || '',
+                custo: isNaN(custoInformado) ? 0.00 : custoInformado,
+                preco: isNaN(precoInformado) ? 0.00 : precoInformado,
                 foto: imgEl && imgEl.src ? imgEl.src : ''
             });
         });
@@ -718,19 +724,27 @@
         const produtoData = { id: id || Date.now().toString(), nome, categoria, descricao, variacoes };
 
         if(id) {
-            const idx = Extidx = produtos.findIndex(p => p.id === id);
-            produtos[idx] = produtoData;
-            alert("Alterações salvas com sucesso!");
+            // CORRIGIDO: Removido o erro de sintaxe 'Extidx'
+            const idx = produtos.findIndex(p => p.id === id);
+            if (idx !== -1) {
+                produtos[idx] = produtoData;
+                alert("Alterações salvas com sucesso!");
+            }
         } else {
             produtos.push(produtoData);
-            alert("Cadastrado com sucesso");
+            alert("Cadastrado com sucesso!");
         }
 
         localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
         document.getElementById('formNovoProduto').reset();
+        
+        // Atualiza a lista e o painel imediatamente
+        if (typeof renderizarGradeProdutos === "function") renderizarGradeProdutos();
+        atualizarDash();
+        
         mudarTela('produtos');
     });
-
+    
     function editarProduto(id) {
         const prod = produtos.find(p => p.id === id);
         if(!prod) return;
