@@ -260,32 +260,135 @@
             <button onclick="mudarTela('produtos')" style="background: none; border: none; font-size:20px; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         
-        <form id="formNovoProduto" class="grid-form">
-            <input type="hidden" id="cad-prod-id">
-            <div class="form-group"><label>Nome do Produto</label><input type="text" id="cad-nome" required></div>
-            <div class="form-group">
-                <label>Categoria</label>
-                <select id="cad-categoria">
-                    <option value="Lingerie">Lingerie</option>
-                    <option value="Sutiã">Sutiã</option>
-                    <option value="Body">Body</option>
-                    <option value="Calcinha">Calcinha</option>
-                    <option value="Cueca">Cueca</option>
-                    <option value="Meia Feminino">Meia Feminino</option>
-                    <option value="Meia Masculino">Meia Masculino</option>
-                    <option value="Pijama">Pijama</option>
-                    <option value="Sexshop">Sexshop</option>
-                    <option value="Perfume">Perfume</option>
-                </select>
+            function abrirCadastroProduto() {
+        document.getElementById('formNovoProduto').reset();
+        document.getElementById('cad-prod-id').value = '';
+        document.getElementById('titulo-cadastro-produto').innerText = 'Cadastrar Produto';
+        document.getElementById('container-variacoes').innerHTML = '';
+        adicionarVariacaoForm();
+        mudarTela('cadastro-produto');
+    }
+
+    function adicionarVariacaoForm(data = {}) {
+        const container = document.getElementById('container-variacoes');
+        const index = container.children.length;
+        const div = document.createElement('div');
+        div.className = 'variant-card';
+        const temFoto = data.foto ? true : false;
+
+        div.innerHTML = `
+            <div class="variant-header">
+                <span>Variação</span>
+                ${index > 0 ? `<button type="button" onclick="this.closest('.variant-card').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
             </div>
-            <div class="form-group"><label>Descrição</label><textarea id="cad-descricao" rows="2"></textarea></div>
-            <div id="container-variacoes"></div>
-            <button type="button" class="btn" style="background: white; color: var(--primary); border: 1px solid var(--primary);" onclick="adicionarVariacaoForm()">
-                <i class="fa-solid fa-plus"></i> Inserir Outra Variação
-            </button>
-            <button type="submit" class="btn">Salvar no Estoque</button>
-        </form>
-    </section>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div class="form-group"><label>Cor</label><input type="text" class="v-cor" value="${data.cor || ''}" required></div>
+                <div class="form-group"><label>Tamanho</label><input type="text" class="v-tamanho" value="${data.tamanho || ''}" required></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div class="form-group"><label>Qtd em Estoque</label><input type="number" class="v-qtd" value="${data.quantidade || '1'}" required></div>
+                <div class="form-group"><label>Código de Barras</label><input type="text" class="v-codigo" value="${data.codigo || ''}"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div class="form-group"><label>Custo (R$)</label><input type="number" step="0.01" class="v-custo" value="${data.custo || ''}" required></div>
+                <div class="form-group"><label>Preço Venda (R$)</label><input type="number" step="0.01" class="v-preco" value="${data.preco || ''}" required></div>
+            </div>
+            <div class="form-group">
+                <label>Foto da Variação</label>
+                <input type="file" accept="image/*" class="v-foto" onchange="previewImage(this)">
+                <div class="preview-img-container" style="display: ${temFoto ? 'block' : 'none'};">
+                    <img src="${data.foto || ''}" alt="Preview">
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    // NOVA FUNÇÃO: Compacta a foto antes de exibir e salvar
+    function previewImage(input) {
+        const file = input.files[0];
+        const container = input.nextElementSibling;
+        const img = container.querySelector('img');
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const tempImg = new Image();
+                tempImg.src = e.target.result;
+                tempImg.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Limita o tamanho máximo para não estourar a memória
+                    const MAX_WIDTH = 400;
+                    let width = tempImg.width;
+                    let height = tempImg.height;
+                    
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(tempImg, 0, 0, width, height);
+                    
+                    // Converte para um JPEG leve (qualidade 60%)
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                    img.src = compressedBase64;
+                    container.style.display = 'block';
+                }
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // FORMULÁRIO BLINDADO: Garante números válidos e salva sem travar
+    document.getElementById('formNovoProduto').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const id = document.getElementById('cad-prod-id').value;
+        const nome = document.getElementById('cad-nome').value;
+        const categoria = document.getElementById('cad-categoria').value;
+        const descricao = document.getElementById('cad-descricao').value;
+
+        const variacoes = [];
+        document.querySelectorAll('.variant-card').forEach(card => {
+            const imgEl = card.querySelector('.preview-img-container img');
+            const qtdInformada = parseInt(card.querySelector('.v-qtd').value);
+            const custoInformado = parseFloat(card.querySelector('.v-custo').value);
+            const precoInformado = parseFloat(card.querySelector('.v-preco').value);
+
+            variacoes.push({
+                cor: card.querySelector('.v-cor').value || 'Padrão',
+                tamanho: card.querySelector('.v-tamanho').value || 'U',
+                quantidade: isNaN(qtdInformada) ? 1 : qtdInformada,
+                codigo: card.querySelector('.v-codigo').value || '',
+                custo: isNaN(custoInformado) ? 0.00 : custoInformado,
+                preco: isNaN(precoInformado) ? 0.00 : precoInformado,
+                foto: imgEl && imgEl.src ? imgEl.src : ''
+            });
+        });
+
+        const produtoData = { id: id || Date.now().toString(), nome, categoria, descricao, variacoes };
+
+        if(id) {
+            const idx = produtos.findIndex(p => p.id === id);
+            if (idx !== -1) {
+                produtos[idx] = produtoData;
+                alert("Alterações salvas com sucesso!");
+            }
+        } else {
+            produtos.push(produtoData);
+            alert("Cadastrado com sucesso!");
+        }
+
+        localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+        document.getElementById('formNovoProduto').reset();
+        
+        if (typeof renderizarGradeProdutos === "function") renderizarGradeProdutos();
+        if (typeof atualizarDash === "function") atualizarDash();
+        
+        mudarTela('produtos');
+    });
 
     <!-- 2. ABA ESTOQUE -->
     <section id="tela-estoque" class="app-section">
