@@ -1521,6 +1521,52 @@
 
     resetarParaNeutro();
     document.getElementById('nota-texto').value = localStorage.getItem('ti_nota_v4') || '';
+<script type="module">
+  // 1. Importações do Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  // 2. Credenciais do seu projeto
+  const firebaseConfig = {
+    apiKey: "AIzaSyAYF6VGYKKwpX9HqOOY5W3eVdIuyt_uxEA",
+    authDomain: "estoque-produtos-ccf6a.firebaseapp.com",
+    databaseURL: "https://estoque-produtos-ccf6a-default-rtdb.firebaseio.com",
+    projectId: "estoque-produtos-ccf6a",
+    storageBucket: "estoque-produtos-ccf6a.firebasestorage.app",
+    messagingSenderId: "429584638843",
+    appId: "1:429584638843:web:b3d41ac2acaa163c3613de",
+    measurementId: "G-JP918CDTR1"
+  };
+
+  // 3. Inicializa o banco de dados
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // 4. Funções para o seu estoque
+  window.salvarProdutoNoFirebase = function(novoProduto) {
+    const produtosRef = ref(db, 'produtos');
+    push(produtosRef, novoProduto)
+      .then(() => alert('Produto salvo no estoque com sucesso!'))
+      .catch((erro) => console.error('Erro ao salvar:', erro));
+  };
+
+  window.carregarProdutosDoFirebase = function(callbackExibirProdutos) {
+    const produtosRef = ref(db, 'produtos');
+    onValue(produtosRef, (snapshot) => {
+      const dados = snapshot.val();
+      const listaProdutos = [];
+      
+      for (let id in dados) {
+        listaProdutos.push({ id, ...dados[id] });
+      }
+
+      if (callbackExibirProdutos) {
+        callbackExibirProdutos(listaProdutos);
+      }
+    });
+  };
+</script>
+    
 </script>
 </body>
 </html>
