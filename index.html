@@ -536,11 +536,22 @@
         window.open('catalogo.html', '_blank');
     }
 
-    function compartilharCatalogoWhatsapp() {
-        const linkCompartilhamento = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        const mensagem = `Olá! Dê uma olhada no nosso catálogo de produtos Toque Íntimo GS clicando no link abaixo:\n\n${linkCompartilhamento}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
-    }
+    // CONTROLES DE COMPARTILHAMENTO DO CATÁLOGO
+function abrirCatalogoLocal() {
+    window.open('catalogo.html', '_blank');
+}
+
+function compartilharCatalogoWhatsapp() {
+    // 1. Defina o endereço Web real onde seu catalogo.html está hospedado (ex: GitHub Pages, Vercel, Hostinger, ou IP da rede local)
+    const urlBaseCatalogo = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/catalogo.html';
+    
+    // 2. Monte a mensagem incluindo o prefixo https:// para garantir que o WhatsApp o identifique como link
+    const mensagem = `Olá! Dê uma olhada no nosso catálogo de produtos Toque Íntimo GS clicando no link abaixo:\n\n${urlBaseCatalogo}`;
+    
+    // 3. Abre a API de compartilhamento do WhatsApp
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
+}
+
 
     // CONTROLE DE FRETE E ENTREGA
     function setFormaEntrega(tipo) {
