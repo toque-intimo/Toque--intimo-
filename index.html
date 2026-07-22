@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Produtos - Toque Íntimo</title>
+</head>
+<body>
+
+  <!-- Formulário de Produto -->
+  <form id="form-produto">
+    <input type="text" id="nome-produto" placeholder="Nome do Produto (ex: Lingerie Miss Visu)" required />
+    
+    <select id="categoria">
+      <option value="Lingerie">Lingerie</option>
+      <!-- Outras categorias aqui -->
+    </select>
+
+    <textarea id="descricao" placeholder="Descrição"></textarea>
+
+    <!-- Variação -->
+    <input type="text" id="cor" placeholder="Cor (ex: Preto e vermelho)" />
+    <input type="text" id="tamanho" placeholder="Tamanho (ex: P)" />
+
+    <!-- Campo de Seleção da Imagem -->
+    <input type="file" id="input-foto" accept="image/*" />
+    <img id="preview-img" src="" alt="Preview" style="display:none; max-width: 100px; margin-top: 10px;" />
+
+    <button type="submit" id="btn-salvar">Salvar no Estoque</button>
+  </form>
+
+  <script>
+    // -------------------------------------------------------------
+    // CONFIGURAÇÃO DO CLOUDINARY
+    // -------------------------------------------------------------
+    // Substitua 'SEU_CLOUD_NAME' pelo Cloud Name do seu painel Cloudinary
+    const CLOUD_NAME = 'SEU_CLOUD_NAME'; 
+    // Nome do preset Unsigned configurado no painel do Cloudinary
+    const UPLOAD_PRESET = 'estoque _produtos'; 
+
+    // Visualizar preview da imagem ao selecionar arquivo
+    const inputFoto = document.getElementById('input-foto');
+    const previewImg = document.getElementById('preview-img');
+
+    inputFoto.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        previewImg.src = URL.createObjectURL(file);
+        previewImg.style.display = 'block';
+      }
+    });
+
+    // Função responsável por fazer o upload da imagem para o Cloudinary
+    async function fazerUploadCloudinary(arquivo) {
+      if (!arquivo) return null;
+
+      const formData = new FormData();
+      formData.append('file', arquivo);
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      try {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Retorna a URL segura gerada pelo Cloudinary
+          return data.secure_url;
+        } else {
+          alert('Erro no Cloudinary: ' + (data.error?.message || 'Falha ao subir imagem'));
+          return null;
+        }
+      } catch (erro) {
+        console.error('Erro no upload:', erro);
+        alert('Erro de conexão ao enviar a imagem.');
+        return null;
+      }
+    }
+
+    // Evento de submissão do formulário
+    document.getElementById('form-produto').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btnSalvar = document.getElementById('btn-salvar');
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "Enviando imagem...";
+
+      const arquivoImagem = inputFoto.files[0];
+      let urlImagem = '';
+
+      // 1. Faz upload da foto se o usuário selecionou uma
+      if (arquivoImagem) {
+        urlImagem = await fazerUploadCloudinary(arquivoImagem);
+        if (!urlImagem) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerText = "Salvar no Estoque";
+          return; // Interrompe se o upload falhar
+        }
+      }
+
+      // 2. Cria o objeto do produto com a URL da imagem pronta
+      const produto = {
+        nome: document.getElementById('nome-produto').value,
+        categoria: document.getElementById('categoria').value,
+        descricao: document.getElementById('descricao').value,
+        variacao: {
+          cor: document.getElementById('cor').value,
+          tamanho: document.getElementById('tamanho').value
+        },
+        imagemUrl: urlImagem
+      };
+
+      console.log('Produto a ser salvo:', produto);
+
+      // TODO: Insira aqui a sua lógica para salvar no LocalStorage ou Banco de Dados
+      alert('Produto salvo com sucesso!');
+
+      btnSalvar.disabled = false;
+      btnSalvar.innerText = "Salvar no Estoque";
+    });
+  </script>
+</body>
+</html>
