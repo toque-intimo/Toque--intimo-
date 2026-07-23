@@ -861,56 +861,65 @@ function compartilharCatalogoWhatsapp() {
     }
 
     function abrirVendaDireta(id) {
-        const prod = produtos.find(p => p.id === id);
-        if(!prod) return;
-        
-        document.getElementById('venda-direta-nome-prod').innerText = prod.nome;
-        const opcoesContainer = document.getElementById('venda-direta-opcoes');
-        opcoesContainer.innerHTML = '';
+    const prod = produtos.find(p => p.id === id);
+    if(!prod) return;
+    
+    document.getElementById('venda-direta-nome-prod').innerText = prod.nome;
+    const opcoesContainer = document.getElementById('venda-direta-opcoes');
+    opcoesContainer.innerHTML = '';
 
-        prod.variacoes.forEach(v => {
-            let fotoEstoque = `<div style="width:40px; height:40px; background:#f5f5f5; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image"></i></div>`;
-            if (v.foto) {
-                fotoEstoque = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${prod.id}')">`;
-            }
+    prod.variacoes.forEach(v => {
+        let fotoEstoque = `<div style="width:40px; height:40px; background:#f5f5f5; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image"></i></div>`;
+        if (v.foto) {
+            fotoEstoque = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${prod.id}')">`;
+        }
 
-            opcoesContainer.innerHTML += `
-                <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; background:#fdfdfd;">
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        ${fotoEstoque}
-                        <div>
-                            <b>${v.cor} / Tam: ${v.tamanho}</b><br>
-                            <small style="color:#888;">Cód: ${v.codigo || 'Sem Código'}</small><br>
-                            <span style="font-size:13px; font-weight:bold; color:var(--primary);">R$ ${v.preco.toFixed(2)}</span> 
-                            <span style="font-size:11px; color:${v.quantidade > 0 ? 'green' : 'red'}; font-weight:bold;">(Qtd: ${v.quantidade})</span>
-                        </div>
+        opcoesContainer.innerHTML += `
+            <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; background:#fdfdfd;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    ${fotoEstoque}
+                    <div>
+                        <b>${v.cor} / Tam: ${v.tamanho}</b><br>
+                        <small style="color:#888;">Cód: ${v.codigo || 'Sem Código'}</small><br>
+                        <span style="font-size:13px; font-weight:bold; color:var(--primary);">R$ ${v.preco.toFixed(2)}</span> 
+                        <span style="font-size:11px; color:${v.quantidade > 0 ? 'green' : 'red'}; font-weight:bold;">(Qtd: ${v.quantidade})</span>
                     </div>
-                    <button class="btn-sm" style="background:#1e7e48; color:white;" ${v.quantidade <= 0 ? 'disabled style="background:#ccc;"' : ''} onclick="venderImediato('${prod.id}', '${v.cor}', '${v.tamanho}', true)">+ Separar</button>
                 </div>
-            `;
-        });
+                <!-- Mudança aqui: o último parâmetro mudou para 'false' para permanecer na tela -->
+                <button class="btn-sm" style="background:#1e7e48; color:white;" ${v.quantidade <= 0 ? 'disabled style="background:#ccc;"' : ''} onclick="venderImediato('${prod.id}', '${v.cor}', '${v.tamanho}', false)">+ Separar</button>
+            </div>
+        `;
+    });
 
-        mudarTela('venda-direta');
-    }
+    mudarTela('venda-direta');
+}
 
     function venderImediato(id, cor, tamanho, redirecionarParaCarrinho = false) {
-        const prod = produtos.find(p => p.id === id);
-        const v = prod.variacoes.find(varItem => varItem.cor === cor && varItem.tamanho === tamanho);
-        if(v && v.quantidade > 0) {
-            carrinho.push({ idProd: id, cor, tamanho, nome: prod.nome, preco: v.preco, custo: v.custo });
-            v.quantidade--;
-            localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-            localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
-            
-            if (redirecionarParaCarrinho) {
-                mudarTela('carrinho');
-            } else {
+    const prod = produtos.find(p => p.id === id);
+    const v = prod.variacoes.find(varItem => varItem.cor === cor && varItem.tamanho === tamanho);
+    
+    if(v && v.quantidade > 0) {
+        carrinho.push({ idProd: id, cor, tamanho, nome: prod.nome, preco: v.preco, custo: v.custo });
+        v.quantidade--;
+        localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+        localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
+        
+        if (redirecionarParaCarrinho) {
+            mudarTela('carrinho');
+        } else {
+            // Atualiza a lista visual da tela atual
+            const telaAtiva = document.querySelector('.app-section.active');
+            if (telaAtiva && telaAtiva.id === 'tela-venda-direta') {
+                abrirVendaDireta(id);
+            } else if (telaAtiva && telaAtiva.id === 'tela-estoque') {
                 carregarEstoque();
             }
-            atualizarDash();
-        } else {
-            alert('Quantidade indisponível no estoque!');
+            alert(`Adicionado ao carrinho: ${prod.nome} (${cor}/${tamanho})`);
         }
+        atualizarDash();
+    } else {
+        alert('Quantidade indisponível no estoque!');
+    }
     }
 
     function devolverAoEstoque(index) {
