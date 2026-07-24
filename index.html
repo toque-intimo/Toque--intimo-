@@ -815,50 +815,58 @@ function compartilharCatalogoWhatsapp() {
         document.getElementById('lightbox').style.display = 'none';
     }
 
-    // LISTAR PRODUTOS NA GRADE
     function renderizarGradeProdutos() {
-        const grade = document.getElementById('gradeProdutos');
-        const busca = document.getElementById('buscaProduto').value.toLowerCase();
-        grade.innerHTML = '';
+    const grade = document.getElementById('gradeProdutos');
+    const busca = document.getElementById('buscaProduto').value.toLowerCase();
+    grade.innerHTML = '';
 
-        const produtosFiltrados = produtos.filter(p => {
-            const matchesCategoria = (categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada);
-            const matchesBusca = p.nome.toLowerCase().includes(busca) || p.variacoes.some(v => v.codigo.toLowerCase().includes(busca));
-            return matchesCategoria && matchesBusca;
-        });
+    const produtosFiltrados = produtos.filter(p => {
+        const matchesCategoria = (categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada);
+        const matchesBusca = p.nome.toLowerCase().includes(busca) || p.variacoes.some(v => v.codigo.toLowerCase().includes(busca));
+        
+        // Calcula se o produto ainda possui itens no estoque
+        const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
 
-        if (!produtosFiltrados.length) {
-            grade.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:20px; color:#999;">Nenhum item em estoque.</p>';
-            return;
+        // Apenas exibe se respeitar os filtros E tiver estoque disponível (> 0)
+        return matchesCategoria && matchesBusca && totalEstoque > 0;
+    });
+
+    if (!produtosFiltrados.length) {
+        grade.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:20px; color:#999;">Nenhum produto disponível em estoque.</p>';
+        return;
+    }
+
+    produtosFiltrados.forEach(p => {
+        const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
+        
+        // Filtra para pegar apenas o menor preço das variações que ainda têm estoque
+        const variacoesDisponiveis = p.variacoes.filter(v => v.quantidade > 0);
+        const menorPreco = Math.min(...variacoesDisponiveis.map(v => v.preco));
+        
+        const varComFoto = p.variacoes.find(v => v.foto) || {};
+        
+        let itemFoto = `<div style="width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image fa-2x"></i></div>`;
+        if (varComFoto.foto) {
+            itemFoto = `<img src="${varComFoto.foto}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="verFotoTelaCheia('${varComFoto.foto}', '${p.id}')">`;
         }
 
-        produtosFiltrados.forEach(p => {
-            const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
-            const menorPreco = Math.min(...p.variacoes.map(v => v.preco));
-            const varComFoto = p.variacoes.find(v => v.foto) || {};
-            
-            let itemFoto = `<div style="width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image fa-2x"></i></div>`;
-            if (varComFoto.foto) {
-                itemFoto = `<img src="${varComFoto.foto}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="verFotoTelaCheia('${varComFoto.foto}', '${p.id}')">`;
-            }
-
-            grade.innerHTML += `
-                <div style="background: white; border-radius:16px; border:1px solid #f0f0f0; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
-                    <div>
-                        ${itemFoto}
-                        <b style="font-size:14px; display:block; margin-top:6px;">${p.nome}</b>
-                        <small style="color:#aaa; font-size:11px;">${p.categoria}</small>
-                        <div style="font-size:11px; color:#777; margin: 2px 0;">Estoque: ${totalEstoque} un.</div>
-                        <div style="font-size:13px; font-weight:bold; color:#6b1d2f;">R$ ${menorPreco.toFixed(2)}</div>
-                    </div>
-                    <div class="actions-row">
-                        <button class="btn-action btn-sell-direct" style="width:100%; justify-content:center;" onclick="abrirVendaDireta('${p.id}')"><i class="fa-solid fa-cart-plus"></i> Vender</button>
-                        <button class="btn-action btn-edit" onclick="editarProduto('${p.id}')"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn-action btn-delete" onclick="excluirProduto('${p.id}')"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>`;
-        });
-    }
+        grade.innerHTML += `
+            <div style="background: white; border-radius:16px; border:1px solid #f0f0f0; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+                <div>
+                    ${itemFoto}
+                    <b style="font-size:14px; display:block; margin-top:6px;">${p.nome}</b>
+                    <small style="color:#aaa; font-size:11px;">${p.categoria}</small>
+                    <div style="font-size:11px; color:#777; margin: 2px 0;">Estoque: ${totalEstoque} un.</div>
+                    <div style="font-size:13px; font-weight:bold; color:#6b1d2f;">R$ ${menorPreco.toFixed(2)}</div>
+                </div>
+                <div class="actions-row">
+                    <button class="btn-action btn-sell-direct" style="width:100%; justify-content:center;" onclick="abrirVendaDireta('${p.id}')"><i class="fa-solid fa-cart-plus"></i> Vender</button>
+                    <button class="btn-action btn-edit" onclick="editarProduto('${p.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-action btn-delete" onclick="excluirProduto('${p.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
+    });
+}
 
     function abrirVendaDireta(id) {
     const prod = produtos.find(p => p.id === id);
@@ -1518,6 +1526,81 @@ function compartilharCatalogoWhatsapp() {
         document.getElementById('dash-vendas-val').innerText = `R$ ${vendasVal.toFixed(2)}`;
     }
 
+function carregarEstoque() {
+    const container = document.getElementById('lista-estoque-produtos');
+    const totalEstoqueEl = document.getElementById('total-produtos-estoque');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    let totalPecas = 0;
+    
+    // Processa os produtos ordenando: Primeiro os que TÊM estoque, por último os ZERADOS no final
+    const listaProdutosOrdenada = [...produtos].sort((a, b) => {
+        const estA = a.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
+        const estB = b.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
+        
+        if (estA === 0 && estB > 0) return 1;  // Mover 'a' (sem estoque) para o final
+        if (estA > 0 && estB === 0) return -1; // Manter 'a' (com estoque) no topo
+        return 0;
+    });
+
+    if (totalEstoqueEl) {
+        produtos.forEach(p => p.variacoes.forEach(v => totalPecas += v.quantidade));
+        totalEstoqueEl.innerHTML = `Cadastrados: <b>${produtos.length}</b><br>Peças em Estoque: <b>${totalPecas}</b>`;
+    }
+
+    if (!listaProdutosOrdenada.length) {
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum item cadastrado no estoque.</p>';
+        return;
+    }
+
+    listaProdutosOrdenada.forEach(p => {
+        const totalEstoqueProd = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
+        const esgotado = totalEstoqueProd === 0;
+
+        // Define a cor de destaque (Vermelho se zerado, Padrão se com estoque)
+        const estCor = esgotado ? '#dc3545' : 'var(--text-dark)';
+        const bgCard = esgotado ? '#fff5f5' : '#fdfdfd';
+        const borderCard = esgotado ? '1px solid #ffcdd2' : '1px solid #f0f0f0';
+
+        let htmlVariacoes = '';
+        p.variacoes.forEach(v => {
+            const vEsgotada = v.quantidade === 0;
+            const corTextoVar = vEsgotada ? '#dc3545' : '#666';
+
+            htmlVariacoes += `
+                <div style="font-size: 12px; color: ${corTextoVar}; display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #eee;">
+                    <span><b>${v.cor}</b> (${v.tamanho}) - R$ ${v.preco.toFixed(2)}</span>
+                    <span style="font-weight: bold;">Qtd: ${v.quantidade} ${vEsgotada ? '(ESGOTADO)' : ''}</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML += `
+            <div class="prod-list-card" style="background: ${bgCard}; border: ${borderCard}; margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <b style="font-size:15px; color: ${estCor};">${p.nome} ${esgotado ? '<small>(Sem Estoque)</small>' : ''}</b><br>
+                        <small style="color:var(--text-muted);">${p.categoria}</small>
+                    </div>
+                    <span style="font-size:12px; font-weight:bold; background:${esgotado ? '#f8d7da' : '#e8f8f0'}; color:${esgotado ? '#721c24' : '#1e7e48'}; padding:4px 8px; border-radius:6px;">
+                        Total: ${totalEstoqueProd} un.
+                    </span>
+                </div>
+
+                <div style="margin-top: 8px;">
+                    ${htmlVariacoes}
+                </div>
+
+                <div class="actions-row" style="margin-top: 10px;">
+                    <button class="btn-action btn-edit" onclick="editarProduto('${p.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+                    <button class="btn-action btn-delete" onclick="excluirProduto('${p.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
+                </div>
+            </div>`;
+    });
+}
+    
     function salvarNota() { localStorage.setItem('ti_nota_v4', document.getElementById('nota-texto').value); alert('Nota Salva!'); }
 
     resetarParaNeutro();
