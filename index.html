@@ -794,43 +794,44 @@ async function previewImage(input) {
             renderizarGradeProdutos();
         }
     }
+    
+function verFotoTelaCheia(src, idProd) {
+    // Permite tanto links da nuvem (http/https) quanto Base64 antigos
+    if (!src) return;
 
-    function verFotoTelaCheia(src, idProd) {
-        if (!src || !src.startsWith('data:image')) return;
+    document.getElementById('imgExpandida').src = src;
+    const lightbox = document.getElementById('lightbox');
+    lightbox.style.display = 'flex';
 
-        document.getElementById('imgExpandida').src = src;
-        const lightbox = document.getElementById('lightbox');
-        lightbox.style.display = 'flex';
+    const thumbsContainer = document.getElementById('lightbox-thumbnails');
+    thumbsContainer.innerHTML = '';
 
-        const thumbsContainer = document.getElementById('lightbox-thumbnails');
-        thumbsContainer.innerHTML = '';
+    const prod = produtos.find(p => p.id === idProd);
+    if (prod) {
+        const variacoesComFoto = prod.variacoes.filter(v => v.foto);
 
-        const prod = produtos.find(p => p.id === idProd);
-        if (prod) {
-            const variacoesComFoto = prod.variacoes.filter(v => v.foto);
-
-            if (variacoesComFoto.length > 1) {
-                thumbsContainer.style.display = 'flex';
-                variacoesComFoto.forEach(v => {
-                    const bordaAtiva = v.foto === src ? 'border: 2px solid var(--primary);' : 'border: 2px solid transparent;';
-                    
-                    const thumbDiv = document.createElement('div');
-                    thumbDiv.style.cssText = "display: flex; flex-direction: column; align-items: center; cursor: pointer; text-align: center; min-width: 60px;";
-                    thumbDiv.onclick = function() { mudarImagemLightbox(v.foto, this); };
-                    
-                    thumbDiv.innerHTML = `
-                        <img src="${v.foto}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; ${bordaAtiva} transition: border 0.2s;">
-                        <span style="color: white; font-size: 10px; margin-top: 4px; font-weight: bold; text-shadow: 1px 1px 2px black;">${v.cor} (${v.tamanho})</span>
-                    `;
-                    thumbsContainer.appendChild(thumbDiv);
-                });
-            } else {
-                thumbsContainer.style.display = 'none';
-            }
+        if (variacoesComFoto.length > 1) {
+            thumbsContainer.style.display = 'flex';
+            variacoesComFoto.forEach(v => {
+                const bordaAtiva = v.foto === src ? 'border: 2px solid var(--primary);' : 'border: 2px solid transparent;';
+                
+                const thumbDiv = document.createElement('div');
+                thumbDiv.style.cssText = "display: flex; flex-direction: column; align-items: center; cursor: pointer; text-align: center; min-width: 60px;";
+                thumbDiv.onclick = function() { mudarImagemLightbox(v.foto, this); };
+                
+                thumbDiv.innerHTML = `
+                    <img src="${v.foto}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; ${bordaAtiva} transition: border 0.2s;">
+                    <span style="color: white; font-size: 10px; margin-top: 4px; font-weight: bold; text-shadow: 1px 1px 2px black;">${v.cor} (${v.tamanho})</span>
+                `;
+                thumbsContainer.appendChild(thumbDiv);
+            });
         } else {
             thumbsContainer.style.display = 'none';
         }
+    } else {
+        thumbsContainer.style.display = 'none';
     }
+}
 
     function mudarImagemLightbox(src, elemento) {
         document.getElementById('imgExpandida').src = src;
