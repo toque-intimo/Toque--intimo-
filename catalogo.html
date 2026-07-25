@@ -633,18 +633,25 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // Atualiza a lista local com os dados vindos em tempo real da nuvem
+  // Escuta os dados do Firebase em tempo real
   db.collection("produtos").onSnapshot((snapshot) => {
+    // 1. Atualiza o array global de produtos com os dados do banco
     produtos = [];
     snapshot.forEach((doc) => {
       produtos.push(doc.data());
     });
 
-    // Recarrega as categorias e renderiza a grade de produtos
-    carregarCategorias();
-    renderizarProdutos();
+    // 2. Atualiza as categorias na tela
+    if (typeof carregarCategorias === 'function') {
+      carregarCategorias();
+    }
+
+    // 3. Renderiza os produtos sem deixar o localStorage sobrescrever
+    if (typeof renderizarProdutos === 'function') {
+      renderizarProdutos();
+    }
   }, (error) => {
-    console.error("Erro ao carregar catálogo da nuvem:", error);
+    console.error("Erro ao carregar catálogo do Firebase:", error);
   });
 </script>
 </body>
