@@ -619,46 +619,32 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
 <script>
-  // Use as MESMAS chaves de configuração do index.html
+  // Configuração do Firebase
   const firebaseConfig = {
-    apiKey: "AIzaSyD6QAOn1t-W6E4465u3ACZ2bB25RIAKPBo", // Substitua pelo seu apiKey completo
+    apiKey: "AIzaSyD6QAOn1t-W6E4465u3ACZ2bB25RIAKPBo",
     authDomain: "meucatalogoapp-c7e39.firebaseapp.com",
     projectId: "meucatalogoapp-c7e39",
     storageBucket: "meucatalogoapp-c7e39.firebasestorage.app",
     messagingSenderId: "311764083576",
-    appId: "1:311764083576:web:2630353079ec5294031e8d",measurementId: "G-N3DFKJG9FP"
+    appId: "1:311764083576:web:2630353079ec5294031e8d",
+    measurementId: "G-N3DFKJG9FP"
   };
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // Elemento HTML onde os produtos serão exibidos na tela
-  const container = document.getElementById("catalogo-container");
-
-  // Ouve atualizações do banco de dados em tempo real
-  db.collection("produtos").orderBy("criadoEm", "desc").onSnapshot((snapshot) => {
-    container.innerHTML = ""; // Limpa a lista antes de reexibir
-
-    if (snapshot.empty) {
-      container.innerHTML = "<p>Nenhum produto cadastrado no momento.</p>";
-      return;
-    }
-
+  // Atualiza a lista local com os dados vindos em tempo real da nuvem
+  db.collection("produtos").onSnapshot((snapshot) => {
+    produtos = [];
     snapshot.forEach((doc) => {
-      const produto = doc.data();
-      const id = doc.id;
-
-      // Cria a estrutura visual para cada produto
-      container.innerHTML += `
-        <div class="card-produto" id="prod-${id}">
-          <img src="${produto.imagem}" alt="${produto.nome}" style="max-width: 100%; height: auto;" />
-          <h3>${produto.nome}</h3>
-          <p class="preco">R$ ${parseFloat(produto.preco).toFixed(2)}</p>
-        </div>
-      `;
+      produtos.push(doc.data());
     });
+
+    // Recarrega as categorias e renderiza a grade de produtos
+    carregarCategorias();
+    renderizarProdutos();
   }, (error) => {
-    console.error("Erro ao carregar catálogo:", error);
+    console.error("Erro ao carregar catálogo da nuvem:", error);
   });
 </script>
 </body>
