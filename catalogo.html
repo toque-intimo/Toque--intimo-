@@ -228,15 +228,8 @@
 <script>
     let produtos = [];
     let clientes = [];
-    
-    try {
-        produtos = JSON.parse(localStorage.getItem('ti_v4_prod')) || [];
-        clientes = JSON.parse(localStorage.getItem('ti_v4_cli')) || [];
-    } catch(e) {
-        console.log("Erro ao ler banco local, reiniciando listas temporárias.");
-        produtos = [];
-        clientes = [];
-    }
+
+    // O carregamento agora é feito via Firebase (nuvem)
     
     let carrinho = [];
     let clienteLogado = null;
