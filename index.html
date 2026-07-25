@@ -1635,5 +1635,53 @@ function carregarEstoque() {
     resetarParaNeutro();
     document.getElementById('nota-texto').value = localStorage.getItem('ti_nota_v4') || '';
 </script>
+
+<!-- Scripts do Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // Suas chaves de configuração do Firebase (copiadas do console)
+  const firebaseConfig = {
+    apiKey: "AIzaSyD6QAOn1t-W6E4465u3ACZ2bB25...", // Substitua pelo seu apiKey completo
+    authDomain: "meucatalogoapp-c7e39.firebaseapp.com",
+    projectId: "meucatalogoapp-c7e39",
+    storageBucket: "meucatalogoapp-c7e39.appspot.com",
+    messagingSenderId: "311764083576",
+    appId: "1:311764083576:web:2630353079ec52..."
+  };
+
+  // Inicializa o Firebase e o Banco de Dados
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // Função para salvar um produto no banco de dados na nuvem
+  function salvarProdutoNoFirebase(nome, preco, urlImagem) {
+    db.collection("produtos").add({
+      nome: nome,
+      preco: parseFloat(preco),
+      imagem: urlImagem,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then((docRef) => {
+      alert("Produto salvo no catálogo online com sucesso!");
+    })
+    .catch((error) => {
+      console.error("Erro ao salvar produto:", error);
+      alert("Erro ao salvar o produto.");
+    });
+  }
+
+  // Função para excluir um produto do banco na nuvem
+  function excluirProdutoDoFirebase(idProduto) {
+    db.collection("produtos").doc(idProduto).delete()
+    .then(() => {
+      alert("Produto removido com sucesso!");
+    })
+    .catch((error) => {
+      console.error("Erro ao remover produto:", error);
+    });
+  }
+</script>    
 </body>
 </html>
