@@ -766,6 +766,14 @@ async function previewImage(input) {
         }
 
         localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+        
+         // Salva no Firebase Firestore (Nuvem)
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("produtos").doc(produtoData.id).set(produtoData)
+      .then(() => console.log("Produto enviado para a nuvem!"))
+      .catch(err => console.error("Erro no Firebase:", err));
+  }
+ 
         document.getElementById('formNovoProduto').reset();
         mudarTela('produtos');
     });
