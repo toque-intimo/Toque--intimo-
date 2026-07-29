@@ -1267,62 +1267,74 @@
      
      const linhasOriginal = textoOriginal.split("\n");
      let extraindoItens = false;
-     let subtotalStr = "R$ 0,00";
-     let totalStr = "R$ 0,00";
-     let temParcelas = false;
-     let listaParcelas = [];
+     // ... [Início da função baixarPDFNota mantido] ...
 
-     linhasOriginal.forEach(linha => {
-       if (linha.includes("-----") && !extraindoItens) {
-         extraindoItens = true;
-         return;
-       }
-       if (linha.includes("-----") && extraindoItens) {
-         extraindoItens = false;
-         return;
-       }
+            let subtotalStr = "R$ 0,00";
+            let descontoStr = "R$ 0,00";
+            let totalStr = "R$ 0,00";
+            let temParcelas = false;
+            let listaParcelas = [];
 
-       if (linha.includes("Subtotal:")) {
-         subtotalStr = linha.split("Subtotal:")[1].trim();
-       }
-       if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
-         totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
-       }
+            linhasOriginal.forEach(linha => {
+                if (linha.includes("-----") && !extraindoItens) {
+                    extraindoItens = true;
+                    return;
+                }
+                if (linha.includes("-----") && extraindoItens) {
+                    extraindoItens = false;
+                    return;
+                }
 
-       if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
-         temParcelas = true;
-         listaParcelas.push(linha.trim());
-       }
+                if (linha.includes("Subtotal:")) {
+                    subtotalStr = linha.split("Subtotal:")[1].trim();
+                }
+                if (linha.includes("Desconto:")) {
+                    descontoStr = linha.split("Desconto:")[1].trim();
+                }
+                if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
+                    totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
+                }
 
-       if (extraindoItens && linha.trim() !== "") {
-         const partes = linha.split(" - ");
-         const nomeEVar = partes[0].trim();
-         const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+                if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
+                    temParcelas = true;
+                    listaParcelas.push(linha.trim());
+                }
 
-         const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
+                if (extraindoItens && linha.trim() !== "") {
+                    const partes = linha.split(" - ");
+                    const nomeEVar = partes[0].trim();
+                    const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+                    const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
 
-         doc.text(nomeLimitado, 15, eixoY);
-         doc.text("1", 110, eixoY);
-         doc.text(precoStr, 130, eixoY);
-         doc.text(precoStr, 170, eixoY);
-         eixoY += 6;
-       }
-     });
+                    doc.text(nomeLimitado, 15, eixoY);
+                    doc.text("1", 110, eixoY);
+                    doc.text(precoStr, 130, eixoY);
+                    doc.text(precoStr, 170, eixoY);
+                    eixoY += 6;
+                }
+            });
 
-     eixoY += 2;
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
+            eixoY += 2;
+            doc.line(15, eixoY, 195, eixoY);
+            eixoY += 6;
 
-     doc.setFont("courier", "normal");
-     doc.text("Subtotal:", 130, eixoY);
-     doc.text(subtotalStr, 170, eixoY);
-     eixoY += 5;
+            // EXIBIÇÃO DE SUBTOTAL, DESCONTO E TOTAL NO PDF
+            doc.setFont("courier", "normal");
+            doc.text("Subtotal:", 130, eixoY);
+            doc.text(subtotalStr, 170, eixoY);
+            eixoY += 5;
 
-     doc.setFont("courier", "bold");
-     doc.setFontSize(11);
-     doc.text("TOTAL:", 130, eixoY);
-     doc.text(totalStr, 170, eixoY);
-     eixoY += 10;
+            doc.text("(-) Desconto:", 130, eixoY);
+            doc.text(descontoStr, 170, eixoY);
+            eixoY += 5;
+
+            doc.setFont("courier", "bold");
+            doc.setFontSize(11);
+            doc.text("TOTAL:", 130, eixoY);
+            doc.text(totalStr, 170, eixoY);
+            eixoY += 10;
+
+// ... [Restante da função baixarPDFNota mantido] ...
 
      if (temParcelas && listaParcelas.length > 0) {
        doc.line(15, eixoY, 195, eixoY);
