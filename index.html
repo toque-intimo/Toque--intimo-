@@ -444,40 +444,52 @@
  </div>
  </section>
 
- <!-- NOTAS -->
- <!-- Substitua a div antiga de notas por esta: -->
+ <!-- SUBSTITUA ISTO: -->
 <div id="vendedor" class="aba-conteudo" style="display: none;">
     <h2>Gestão de Revendedoras — TOQUE ÍNTIMO GS</h2>
+    ...
+</div>
+
+<!-- POR ISTO: -->
+<section id="tela-vendedor" class="app-section">
+    <div class="section-title" style="font-size: 20px; color: #501926; display: flex; justify-content: space-between; align-items: center;">
+        <span>Gestão de Revendedoras</span>
+        <button onclick="resetarParaNeutro()" style="background: none; border: none; font-size:20px; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
     
-    <!-- Formulário de cadastro -->
-    <div class="card">
-        <h3>Cadastrar Nova Revendedora</h3>
-        <input type="text" id="nomeVendedor" placeholder="Nome da Vendedora">
-        <input type="text" id="telVendedor" placeholder="WhatsApp (com DDD)">
-        <button onclick="cadastrarEEnviarWhatsApp()">📲 Salvar e Enviar Convite</button>
+    <!-- Form de Cadastro -->
+    <div class="grid-form" style="margin-top: 15px;">
+        <div class="form-group">
+            <label>Nome da Vendedora</label>
+            <input type="text" id="nomeVendedor" placeholder="Ex: Maria Silva">
+        </div>
+        <div class="form-group">
+            <label>WhatsApp (com DDD)</label>
+            <input type="text" id="telVendedor" placeholder="11999999999">
+        </div>
+        <button type="button" class="btn" style="background-color: #25D366;" onclick="cadastrarEEnviarWhatsApp()">
+            <i class="fa-brands fa-whatsapp"></i> Salvar e Enviar Convite
+        </button>
     </div>
 
-    <!-- Tabela de Vendedores -->
-    <div class="card">
-        <h3>Revendedoras Cadastradas</h3>
-        <table>
+    <!-- Tabela de Vendedoras -->
+    <div style="margin-top: 25px; overflow-x: auto;">
+        <div class="section-title" style="font-size: 15px;">Revendedoras Cadastradas</div>
+        <table class="fin-table">
             <thead>
                 <tr>
                     <th>Código</th>
                     <th>Nome</th>
                     <th>WhatsApp</th>
-                    <th>Data</th>
-                    <th>Status</th>
                     <th>Ações</th>
                 </tr>
             </thead>
             <tbody id="tabelaVendedores">
-                <!-- Dados carregados do Firebase -->
+                <!-- Dados dinâmicos -->
             </tbody>
         </table>
     </div>
-</div>
-
+</section>
 
 <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
 <div class="bottom-nav">
