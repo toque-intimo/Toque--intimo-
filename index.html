@@ -175,9 +175,9 @@
  <div class="icon-wrapper"><i class="fa-solid fa-wallet"></i></div>
  <span>Financeiro</span>
  </div>
- <div class="menu-btn" id="btn-notas" onclick="mudarTela('notas')">
+ <div class="menu-btn" id="btn-vendedor" onclick="mudarTela('vendedor')">
  <div class="icon-wrapper"><i class="fa-solid fa-note-sticky"></i></div>
- <span>Notas</span>
+ <span>vendedor</span>
  </div>
  <div class="menu-btn" id="btn-catalogo" onclick="mudarTela('catalogo')">
  <div class="icon-wrapper" style="background-color: #e6f9ed; color: #25D366;"><i class="fa-brands fa-whatsapp"></i></div>
@@ -445,11 +445,39 @@
  </section>
 
  <!-- NOTAS -->
- <section id="tela-notas" class="app-section">
- <textarea id="nota-texto" rows="5" style="width:100%; border-radius:10px; padding:10px; border:1px solid #ccc;"></textarea>
- <button onclick="salvarNota()" class="btn">Salvar Nota</button>
- </section>
+ <!-- Substitua a div antiga de notas por esta: -->
+<div id="vendedor" class="aba-conteudo" style="display: none;">
+    <h2>Gestão de Revendedoras — TOQUE ÍNTIMO GS</h2>
+    
+    <!-- Formulário de cadastro -->
+    <div class="card">
+        <h3>Cadastrar Nova Revendedora</h3>
+        <input type="text" id="nomeVendedor" placeholder="Nome da Vendedora">
+        <input type="text" id="telVendedor" placeholder="WhatsApp (com DDD)">
+        <button onclick="cadastrarEEnviarWhatsApp()">📲 Salvar e Enviar Convite</button>
+    </div>
+
+    <!-- Tabela de Vendedores -->
+    <div class="card">
+        <h3>Revendedoras Cadastradas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>WhatsApp</th>
+                    <th>Data</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaVendedores">
+                <!-- Dados carregados do Firebase -->
+            </tbody>
+        </table>
+    </div>
 </div>
+
 
 <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
 <div class="bottom-nav">
