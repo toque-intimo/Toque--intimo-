@@ -530,7 +530,85 @@
  let clientes = JSON.parse(localStorage.getItem('ti_v4_cli')) || [];
  let carrinho = JSON.parse(localStorage.getItem('ti_v4_car')) || [];
  let vendas = JSON.parse(localStorage.getItem('ti_v4_vend')) || [];
- 
+
+ // ==========================================
+// FUNÇÕES DA ABA VENDEDOR / REVENDEDORAS
+// ==========================================
+
+function cadastrarEEnviarWhatsApp() {
+  const nome = document.getElementById('nomeVendedor').value;
+  const tel = document.getElementById('telVendedor').value;
+
+  if (!nome || !tel) {
+    alert('Por favor, preencha o nome e o WhatsApp.');
+    return;
+  }
+
+  const codigo = 'REV' + Math.floor(1000 + Math.random() * 9000);
+  const data = new Date().toLocaleDateString();
+
+  const vendedoraData = {
+    codigo: codigo,
+    nome: nome,
+    whatsapp: tel,
+    data: data,
+    status: 'Ativo'
+  };
+
+  // Salva no Firebase Firestore
+  db.collection("vendedores").add(vendedoraData)
+    .then(() => {
+      alert("Revendedora cadastrada com sucesso!");
+      document.getElementById('nomeVendedor').value = '';
+      document.getElementById('telVendedor').value = '';
+      
+      // Envia a mensagem de convite no WhatsApp
+      const msg = encodeURIComponent(`Olá ${nome}! Você foi cadastrada como revendedora Toque Íntimo GS. Seu código de identificação é: ${codigo}`);
+      const numLimpo = tel.replace(/\D/g, '');
+      const numFormatted = numLimpo.startsWith('55') ? numLimpo : '55' + numLimpo;
+      window.open(`https://wa.me/${numFormatted}?text=${msg}`, '_blank');
+      
+      carregarVendedores();
+    })
+    .catch(err => alert("Erro ao salvar no Firebase: " + err));
+}
+
+function carregarVendedores() {
+  const tabela = document.getElementById('tabelaVendedores');
+  if (!tabela) return;
+  tabela.innerHTML = '';
+
+  db.collection("vendedores").get().then((snapshot) => {
+    if (snapshot.empty) {
+      tabela.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#999;">Nenhuma revendedora cadastrada.</td></tr>';
+      return;
+    }
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      tabela.innerHTML += `
+        <tr>
+          <td><b>${data.codigo || '-'}</b></td>
+          <td>${data.nome}</td>
+          <td>${data.whatsapp}</td>
+          <td>
+            <button class="btn-action btn-delete" onclick="deletarVendedor('${doc.id}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  });
+}
+
+function deletarVendedor(id) {
+  if (confirm("Deseja remover esta revendedora?")) {
+    db.collection("vendedores").doc(id).delete().then(() => {
+      carregarVendedores();
+    });
+  }
+}
+
  let categoriaSelecionada = 'Todos';
  let html5QrcodeScanner = null;
  let entregaSelecionada = 'retirar';
@@ -578,17 +656,18 @@
 
    pararScanner();
 
-   if(tela === 'produtos') {
-     renderizarChipsCategorias();
-     renderizarGradeProdutos();
-   }
-   if(tela === 'estoque') carregarEstoque();
-   if(tela === 'clientes') renderizarClientes();
-   if(tela === 'carrinho') carregarCarrinho();
-   if(tela === 'vendas') carregarVendas();
-   if(tela === 'financeiro') carregarFinanceiro();
-   atualizarDash();
+    if(tela === 'produtos') {
+   renderizarChipsCategorias();
+   renderizarGradeProdutos();
  }
+ if(tela === 'estoque') carregarEstoque();
+ if(tela === 'clientes') renderizarClientes();
+ if(tela === 'carrinho') carregarCarrinho();
+ if(tela === 'vendas') carregarVendas();
+ if(tela === 'financeiro') carregarFinanceiro();
+ if(tela === 'vendedor') carregarVendedores(); // <-- Adicione esta linha
+ atualizarDash();
+  
 
  function abrirCatalogoLocal() {
    window.open('catalogo.html', '_blank');
