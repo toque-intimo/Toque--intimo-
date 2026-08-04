@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concluir Cadastro — TOQUE ÍNTIMO GS</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #e9ecef; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h2 { color: #d63384; margin: 0; }
+        .header p { color: #6c757d; font-size: 14px; margin-top: 5px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .btn-salvar { background-color: #d63384; color: white; border: none; padding: 14px; cursor: pointer; border-radius: 6px; font-size: 16px; font-weight: 600; width: 100%; transition: 0.2s; }
+        .btn-salvar:hover { background-color: #b8256f; }
+        .aviso-erro { color: #e03131; font-weight: bold; text-align: center; }
+        .sucesso { display: none; text-align: center; }
+        .sucesso h3 { color: #2b8a3e; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="cardFormulario">
+    <div class="header">
+        <h2>TOQUE ÍNTIMO GS</h2>
+        <p>Complete seu cadastro para se tornar uma revendedora!</p>
+    </div>
+
+    <form id="formCadastro" onsubmit="salvarCadastro(event)">
+        <div class="form-group">
+            <label for="nome">Nome Completo:</label>
+            <input type="text" id="nome" required readonly style="background-color: #e9ecef;">
+        </div>
+
+        <div class="form-group">
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" placeholder="000.000.000-00" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">E-mail:</label>
+            <input type="email" id="email" placeholder="seuemail@email.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="chavePix">Chave Pix (para recebimentos):</label>
+            <input type="text" id="chavePix" placeholder="CPF, Celular, E-mail ou Aleatória" required>
+        </div>
+
+        <div class="form-group">
+            <label for="endereco">Endereço Completo:</label>
+            <textarea id="endereco" rows="3" placeholder="Rua, Número, Bairro, Cidade - UF" required></textarea>
+        </div>
+
+        <button type="submit" class="btn-salvar" id="btnSubmit">Finalizar Cadastro</button>
+    </form>
+</div>
+
+<!-- Tela exibida após o envio -->
+<div class="container sucesso" id="cardSucesso">
+    <h3>🎉 Cadastro Concluído com Sucesso!</h3>
+    <p>Seja bem-vinda à equipe <strong>TOQUE ÍNTIMO GS</strong>.</p>
+    <p>Em breve entraremos em contato para liberar suas vendas.</p>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+    // Mesma configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDpUFJnqqg4LX17Nk24zR9rg1C923VcLME",
+      authDomain: "cadastro-vendedor.firebaseapp.com",
+      projectId: "cadastro-vendedor",
+      storageBucket: "cadastro-vendedor.firebasestorage.app",
+      messagingSenderId: "640048043072",
+      appId: "1:640048043072:web:b0c484a751ab420fed3ba5"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 1. Pega o ID que veio na URL (ex: cadastro.html?id=ABC123XYZ)
+    const urlParams = new URLSearchParams(window.location.search);
+    const vendedorId = urlParams.get('id');
+
+    // 2. Carrega os dados iniciais do convite
+    async function carregarDadosConvite() {
+        if (!vendedorId) {
+            document.getElementById('cardFormulario').innerHTML = '<p class="aviso-erro">Link de convite inválido ou expirado.</p>';
+            return;
+        }
+
+        try {
+            const doc = await db.collection("vendedores").doc(vendedorId).get();
+            if (doc.exists) {
+                const dados = doc.data();
+
+                // Se já tiver preenchido antes
+                if (dados.status === 'Completo') {
+                    document.getElementById('cardFormulario').style.display = 'none';
+                    document.getElementById('cardSucesso').style.display = 'block';
+                    return;
+                }
+
+                // Preenche o campo nome e deixa desabilitado para alteração
+                document.getElementById('nome').value = dados.nome || '';
+            } else {
+                document.getElementById('cardFormulario').innerHTML = '<p class="aviso-erro">Convite não encontrado no sistema.</p>';
+            }
+        } catch (error) {
+            console.error("Erro ao buscar convite:", error);
+            alert("Erro ao carregar dados do convite.");
+        }
+    }
+
+    // 3. Salva os dados preenchidos pela vendedora
+    async function salvarCadastro(event) {
+        event.preventDefault();
+
+        const btn = document.getElementById('btnSubmit');
+        btn.disabled = true;
+        btn.innerText = "Salvando...";
+
+        const cpf = document.getElementById('cpf').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const chavePix = document.getElementById('chavePix').value.trim();
+        const endereco = document.getElementById('endereco').value.trim();
+
+        try {
+            // Atualiza o documento no Firestore mantendo o código, nome e telefone originais
+            await db.collection("vendedores").doc(vendedorId).update({
+                cpf: cpf,
+                email: email,
+                chavePix: chavePix,
+                endereco: endereco,
+                status: 'Completo',
+                dataCadastroCompleto: new Date().toLocaleDateString('pt-BR')
+            });
+
+            // Esconde formulário e mostra mensagem de sucesso
+            document.getElementById('cardFormulario').style.display = 'none';
+            document.getElementById('cardSucesso').style.display = 'block';
+
+        } catch (error) {
+            alert("Erro ao concluir cadastro: " + error.message);
+            btn.disabled = false;
+            btn.innerText = "Finalizar Cadastro";
+        }
+    }
+
+    // Executa ao carregar a página
+    carregarDadosConvite();
+</script>
+
+</body>
+</html>
