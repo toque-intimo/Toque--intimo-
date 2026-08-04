@@ -24,7 +24,103 @@
  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
  <style>
- :root {
+ 
+  <style>
+  /* --- ESTILOS DO CARD DA VENDEDORA --- */
+  .card-vendedora {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+  }
+
+  /* Efeito ao passar o mouse por cima */
+  .card-vendedora:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e1;
+  }
+
+  .resumo-vendedora {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .info-principal strong {
+    font-size: 16px;
+    color: #1e293b;
+  }
+
+  /* Badges de Status (Completo / Incompleto) */
+  .badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+    display: inline-block;
+  }
+
+  .status-completo {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .status-incompleto {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .icone-seta {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  /* Detalhes que expandem ao clicar */
+  .detalhes-vendedora {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.6;
+  }
+
+  .detalhes-vendedora hr {
+    border: 0;
+    border-top: 1px solid #f1f5f9;
+    margin: 10px 0;
+  }
+
+  .detalhes-vendedora p {
+    margin: 6px 0;
+  }
+
+  /* Botão do WhatsApp */
+  .acoes-vendedora {
+    margin-top: 12px;
+  }
+
+  .btn-whatsapp {
+    background-color: #25d366;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn-whatsapp:hover {
+    background-color: #1eb857;
+  }
+</style>
+
+  :root {
    --primary: #70293b;
    --primary-light: #f9f0f2;
    --bg: #f8f9fa;
@@ -593,6 +689,48 @@ function carregarVendedores() {
       `;
     });
   });
+}
+
+ // ==========================================
+// FUNÇÃO DE CLIQUE: ABRE E FECHA O CARD
+// ==========================================
+function toggleCardVendedora(cardElement) {
+  // Procura a área de detalhes e a seta dentro do card que foi clicado
+  const detalhes = cardElement.querySelector('.detalhes-vendedora');
+  const seta = cardElement.querySelector('.icone-seta');
+
+  if (!detalhes) return;
+
+  // Verifica se o card já está visível
+  const estaVisivel = detalhes.style.display === 'block';
+
+  // Se estiver visível, esconde (none). Se estiver escondido, exibe (block)
+  if (estaVisivel) {
+    detalhes.style.display = 'none';
+    if (seta) seta.textContent = '▼';
+  } else {
+    detalhes.style.display = 'block';
+    if (seta) seta.textContent = '▲';
+  }
+}
+
+// ==========================================
+// FUNÇÃO AUXILIAR: ENVIO DE WHATSAPP
+// ==========================================
+function enviarWhatsAppBoasVindas(telefone, nome) {
+  if (!telefone) {
+    alert('Telefone da revendedora não cadastrado.');
+    return;
+  }
+
+  // Limpa caracteres especiais do telefone (deixa apenas números)
+  const numeroApenasNumeros = telefone.replace(/\D/g, '');
+  
+  // Mensagem personalizada de boas-vindas
+  const mensagem = encodeURIComponent(`Olá ${nome || ''}! Seu cadastro foi aprovado com sucesso! Já pode começar a usar o sistema.`);
+  
+  // Abre o WhatsApp Web / App em uma nova aba
+  window.open(`https://wa.me/55${numeroApenasNumeros}?text=${mensagem}`, '_blank');
 }
 
 function deletarVendedor(id) {
