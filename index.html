@@ -659,82 +659,82 @@ function cadastrarEEnviarWhatsApp() {
     .catch(err => alert("Erro ao salvar no Firebase: " + err));
 }
 
-function renderizarVendedoras(vendedoras) {
-  const container = document.getElementById('lista-vendedoras'); // Certifique-se de que o ID do seu container seja 'lista-vendedoras'
-  if (!container) return;
-  
-  container.innerHTML = '';
-
-  vendedoras.forEach(vendedora => {
-    // Verifica se os dados principais foram preenchidos
-    const estaCompleto = vendedora.cpf && vendedora.pix && vendedora.endereco && vendedora.email;
-    const statusTexto = estaCompleto ? 'Completo' : 'Incompleto';
-    const statusClasse = estaCompleto ? 'status-completo' : 'status-incompleto';
-
-    const cardHTML = `
-      <div class="card-vendedora" onclick="toggleCardVendedora(this)">
-        <div class="resumo-vendedora">
-          <div class="info-principal">
-            <strong>${vendedora.nome || 'Sem Nome'}</strong>
-            <span class="badge ${statusClasse}">${statusTexto}</span>
-          </div>
-          <span class="icone-seta">▼</span>
-        </div>
-
-        <!-- Detalhes completos (inicia escondido) -->
-        <div class="detalhes-vendedora" style="display: none;">
-          <hr>
-          <p><strong>CPF:</strong> ${vendedora.cpf || 'Não informado'}</p>
-          <p><strong>E-mail:</strong> ${vendedora.email || 'Não informado'}</p>
-          <p><strong>Chave Pix:</strong> ${vendedora.pix || 'Não informada'}</p>
-          <p><strong>Endereço:</strong> ${vendedora.endereco || 'Não informado'}</p>
-          
-          <div class="acoes-vendedora">
-            <button class="btn-whatsapp" onclick="event.stopPropagation(); enviarWhatsAppBoasVindas('${vendedora.telefone}', '${vendedora.nome}')">
-              Aprovar & Enviar WhatsApp
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    container.innerHTML += cardHTML;
-  });
-}
-
-function toggleCardVendedora(cardElement) {
-  const detalhes = cardElement.querySelector('.detalhes-vendedora');
-  const seta = cardElement.querySelector('.icone-seta');
-
-  if (!detalhes) return;
-
-  const estaVisivel = detalhes.style.display === 'block';
-
-  if (estaVisivel) {
-    detalhes.style.display = 'none';
-    if (seta) seta.textContent = '▼';
-  } else {
-    detalhes.style.display = 'block';
-    if (seta) seta.textContent = '▲';
-  }
-}
-
-function enviarWhatsAppBoasVindas(telefone, nome) {
-  if (!telefone) {
-    alert('Telefone da revendedora não cadastrado.');
+// 1. Função para carregar as revendedoras do Firebase Firestore
+function carregarVendedores() {
+  if (typeof db === 'undefined') {
+    console.error("Firebase Firestore ('db') não está inicializado.");
     return;
   }
 
-  const numeroApenasNumeros = telefone.replace(/\D/g, '');
-  const mensagem = encodeURIComponent(`Olá ${nome || ''}! Seu cadastro foi aprovado com sucesso! Já pode começar a usar o sistema.`);
-  
-  window.open(`https://wa.me/55${numeroApenasNumeros}?text=${mensagem}`, '_blank');
+  db.collection("vendedores").onSnapshot((snapshot) => {
+    const vendedoras = [];
+    snapshot.forEach((doc) => {
+      vendedoras.push({ id: doc.id, ...doc.data() });
+    });
+    renderizarVendedoras(vendedoras);
+  }, (error) => {
+    console.error("Erro ao carregar revendedoras: ", error);
+  });
 }
 
-function deletarVendedor(id) {
-  if (confirm("Deseja remover esta revendedora?")) {
+// 2. Função para renderizar as revendedoras na tela em formato de cards
+function renderizarVendedoras(vendedoras) {
+  const container = document.getElementById('lista-vendedoras');
+  if (!container) return; // Garante que o elemento existe na tela atual
+
+  if (vendedoras.length === 0) {
+    container.innerHTML = `<p style="text-align: center; color: #777; padding: 20px;">Nenhuma revendedora cadastrada ainda.</p>`;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  vendedoras.forEach((vendedora) => {
+    // Garante que o campo de whatsapp não fique vazio na chamada
+    const telefone = vendedora.whatsapp || vendedora.telefone || '';
+
+    const card = document.createElement('div');
+    card.className = 'card-vendedora';
+    card.style.cssText = "background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;";
+
+    card.innerHTML = `
+      <div>
+        <h4 style="margin: 0 0 5px 0; color: #333;">${vendedora.nome || 'Sem Nome'}</h4>
+        <p style="margin: 0; font-size: 13px; color: #666;">WhatsApp: ${telefone}</p>
+      </div>
+      <div>
+        <button onclick="enviarWhatsAppBoasVindas('${telefone}', '${vendedora.nome}')" style="background: #25d366; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 13px;">
+          WhatsApp
+        </button>
+        <button onclick="excluirVendedora('${vendedora.id}')" style="background: #ff4d4d; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-left: 5px;">
+          Excluir
+        </button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+// 3. Função auxiliar para envio de mensagem via WhatsApp
+function enviarWhatsAppBoasVindas(telefone, nome) {
+  if (!telefone) {
+    alert("Número de WhatsApp não cadastrado para esta revendedora.");
+    return;
+  }
+  // Limpa caracteres especiais do telefone para o link do Wpp (mantém apenas números)
+  const numeroLimpo = telefone.replace(/\D/g, '');
+  const mensagem = encodeURIComponent(`Olá ${nome}, seja bem-vinda à nossa equipe de revendedoras!`);
+  window.open(`https://api.whatsapp.com/send?phone=55${numeroLimpo}&text=${mensagem}`, '_blank');
+}
+
+// 4. Função para excluir revendedora (opcional, caso precise)
+function excluirVendedora(id) {
+  if (confirm("Deseja realmente excluir esta revendedora?")) {
     db.collection("vendedores").doc(id).delete().then(() => {
-      carregarVendedores();
+      console.log("Revendedora excluída com sucesso!");
+    }).catch((error) => {
+      console.error("Erro ao excluir: ", error);
     });
   }
 }
