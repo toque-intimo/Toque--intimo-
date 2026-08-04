@@ -582,7 +582,7 @@ function carregarVendedores() {
     snapshot.forEach((doc) => {
       const data = doc.data();
       tabela.innerHTML += `
-        <tr>
+        <tr>onclick="verDetalhesVendedor('${doc.id}')"
           <td><b>${data.codigo || '-'}</b></td>
           <td>${data.nome}</td>
           <td>${data.whatsapp}</td>
@@ -1761,7 +1761,64 @@ function deletarVendedor(id) {
    atualizarDash();
    carregarVendedores();
  };
- </script>
-</div>
+
+     <!-- ... Todo o seu conteúdo do painel (tabela, menus, etc) fica aqui acima ... -->
+
+    <!-- ========================================================= -->
+    <!-- 1. COLE O MODAL DE DETALHES AQUI (LOGO ANTES DE </body>) -->
+    <!-- ========================================================= -->
+    <div id="modalDetalhes" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+      <div style="background:#fff; padding:25px; border-radius:10px; max-width:450px; width:90%; font-family:sans-serif;">
+        <h3 style="margin-top:0; color:#d63384;">Detalhes da Revendedora</h3>
+        <hr>
+        <p><strong>Código:</strong> <span id="detCodigo"></span></p>
+        <p><strong>Nome:</strong> <span id="detNome"></span></p>
+        <p><strong>WhatsApp:</strong> <span id="detWhatsapp"></span></p>
+        <p><strong>Status:</strong> <span id="detStatus"></span></p>
+        <hr>
+        <p><strong>CPF:</strong> <span id="detCpf">-</span></p>
+        <p><strong>E-mail:</strong> <span id="detEmail">-</span></p>
+        <p><strong>Chave Pix:</strong> <span id="detPix">-</span></p>
+        <p><strong>Endereço:</strong> <span id="detEndereco">-</span></p>
+        
+        <button onclick="fecharModalDetalhes()" style="background:#6c757d; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; width:100%; margin-top:15px;">Fechar</button>
+      </div>
+    </div>
+
+    <!-- Scripts do Firebase e JavaScript do sistema -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script>
+        // Seus scripts JavaScript vêm aqui...
+ // Função para abrir o modal e buscar dados atualizados
+async function verDetalhesVendedor(idDoc) {
+  try {
+    const doc = await db.collection("vendedores").doc(idDoc).get();
+    if (doc.exists) {
+      const v = doc.data();
+
+      document.getElementById('detCodigo').innerText = v.codigo || '-';
+      document.getElementById('detNome').innerText = v.nome || '-';
+      document.getElementById('detWhatsapp').innerText = v.whatsapp || '-';
+      document.getElementById('detStatus').innerText = v.status || 'Pendente';
+      
+      // Dados preenchidos no cadastro.html
+      document.getElementById('detCpf').innerText = v.cpf || 'Ainda não preenchido';
+      document.getElementById('detEmail').innerText = v.email || 'Ainda não preenchido';
+      document.getElementById('detPix').innerText = v.chavePix || 'Ainda não preenchido';
+      document.getElementById('detEndereco').innerText = v.endereco || 'Ainda não preenchido';
+
+      document.getElementById('modalDetalhes').style.display = 'flex';
+    }
+  } catch (erro) {
+    alert("Erro ao carregar detalhes: " + erro.message);
+  }
+}
+
+function fecharModalDetalhes() {
+  document.getElementById('modalDetalhes').style.display = 'none';
+}
+
+    </script>
 </body>
 </html>
