@@ -523,8 +523,8 @@
 
 // FUNÇÕES DA ABA VENDEDOR / REVENDEDORAS
 function cadastrarEEnviarWhatsApp() {
-  const nome = document.getElementById('nomeVendedor').value;
-  const tel = document.getElementById('telVendedor').value;
+  const nome = document.getElementById('nomeVendedor').value.trim();
+  const tel = document.getElementById('telVendedor').value.trim();
 
   if (!nome || !tel) {
     alert('Por favor, preencha o nome e o WhatsApp.');
@@ -532,25 +532,36 @@ function cadastrarEEnviarWhatsApp() {
   }
 
   const codigo = 'REV' + Math.floor(1000 + Math.random() * 9000);
-  const data = new Date().toLocaleDateString();
+  const data = new Date().toLocaleDateString('pt-BR');
 
   const vendedoraData = {
     codigo: codigo,
     nome: nome,
     whatsapp: tel,
     data: data,
-    status: 'Ativo'
+    status: 'Pendente'
   };
 
+  // 1. Cria o documento no Firestore primeiro para obter o doc.id
   db.collection("vendedores").add(vendedoraData)
-    .then(() => {
-      alert("Revendedora cadastrada com sucesso!");
+    .then((docRef) => {
+      alert("Revendedora iniciada com sucesso!");
       document.getElementById('nomeVendedor').value = '';
       document.getElementById('telVendedor').value = '';
-      
-      const msg = encodeURIComponent(`Olá ${nome}! Você foi cadastrada como revendedora Toque Íntimo GS. Seu código de identificação é: ${codigo}`);
+
+      // 2. Define o endereço da sua página de cadastro (Ajuste o link base quando seu site estiver no ar/GitHub Pages)
+      const urlBase = window.location.origin + window.location.pathname.replace('index.html', '');
+      const linkCadastro = `${urlBase}cadastro.html?id=${docRef.id}`;
+
+      // 3. Monta a mensagem com o link gerado contendo o ID do convite
+      const msg = encodeURIComponent(
+        `Olá ${nome}! Você foi convidada para ser uma revendedora Toque Íntimo GS (Seu código: ${codigo}).\n\n` +
+        `Por favor, acesse o link abaixo para completar o seu cadastro:\n${linkCadastro}`
+      );
+
       const numLimpo = tel.replace(/\D/g, '');
       const numFormatted = numLimpo.startsWith('55') ? numLimpo : '55' + numLimpo;
+      
       window.open(`https://wa.me/${numFormatted}?text=${msg}`, '_blank');
       
       carregarVendedores();
