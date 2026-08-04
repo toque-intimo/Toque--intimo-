@@ -116,44 +116,45 @@
         });
     });
 
-    // 3. Cadastra no Firebase e envia mensagem via WhatsApp
     async function cadastrarEEnviarWhatsApp() {
-        const nome = document.getElementById('nomeVendedor').value.trim();
-        const telefone = document.getElementById('telVendedor').value.trim();
+    const nome = document.getElementById('nomeVendedor').value.trim();
+    const telefone = document.getElementById('telVendedor').value.trim();
 
-        if (!nome || !telefone) {
-            alert('Preencha o nome e o telefone!');
-            return;
-        }
-
-        const codigoUnico = 'GS-' + Math.floor(1000 + Math.random() * 9000);
-        const dataAtual = new Date().toLocaleDateString('pt-BR');
-
-        try {
-            // Salva na coleção "vendedores" do Firestore
-            const docRef = await db.collection("vendedores").add({
-                codigo: codigoUnico,
-                nome: nome,
-                telefone: telefone,
-                data: dataAtual,
-                status: 'Pendente',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            document.getElementById('nomeVendedor').value = '';
-            document.getElementById('telVendedor').value = '';
-
-            // O link usa o ID gerado pelo Firebase para o cadastro do revendedor
-            const linkCadastro = `https://seu-usuario.github.io/seu-repositorio/cadastro.html?id=${docRef.id}`;
-            const mensagem = `Olá ${nome}! Você foi convidado(a) para ser revendedor(a) da TOQUE ÍNTIMO GS.\n\nClique no link para completar seu cadastro e criar sua senha:\n${linkCadastro}`;
-            
-            const telefoneLimpo = telefone.replace(/\D/g, '');
-            window.open(`https://wa.me/55${telefoneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
-
-        } catch (error) {
-            alert("Erro ao salvar no Firebase: " + error.message);
-        }
+    if (!nome || !telefone) {
+        alert('Preencha o nome e o telefone!');
+        return;
     }
+
+    const codigoUnico = 'GS-' + Math.floor(1000 + Math.random() * 9000);
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+
+    try {
+        // Salva na coleção "vendedores" do Firestore
+        const docRef = await db.collection("vendedores").add({
+            codigo: codigoUnico,
+            nome: nome,
+            telefone: telefone,
+            data: dataAtual,
+            status: 'Pendente',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        document.getElementById('nomeVendedor').value = '';
+        document.getElementById('telVendedor').value = '';
+
+        // 🟢 AQUI ESTÁ A ALTERAÇÃO DO LINK:
+        const linkCadastro = `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/cadastro.html?id=${docRef.id}`;
+        
+        const mensagem = `Olá ${nome}! Você foi convidado(a) para ser revendedor(a) da TOQUE ÍNTIMO GS.\n\nClique no link para completar seu cadastro:\n${linkCadastro}`;
+        
+        const telefoneLimpo = telefone.replace(/\D/g, '');
+        window.open(`https://wa.me/55${telefoneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
+
+    } catch (error) {
+        alert("Erro ao salvar no Firebase: " + error.message);
+    }
+}
+
 
     // 4. Exibe os detalhes
     async function verDetalhes(id) {
