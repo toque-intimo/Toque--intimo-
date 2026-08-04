@@ -114,6 +114,98 @@
  .fin-table th { background: #fdf2f4; color: var(--primary); font-weight: 600; }
  .badge-pago { background: #e8f8f0; color: #1e7e48; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
  .badge-prazo { background: #fff8eb; color: #b57c1e; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+  /* --- ESTILOS DO CARD DA VENDEDORA --- */
+  .card-vendedora {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+  }
+
+  /* Efeito ao passar o mouse por cima */
+  .card-vendedora:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e1;
+  }
+
+  .resumo-vendedora {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .info-principal strong {
+    font-size: 16px;
+    color: #1e293b;
+  }
+
+  /* Badges de Status (Completo / Incompleto) */
+  .badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+    display: inline-block;
+  }
+
+  .status-completo {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .status-incompleto {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .icone-seta {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  /* Detalhes que expandem ao clicar */
+  .detalhes-vendedora {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.6;
+  }
+
+  .detalhes-vendedora hr {
+    border: 0;
+    border-top: 1px solid #f1f5f9;
+    margin: 10px 0;
+  }
+
+  .detalhes-vendedora p {
+    margin: 6px 0;
+  }
+
+  /* Botão do WhatsApp */
+  .acoes-vendedora {
+    margin-top: 12px;
+  }
+
+  .btn-whatsapp {
+    background-color: #25d366;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn-whatsapp:hover {
+    background-color: #1eb857;
+  }
  </style>
 </head>
 <body>
@@ -567,31 +659,46 @@ function cadastrarEEnviarWhatsApp() {
     .catch(err => alert("Erro ao salvar no Firebase: " + err));
 }
 
-function carregarVendedores() {
-  const tabela = document.getElementById('tabelaVendedores');
-  if (!tabela) return;
-  tabela.innerHTML = '';
+function renderizarVendedoras(vendedoras) {
+  const container = document.getElementById('lista-vendedoras'); // Certifique-se de que o ID do seu container seja 'lista-vendedoras'
+  if (!container) return;
+  
+  container.innerHTML = '';
 
-  db.collection("vendedores").get().then((snapshot) => {
-    if (snapshot.empty) {
-      tabela.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#999;">Nenhuma revendedora cadastrada.</td></tr>';
-      return;
-    }
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      tabela.innerHTML += `
-        <tr onclick="verDetalhesVendedor('${doc.id}')">
-          <td><b>${data.codigo || '-'}</b></td>
-          <td>${data.nome}</td>
-          <td>${data.whatsapp}</td>
-          <td>
-            <button class="btn-action btn-delete" onclick="deletarVendedor('${doc.id}'); event.stopPropagation();">
-              <i class="fa-solid fa-trash"></i>
+  vendedoras.forEach(vendedora => {
+    // Verifica se os dados principais foram preenchidos
+    const estaCompleto = vendedora.cpf && vendedora.pix && vendedora.endereco && vendedora.email;
+    const statusTexto = estaCompleto ? 'Completo' : 'Incompleto';
+    const statusClasse = estaCompleto ? 'status-completo' : 'status-incompleto';
+
+    const cardHTML = `
+      <div class="card-vendedora" onclick="toggleCardVendedora(this)">
+        <div class="resumo-vendedora">
+          <div class="info-principal">
+            <strong>${vendedora.nome || 'Sem Nome'}</strong>
+            <span class="badge ${statusClasse}">${statusTexto}</span>
+          </div>
+          <span class="icone-seta">▼</span>
+        </div>
+
+        <!-- Detalhes completos (inicia escondido) -->
+        <div class="detalhes-vendedora" style="display: none;">
+          <hr>
+          <p><strong>CPF:</strong> ${vendedora.cpf || 'Não informado'}</p>
+          <p><strong>E-mail:</strong> ${vendedora.email || 'Não informado'}</p>
+          <p><strong>Chave Pix:</strong> ${vendedora.pix || 'Não informada'}</p>
+          <p><strong>Endereço:</strong> ${vendedora.endereco || 'Não informado'}</p>
+          
+          <div class="acoes-vendedora">
+            <button class="btn-whatsapp" onclick="event.stopPropagation(); enviarWhatsAppBoasVindas('${vendedora.telefone}', '${vendedora.nome}')">
+              Aprovar & Enviar WhatsApp
             </button>
-          </td>
-        </tr>
-      `;
-    });
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML += cardHTML;
   });
 }
 
