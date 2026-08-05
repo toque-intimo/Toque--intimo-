@@ -269,53 +269,86 @@
       if(aba === 'financeiro') renderizarFinanceiro();
     }
 
-    function renderizarProdutos() {
-      const container = document.getElementById('grid-produtos');
-      container.innerHTML = "";
+    console.error("Erro na escuta da nuvem:", err);
+     renderizarCategorias();
+     renderizarGrade();
+   });
+ }
 
-      if (produtos.length === 0) {
-        container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">Nenhum produto cadastrado no estoque.</p>`;
-        return;
-      }
+ function renderizarCategorias() {
+   const container = document.getElementById('categorias-lista');
+   container.innerHTML = '';
+   categoriasLista.forEach(cat => {
+     const activeClass = cat === categoriaAtiva ? 'active' : '';
+     container.innerHTML += `<span class="cat-chip ${activeClass}" onclick="filtrarCategoria('${cat}')">${cat}</span>`;
+   });
+ }
 
-      produtos.forEach(p => {
-        const variacoesDisponiveis = (p.variacoes || []).filter(v => v.quantidade > 0);
-        const temEstoque = variacoesDisponiveis.length > 0;
-        
-        let opcoesSelect = '';
-        if (temEstoque) {
-          variacoesDisponiveis.forEach((v, idx) => {
-            opcoesSelect += `<option value="${idx}">${v.cor} (${v.tamanho}) - R$ ${v.preco.toFixed(2)} (Estoque: ${v.quantidade})</option>`;
-          });
-        } else {
-          opcoesSelect = `<option value="">Sem estoque</option>`;
-        }
+ function filtrarCategoria(cat) {
+   categoriaAtiva = cat;
+   renderizarCategorias();
+   renderizarGrade();
+ }
 
-        const foto = variacoesDisponiveis.find(v => v.foto)?.foto || "";
+ function renderizarGrade() {
+   const grade = document.getElementById('catalogo-grade');
+   grade.innerHTML = '';
 
-        container.innerHTML += `
-          <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-col justify-between space-y-3">
-            <div>
-              ${foto ? `<img src="${foto}" alt="${p.nome}" class="w-full h-32 object-cover rounded-md mb-2">` : ''}
-              <h3 class="font-bold text-gray-800">${p.nome}</h3>
-              <p class="text-xs text-gray-500 line-clamp-2 mt-1">${p.descricao || ''}</p>
-            </div>
-            
-            <div class="space-y-2">
-              <label class="block text-xs font-medium text-gray-600">Variação / Tamanho:</label>
-              <select id="select-var-${p.id}" class="w-full p-2 border text-sm rounded-lg bg-gray-50 border-gray-300" ${!temEstoque ? 'disabled' : ''}>
-                ${opcoesSelect}
-              </select>
+   const produtosFiltrados = produtos.filter(p => {
+     const matchCat = (categoriaAtiva === 'Todas' || p.categoria === categoriaAtiva);
+     const temEstoque = p.variacoes && p.variacoes.some(v => v.quantidade > 0);
+     return matchCat && temEstoque;
+   });
 
-              <button onclick="adicionarAoCarrinho('${p.id}')" ${!temEstoque ? 'disabled' : ''} 
-                class="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white text-sm font-semibold rounded-lg transition">
-                ${temEstoque ? 'Adicionar ao Carrinho' : 'Esgotado'}
-              </button>
-            </div>
-          </div>
-        `;
-      });
-    }
+   if (!produtosFiltrados.length) {
+     grade.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:30px; color:#888;">Nenhum produto disponível nesta categoria no momento.</p>`;
+     return;
+   }
+
+   produtosFiltrados.forEach(p => {
+     const variacoesDisponiveis = p.variacoes.filter(v => v.quantidade > 0);
+     const menorPreco = Math.min(...variacoesDisponiveis.map(v => v.preco));
+     const varComFoto = variacoesDisponiveis.find(v => v.foto) || {};
+
+     let htmlFoto = `<div class="img-container"><i class="fa-solid fa-image fa-2x"></i></div>`;
+     if (varComFoto.foto) {
+       htmlFoto = `<div class="img-container" onclick="abrirFotoExpandida('${p.id}', '${varComFoto.foto}')">
+                     <img src="${varComFoto.foto}" alt="${p.nome}">
+                   </div>`;
+     }
+
+     let opcoesSelect = '';
+     variacoesDisponiveis.forEach((v, index) => {
+       opcoesSelect += `<option value="${index}">${v.cor} (${v.tamanho}) - R$ ${v.preco.toFixed(2)}</option>`;
+     });
+
+     grade.innerHTML += `
+     <div class="card">
+       <div>
+         ${htmlFoto}
+         <span class="prod-title">${p.nome}</span>
+         <div class="prod-price">A partir de R$ ${menorPreco.toFixed(2)}</div>
+         ${p.descricao ? `<button class="btn-ver-descricao" onclick="abrirDescricao('${p.nome}', \`${p.descricao.replace(/`/g, "'")}\`)"><i class="fa-solid fa-circle-info"></i> Ver Detalhes</button>` : ''}
+         <select class="variation-select" id="select-var-${p.id}">
+           ${opcoesSelect}
+         </select>
+       </div>
+       <button class="btn-add-cart" onclick="adicionarAoCarrinho('${p.id}')">
+         <i class="fa-solid fa-cart-plus"></i> Adicionar
+       </button>
+     </div>`;
+   });
+ }
+
+ function abrirDescricao(nome, desc) {
+   document.getElementById('modal-desc-titulo').innerText = nome;
+   document.getElementById('modal-desc-texto').innerText = desc;
+   document.getElementById('modal-descricao').style.display = 'flex';
+ }
+
+ function fecharModal(id) {
+   document.getElementById(id).style.display = 'none';
+ }
 
     function adicionarAoCarrinho(produtoId) {
       const prod = produtos.find(p => p.id === produtoId);
