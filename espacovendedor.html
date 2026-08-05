@@ -496,6 +496,25 @@
       const mensagem = `Olá! Confira nosso catálogo de produtos atualizado e faça seu pedido direto comigo: ${linkCatalogo}`;
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`, '_blank');
     }
+  
+  <!-- Firebase App e Serviços (Exemplo com Firebase v9+/v10 via CDN) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  // Suas configurações do Firebase (Copie do seu arquivo principal)
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "seu-projeto.firebaseapp.com",
+    projectId: "seu-projeto",
+    storageBucket: "seu-projeto.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcde12345"
+  };
+
+  // Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
   </script>
 </body>
 </html>
