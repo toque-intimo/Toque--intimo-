@@ -65,7 +65,7 @@
     <p>Sua conta foi ativada e você já pode acessar o portal.</p>
     
     <!-- Botão adicionado para ir diretamente para o portal -->
-    <a id="btnIrParaPortal" href="portal.html" class="btn-acessar">Acessar Portal da Vendedora</a>
+    <a id="btnIrParaPortal" href="espacovendedor.html" class="btn-acessar">Acessar Portal da Vendedora</a>
 </div>
 
 <!-- Firebase SDKs -->
@@ -125,7 +125,7 @@
         const linkBtn = document.getElementById('btnIrParaPortal');
         if (linkBtn) {
             // Substitua 'portal.html' pelo nome correto do seu arquivo do portal se for diferente
-            linkBtn.href = `portal.html?nome=${encodeURIComponent(nome)}&codigo=${encodeURIComponent(codigo)}`;
+            linkBtn.href = `espacovendedor.html?nome=${encodeURIComponent(nome)}&codigo=${encodeURIComponent(codigo)}`;
         }
     }
 
