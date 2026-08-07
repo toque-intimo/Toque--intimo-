@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo de Produtos - Toque Íntimo GS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Cabeçalho -->
+  <header class="bg-white p-4 text-center border-b sticky top-0 z-50">
+    <h1 class="text-xl font-bold text-[#501926]">Toque Íntimo GS</h1>
+    <p class="text-xs text-gray-500" id="info-atendimento">Atendimento Personalizado</p>
+  </header>
+
+  <main class="max-w-4xl mx-auto p-4">
+    <!-- Lista de Produtos será renderizada aqui -->
+    <div id="grid-catalogo" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+  </main>
+
+  <script>
+    // 1. Inicializar Firebase (Mesma configuração do espacovendedor.html)
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6QAOn1t-W6E4465u3ACZ2bB25RIAkpbo",
+      authDomain: "meucatalogoapp-c7e39.firebaseapp.com",
+      projectId: "meucatalogoapp-c7e39",
+      storageBucket: "meucatalogoapp-c7e39.appspot.com",
+      messagingSenderId: "311764083576",
+      appId: "1:311764083576:web:2630353079ec5294031e8d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let telefoneVendedora = "";
+    let nomeVendedora = "";
+    let codigoVendedora = "";
+
+    // 2. Identificar Vendedora pelo parâmetro '?v=' na URL
+    async function carregarDadosVendedora() {
+      const urlParams = new URLSearchParams(window.location.search);
+      codigoVendedora = urlParams.get('v');
+
+      if (!codigoVendedora) {
+        alert("Link inválido. Por favor, solicite o link diretamente à sua vendedora.");
+        return;
+      }
+
+      try {
+        // Busca a vendedora na coleção 'vendedoras' pelo código informado na URL
+        const doc = await db.collection("vendedoras").doc(codigoVendedora).get();
+        
+        if (doc.exists) {
+          const dados = doc.data();
+          nomeVendedora = dados.nome;
+          telefoneVendedora = dados.telefone.replace(/\D/g, ''); // Garante somente números
+          
+          document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
+        } else {
+          alert("Vendedora não encontrada.");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados da vendedora:", error);
+      }
+    }
+
+    // 3. Enviar o Pedido do Cliente via WhatsApp diretamente para a Vendedora
+    function enviarPedidoWhatsApp(carrinhoCliente) {
+      if (!telefoneVendedora) {
+        alert("Não foi possível identificar o número da vendedora. Tente recarregar a página.");
+        return;
+      }
+
+      let mensagem = `*NOVO PEDIDO DE CLIENTE*\n`;
+      mensagem += `*Vendedora:* ${nomeVendedora}\n`;
+      mensagem += `------------------------------\n`;
+      mensagem += `*ITENS ESCOLHIDOS:*\n`;
+
+      let total = 0;
+      carrinhoCliente.forEach(item => {
+        const subtotal = item.preco * item.qtd;
+        total += subtotal;
+        mensagem += `- ${item.qtd}x ${item.nome} (R$ ${subtotal.toFixed(2)})\n`;
+      });
+
+      mensagem += `------------------------------\n`;
+      mensagem += `*TOTAL:* R$ ${total.toFixed(2)}\n\n`;
+      mensagem += `Olá ${nomeVendedora}! Gostaria de finalizar a compra desses itens.`;
+
+      // Cria a URL e abre diretamente o WhatsApp da vendedora
+      const linkWa = `https://api.whatsapp.com/send?phone=${telefoneVendedora}&text=${encodeURIComponent(mensagem)}`;
+      window.open(linkWa, '_blank');
+    }
+
+    // Executa no carregamento da página
+    window.onload = () => {
+      carregarDadosVendedora();
+    };
+  </script>
+</body>
+</html>
