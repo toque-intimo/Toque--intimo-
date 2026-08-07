@@ -153,35 +153,38 @@
       document.getElementById('modal-finalizar').classList.add('hidden');
     }
 
-    function enviarPedidoFirebase() {
-      const nome = document.getElementById('cliente-nome').value.trim();
-      const fone = document.getElementById('cliente-fone').value.trim();
+    // Trecho do catalogocliente.html que salva direto no banco de dados da vendedora
+function enviarPedidoFirebase() {
+  const nome = document.getElementById('cliente-nome').value.trim();
+  const fone = document.getElementById('cliente-fone').value.trim();
 
-      if (!nome || !fone) return alert("Por favor, informe seu nome e WhatsApp.");
-      if (!codigoVendedora) return alert("Código de vendedora ausente no link!");
+  if (!nome || !fone) return alert("Por favor, informe seu nome e WhatsApp.");
+  if (!codigoVendedora) return alert("Código de vendedora ausente no link!");
 
-      const total = carrinho.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
+  const total = carrinho.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
 
-      db.collection("pedidos").add({
-        vendedoraCodigo: codigoVendedora,
-        cliente: nome,
-        fone: fone,
-        data: new Date().toLocaleString('pt-BR'),
-        total: total,
-        status: "Pendente",
-        pagamento: "Pendente",
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-        itens: carrinho.map(i => ({ nome: i.nome, quantidade: i.qtd, preco: i.preco }))
-      }).then(() => {
-        alert("Pedido enviado com sucesso! A vendedora entrará em contato.");
-        carrinho = [];
-        atualizarCarrinho();
-        fecharModalFinalizar();
-      }).catch(err => {
-        console.error("Erro ao enviar pedido:", err);
-        alert("Ocorreu um erro ao enviar o pedido. Tente novamente.");
-      });
-    }
+  // Grava o pedido direto no Firestore vinculado à vendedora
+  db.collection("pedidos").add({
+    vendedoraCodigo: codigoVendedora,
+    cliente: nome,
+    fone: fone,
+    data: new Date().toLocaleString('pt-BR'),
+    total: total,
+    status: "Pendente",
+    pagamento: "Pendente",
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    itens: carrinho.map(i => ({ nome: i.nome, quantidade: i.qtd, preco: i.preco }))
+  }).then(() => {
+    // Alerta de sucesso exibido na tela do próprio cliente
+    alert("Pedido enviado com sucesso! A vendedora já recebeu seu pedido.");
+    carrinho = [];
+    atualizarCarrinho();
+    fecharModalFinalizar();
+  }).catch(err => {
+    console.error("Erro ao enviar pedido:", err);
+    alert("Ocorreu um erro ao enviar o pedido. Tente novamente.");
+  });
+}
   </script>
 </body>
 </html>
