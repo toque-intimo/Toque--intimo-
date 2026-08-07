@@ -678,7 +678,7 @@
       const codigo = vendedoraAtual.codigo || document.getElementById('login-codigo').value.trim();
       if (!codigo) return null;
       const baseUrl = window.location.href.split('?')[0].replace(/\/[^\/]*$/, '/');
-      return `${baseUrl}catalogo.html?v=${encodeURIComponent(codigo)}`;
+      return `${baseUrl}catalogocliente.html?v=${encodeURIComponent(codigo)}`;
     }
 
     function enviarCatalogoWhats() {
