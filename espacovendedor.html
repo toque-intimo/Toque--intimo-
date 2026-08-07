@@ -730,28 +730,57 @@
     }
 
     function subirPedidoLoja(vendaId) {
-      const v = vendas.find(x => x.id === vendaId);
-      if (!v) return;
-      if (!v.pagamento) { alert("Selecione a forma de pagamento antes de subir o pedido."); return; }
+  const v = vendas.find(x => x.id === vendaId);
+  if (!v) return;
+  if (!v.pagamento) { 
+    alert("Selecione a forma de pagamento antes de subir o pedido."); 
+    return; 
+  }
 
-      let mensagem = `*NOVO PEDIDO PARA SEPARAÇÃO (ESTOQUE CENTRAL)*\n\n`;
-      mensagem += `*Vendedora:* ${vendedoraAtual.nome}\n`;
-      mensagem += `*Data:* ${v.data}\n`;
-      mensagem += `*Cliente:* ${v.cliente}\n`;
-      mensagem += `*Contato:* ${v.fone}\n\n`;
-      mensagem += `*ITENS PARA SEPARAÇÃO & BAIXA REAL:*\n`;
-      v.itens.forEach(i => {
-        mensagem += `- ${i.qtd}x ${i.nome}\n`;
-      });
-      mensagem += `\n*Forma de Pagamento Acertada:* ${v.pagamento}\n`;
-      mensagem += `*Valor Total:* R$ ${v.total.toFixed(2)}`;
+  // Prepara o objeto de pedido formatado para salvar no Firebase Firestore
+  const pedidoFirebase = {
+    vendedoraNome: vendedoraAtual.nome,
+    vendedoraCodigo: vendedoraAtual.codigo,
+    cliente: v.cliente,
+    fone: v.fone,
+    dataHora: v.data,
+    pagamento: v.pagamento,
+    total: v.total,
+    status: "Pendente",
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    itens: v.itens.map(i => {
+      // Extrai cor e tamanho do nome se formatado como "Nome (Cor / Tam: P)"
+      let cor = "";
+      let tamanho = "";
+      const regexMatch = i.nome.match(/\((.*?)\s*\/\s*Tam:\s*(.*?)\)/);
+      if (regexMatch) {
+        cor = regexMatch[1].trim();
+        tamanho = regexMatch[2].trim();
+      }
 
+      return {
+        id: i.id,
+        nome: i.nome,
+        cor: cor,
+        tamanho: tamanho,
+        quantidade: i.qtd,
+        preco: i.preco
+      };
+    })
+  };
+
+  // Salva na coleção "pedidos" do Firebase
+  db.collection("pedidos").add(pedidoFirebase)
+    .then(() => {
       v.status = "Subido";
       renderizarVendas();
-
-      const link = `https://api.whatsapp.com/send?phone=${NUMERO_WHATSAPP_LOJA}&text=${encodeURIComponent(mensagem)}`;
-      window.open(link, '_blank');
-    }
+      alert("Pedido enviado com sucesso para o painel principal!");
+    })
+    .catch((error) => {
+      console.error("Erro ao subir pedido para o Firebase:", error);
+      alert("Erro ao enviar pedido. Tente novamente.");
+    });
+}
 
     function atualizarDashboard() {
       const totalVendas = vendas.reduce((acc, v) => acc + v.total, 0);
