@@ -807,10 +807,13 @@
     }
 
     // Gerador de link do catálogo direcionado para catalogo.html com o parâmetro da vendedora
-    function gerarLinkCatalogoPublico() {
-      const baseUrl = window.location.origin + window.location.pathname.replace("espacovendedor.html", "catalogo.html");
-      return `${baseUrl}?v=${encodeURIComponent(vendedoraAtual.codigo)}`;
-    }
+    // Substitua a função antiga por esta:
+function gerarLinkCatalogoPublico() {
+  // Pega a URL do diretório onde o site está hospedado e aponta diretamente para catalogo.html
+  const urlAtual = window.location.href;
+  const baseUrl = urlAtual.substring(0, urlAtual.lastIndexOf('/') + 1);
+  return `${baseUrl}catalogo.html?v=${encodeURIComponent(vendedoraAtual.codigo)}`;
+}
 
     function enviarCatalogoWhats() {
       if (!vendedoraAtual || !vendedoraAtual.codigo) {
