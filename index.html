@@ -520,7 +520,7 @@
             <input type="text" id="nomeVendedor" placeholder="Ex: Maria Silva">
         </div>
         <div class="form-group">
-            <label>WhatsApp (com DDD)</label>
+            <label>telefone (com DDD)</label>
             <input type="text" id="telVendedor" placeholder="11999999999">
         </div>
         <button type="button" class="btn" style="background-color: #25D366;" onclick="cadastrarEEnviarWhatsApp()">
@@ -545,7 +545,7 @@
     
     <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px; color: #444;">
       <div><strong>Código de Registro:</strong> <span id="det-vendedor-codigo" style="color: var(--primary); font-weight: bold;">-</span></div>
-      <div><strong>WhatsApp / Telefone:</strong> <span id="det-vendedor-tel">-</span></div>
+      <div><strong>Telefone / Telefone:</strong> <span id="det-vendedor-tel">-</span></div>
       <div><strong>Data de Cadastro:</strong> <span id="det-vendedor-data">-</span></div>
       <div><strong>Status:</strong> <span id="det-vendedor-status" class="badge-pago">-</span></div>
     </div>
@@ -949,7 +949,7 @@ function verDetalhesVendedora(id) {
   db.collection("vendedores").doc(id).get().then((doc) => {
     if (doc.exists) {
       const data = doc.data();
-      const telefone = data.whatsapp || data.telefone || 'Não informado';
+      const telefone = data.telefone || data.telefone || 'Não informado';
 
       document.getElementById('det-vendedor-nome').innerText = data.nome || 'Revendedora';
       document.getElementById('det-vendedor-codigo').innerText = data.codigo || 'Não informado';
