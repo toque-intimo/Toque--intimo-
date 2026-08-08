@@ -342,6 +342,7 @@
  }
 
  // --- FILTRO PARA OCULTAR PRODUTOS SEM ESTOQUE ---
+  // --- FILTRO PARA RENDERIZAR A GRADE DE PRODUTOS ---
  function renderizarGradeProdutos() {
    const container = document.getElementById('gradeProdutos');
    if (!container) return;
@@ -353,14 +354,11 @@
      const matchBusca = p.nome.toLowerCase().includes(busca) || 
                           (p.variacoes && p.variacoes.some(v => v.codigo && v.codigo.toLowerCase().includes(busca)));
      
-     // Calcula se o produto tem estoque disponível total
-     const estoqueTotal = p.variacoes ? p.variacoes.reduce((sum, v) => sum + (Number(v.quantidade) || 0), 0) : 0;
-     
-     return matchCategoria && matchBusca && estoqueTotal > 0;
+     return matchCategoria && matchBusca;
    });
 
    if (filtrados.length === 0) {
-     container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">Nenhum produto disponível em estoque.</p>`;
+     container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">Nenhum produto cadastrado ou encontrado.</p>`;
      return;
    }
 
@@ -372,16 +370,19 @@
        if (vComFoto) fotoExibicao = vComFoto.foto;
      }
 
-     const minPreco = Math.min(...p.variacoes.map(v => Number(v.preco) || 0));
+     const precos = p.variacoes ? p.variacoes.map(v => Number(v.preco) || 0) : [0];
+     const minPreco = Math.min(...precos);
+     const estoqueTotal = p.variacoes ? p.variacoes.reduce((sum, v) => sum + (Number(v.quantidade) || 0), 0) : 0;
      
      const card = document.createElement('div');
      card.className = 'prod-list-card';
      card.innerHTML = `
-       <div style="height: 120px; background: #f0f0f0; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+       <div style="height: 120px; background: #f0f0f0; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
          ${fotoExibicao ? `<img src="${fotoExibicao}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fa-solid fa-image" style="font-size:30px; color:#ccc;"></i>`}
+         ${estoqueTotal <= 0 ? `<span style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Esgotado</span>` : ''}
        </div>
        <div style="font-weight: bold; font-size: 13px; color: #333;">${p.nome}</div>
-       <div style="font-size: 11px; color: #888;">${p.categoria}</div>
+       <div style="font-size: 11px; color: #888;">${p.categoria} | Estoque: ${estoqueTotal}</div>
        <div style="font-weight: bold; color: var(--primary); font-size: 14px;">A partir de R$ ${minPreco.toFixed(2)}</div>
        <button class="btn-sm" style="background: var(--primary); color: white; width: 100%; margin-top: 5px;" onclick="abrirVendaDireta('${p.id}')">Vender / Adicionar</button>
      `;
