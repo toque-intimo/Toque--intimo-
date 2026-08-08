@@ -845,7 +845,7 @@ function cadastrarEEnviarWhatsApp() {
   const tel = document.getElementById('telVendedor').value.trim();
 
   if (!nome || !tel) {
-    alert('Por favor, preencha o nome e o WhatsApp.');
+    alert('Por favor, preencha o nome e o telefone.');
     return;
   }
 
@@ -855,7 +855,7 @@ function cadastrarEEnviarWhatsApp() {
   const vendedoraData = {
     codigo: codigo,
     nome: nome,
-    whatsapp: tel,
+    telefone: tel,
     data: data,
     status: 'Pendente'
   };
