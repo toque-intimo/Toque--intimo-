@@ -98,69 +98,70 @@
     let codigoVendedora = "";
 
         async function inicializar() {
-      // TELEFONE PADRÃO DA LOJA (com DDD e 55): altere aqui caso a vendedora não seja encontrada
-      const TELEFONE_PADRAO_LOJA = "5511999999999"; 
+  const urlParams = new URLSearchParams(window.location.search);
+  codigoVendedora = urlParams.get('v');
+  const telParam = urlParams.get('tel');
 
-      const urlParams = new URLSearchParams(window.location.search);
-      codigoVendedora = urlParams.get('v');
-      const telParam = urlParams.get('tel');
+  // Fallback caso venha o parâmetro ?tel= na URL
+  if (telParam) {
+    telefoneVendedora = formatarTelefone(telParam);
+  }
 
-      // 1. Fallback caso venha o parâmetro ?tel= na URL
-      if (telParam) {
-        telefoneVendedora = formatarTelefone(telParam);
+  if (!codigoVendedora) {
+    document.getElementById('info-atendimento').innerText = "Catálogo Geral";
+    carregarProdutos();
+    return;
+  }
+
+  try {
+    // 1. Tenta buscar pelo ID do documento na coleção vendedoras
+    let doc = await db.collection("vendedoras").doc(codigoVendedora).get();
+    
+    if (doc.exists) {
+      const dados = doc.data();
+      nomeVendedora = dados.nome || nomeVendedora;
+      if (dados.telefone) {
+        telefoneVendedora = formatarTelefone(dados.telefone);
       }
-
-      if (!codigoVendedora) {
-        document.getElementById('info-atendimento').innerText = "Catálogo Geral";
-        if (!telefoneVendedora) telefoneVendedora = TELEFONE_PADRAO_LOJA;
-        carregarProdutos();
-        return;
-      }
-
-      try {
-        // Busca pelo ID do documento
-        let doc = await db.collection("vendedoras").doc(codigoVendedora).get();
-        
-        if (doc.exists) {
-          const dados = doc.data();
-          nomeVendedora = dados.nome || nomeVendedora;
-          if (dados.telefone) telefoneVendedora = formatarTelefone(dados.telefone);
-        } else {
-          // Busca pelo campo "codigo"
-          const q = await db.collection("vendedoras").where("codigo", "==", codigoVendedora).get();
-          if (!q.empty) {
-            q.forEach(documento => {
-              const dados = documento.data();
-              if (dados.nome) nomeVendedora = dados.nome;
-              if (dados.telefone && !telefoneVendedora) {
-                telefoneVendedora = formatarTelefone(dados.telefone);
-              }
-            });
+    } else {
+      // 2. Se não achar pelo ID, busca pelo campo "codigo"
+      const q = await db.collection("vendedoras").where("codigo", "==", codigoVendedora).get();
+      if (!q.empty) {
+        q.forEach(documento => {
+          const dados = documento.data();
+          if (dados.nome) nomeVendedora = dados.nome;
+          if (dados.telefone && !telefoneVendedora) {
+            telefoneVendedora = formatarTelefone(dados.telefone);
           }
-        }
-      } catch (e) {
-        console.error("Erro ao buscar vendedora:", e);
+        });
       }
-
-      // Se mesmo após a busca o telefone continuar vazio, aplica o número padrão
-      if (!telefoneVendedora) {
-        telefoneVendedora = TELEFONE_PADRAO_LOJA;
-      }
-
-      document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
-      carregarProdutos();
     }
+  } catch (e) {
+    console.error("Erro ao buscar vendedora:", e);
+  }
 
-// Função auxiliar para padronizar o número para o WhatsApp
+  document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
+  carregarProdutos();
+}
+
+// Função para formatar o número do WhatsApp corretamente
 function formatarTelefone(tel) {
   if (!tel) return "";
-  let apenasNumeros = tel.replace(/\D/g, '');
   
-  // Se o número tiver 10 ou 11 dígitos (DDD + Número), adiciona o 55 do Brasil
-  if (apenasNumeros.length === 10 || apenasNumeros.length === 11) {
-    apenasNumeros = "55" + apenasNumeros;
+  // Remove tudo que não for número
+  let num = String(tel).replace(/\D/g, '');
+  
+  // Se começou com 0 (ex: 011999999999), remove o 0 inicial
+  if (num.startsWith('0')) {
+    num = num.substring(1);
   }
-  return apenasNumeros;
+
+  // Se tem 10 ou 11 dígitos (DDD + Número), adiciona o DDI do Brasil (55)
+  if (num.length === 10 || num.length === 11) {
+    num = "55" + num;
+  }
+  
+  return num;
 }
 
     function carregarProdutos() {
