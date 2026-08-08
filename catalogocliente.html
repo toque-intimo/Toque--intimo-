@@ -41,33 +41,48 @@
     let nomeVendedora = "";
     let codigoVendedora = "";
 
-    // 2. Identificar Vendedora pelo parâmetro '?v=' na URL
-    async function carregarDadosVendedora() {
-      const urlParams = new URLSearchParams(window.location.search);
-      codigoVendedora = urlParams.get('v');
+// Identificar Vendedora pelo parâmetro '?v=' na URL (ex: ?v=REV6529)
+async function carregarDadosVendedora() {
+  const urlParams = new URLSearchParams(window.location.search);
+  codigoVendedora = urlParams.get('v');
 
-      if (!codigoVendedora) {
-        alert("Link inválido. Por favor, solicite o link diretamente à sua vendedora.");
-        return;
-      }
+  if (!codigoVendedora) {
+    alert("Link de vendedora não identificado. Por favor, solicite o link com seu código.");
+    document.getElementById('info-atendimento').innerText = "Atendimento Geral";
+    return;
+  }
 
-      try {
-        // Busca a vendedora na coleção 'vendedoras' pelo código informado na URL
-        const doc = await db.collection("vendedoras").doc(codigoVendedora).get();
-        
-        if (doc.exists) {
-          const dados = doc.data();
-          nomeVendedora = dados.nome;
-          telefoneVendedora = dados.telefone.replace(/\D/g, ''); // Garante somente números
-          
-          document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
-        } else {
-          alert("Vendedora não encontrada.");
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados da vendedora:", error);
+  try {
+    // 1. Faz a busca na coleção pelo CAMPO 'codigo' (ex: "REV6529")
+    const querySnapshot = await db.collection("vendedoras")
+                                  .where("codigo", "==", codigoVendedora)
+                                  .get();
+    
+    if (!querySnapshot.empty) {
+      // Pega o primeiro documento correspondente
+      const doc = querySnapshot.docs[0];
+      const dados = doc.data();
+      
+      nomeVendedora = dados.nome;
+      
+      // 2. Lê a propriedade 'whatsapp' em vez de 'telefone'
+      let numLimpo = (dados.whatsapp || "").replace(/\D/g, '');
+      
+      // Garante o prefixo do Brasil (55) se o cadastro não possuir
+      if (numLimpo.length === 10 || numLimpo.length === 11) {
+        numLimpo = "55" + numLimpo;
       }
+      
+      telefoneVendedora = numLimpo;
+      
+      document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
+    } else {
+      alert("Vendedora não encontrada para o código informado.");
     }
+  } catch (error) {
+    console.error("Erro ao buscar dados da vendedora:", error);
+  }
+}
 
     // 3. Enviar o Pedido do Cliente via WhatsApp diretamente para a Vendedora
     function enviarPedidoWhatsApp(carrinhoCliente) {
