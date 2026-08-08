@@ -97,51 +97,59 @@
     let nomeVendedora = "Vendedora";
     let codigoVendedora = "";
 
-    async function inicializar() {
-  const urlParams = new URLSearchParams(window.location.search);
-  codigoVendedora = urlParams.get('v');
-  const telParam = urlParams.get('tel');
+        async function inicializar() {
+      // TELEFONE PADRÃO DA LOJA (com DDD e 55): altere aqui caso a vendedora não seja encontrada
+      const TELEFONE_PADRAO_LOJA = "5511999999999"; 
 
-  // Fallback caso venha o parâmetro ?tel= na URL
-  if (telParam) {
-    telefoneVendedora = formatarTelefone(telParam);
-  }
+      const urlParams = new URLSearchParams(window.location.search);
+      codigoVendedora = urlParams.get('v');
+      const telParam = urlParams.get('tel');
 
-  if (!codigoVendedora) {
-    document.getElementById('info-atendimento').innerText = "Catálogo Geral";
-    carregarProdutos();
-    return;
-  }
-
-  try {
-    // 1. Tenta buscar pelo ID do documento
-    let doc = await db.collection("vendedoras").doc(codigoVendedora).get();
-    
-    if (doc.exists) {
-      const dados = doc.data();
-      nomeVendedora = dados.nome || nomeVendedora;
-      if (dados.telefone) telefoneVendedora = formatarTelefone(dados.telefone);
-    } else {
-      // 2. Se não achar pelo ID, busca pelo campo "codigo"
-      const q = await db.collection("vendedoras").where("codigo", "==", codigoVendedora).get();
-      if (!q.empty) {
-        // Percorre os resultados até achar um registro com telefone preenchido
-        q.forEach(documento => {
-          const dados = documento.data();
-          if (dados.nome) nomeVendedora = dados.nome;
-          if (dados.telefone && !telefoneVendedora) {
-            telefoneVendedora = formatarTelefone(dados.telefone);
-          }
-        });
+      // 1. Fallback caso venha o parâmetro ?tel= na URL
+      if (telParam) {
+        telefoneVendedora = formatarTelefone(telParam);
       }
-    }
-  } catch (e) {
-    console.error("Erro ao buscar vendedora:", e);
-  }
 
-  document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
-  carregarProdutos();
-}
+      if (!codigoVendedora) {
+        document.getElementById('info-atendimento').innerText = "Catálogo Geral";
+        if (!telefoneVendedora) telefoneVendedora = TELEFONE_PADRAO_LOJA;
+        carregarProdutos();
+        return;
+      }
+
+      try {
+        // Busca pelo ID do documento
+        let doc = await db.collection("vendedoras").doc(codigoVendedora).get();
+        
+        if (doc.exists) {
+          const dados = doc.data();
+          nomeVendedora = dados.nome || nomeVendedora;
+          if (dados.telefone) telefoneVendedora = formatarTelefone(dados.telefone);
+        } else {
+          // Busca pelo campo "codigo"
+          const q = await db.collection("vendedoras").where("codigo", "==", codigoVendedora).get();
+          if (!q.empty) {
+            q.forEach(documento => {
+              const dados = documento.data();
+              if (dados.nome) nomeVendedora = dados.nome;
+              if (dados.telefone && !telefoneVendedora) {
+                telefoneVendedora = formatarTelefone(dados.telefone);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao buscar vendedora:", e);
+      }
+
+      // Se mesmo após a busca o telefone continuar vazio, aplica o número padrão
+      if (!telefoneVendedora) {
+        telefoneVendedora = TELEFONE_PADRAO_LOJA;
+      }
+
+      document.getElementById('info-atendimento').innerText = `Atendimento por: ${nomeVendedora}`;
+      carregarProdutos();
+    }
 
 // Função auxiliar para padronizar o número para o WhatsApp
 function formatarTelefone(tel) {
