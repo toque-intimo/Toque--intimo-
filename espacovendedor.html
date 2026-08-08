@@ -700,7 +700,7 @@
   const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
   
   // Adiciona o código e o telefone (se houver) como parâmetros
-  let linkCompleto = `${baseUrl}catalogo.html?v=${encodeURIComponent(codigo)}`;
+  let linkCompleto = `${baseUrl}catalogocliente.html?v=${encodeURIComponent(codigo)}`;
   if (vendedoraAtual.telefone) {
     linkCompleto += `&tel=${encodeURIComponent(vendedoraAtual.telefone)}`;
   }
