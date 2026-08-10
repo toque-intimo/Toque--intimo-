@@ -1656,13 +1656,20 @@ function deletarVendedor(id) {
  }
 
  function atualizarDash() {
-   document.getElementById('dash-produtos-qtd').innerText = produtos.length;
-   document.getElementById('dash-clientes-qtd').innerText = clientes.length;
-   const estoqueVal = produtos.reduce((acc, p) => acc + p.variacoes.reduce((vAcc, v) => vAcc + (v.preco * v.quantidade), 0), 0);
-   document.getElementById('dash-estoque-val').innerText = `R$ ${estoqueVal.toFixed(2)}`;
-   const vendasVal = vendas.reduce((a, b) => a + b.total, 0);
-   document.getElementById('dash-vendas-val').innerText = `R$ ${vendasVal.toFixed(2)}`;
- }
+  // Soma a quantidade total de peças/unidades em todas as variações dos produtos
+  const totalUnidadesEstoque = produtos.reduce((acc, p) => {
+    return acc + p.variacoes.reduce((vAcc, v) => vAcc + (v.quantidade || 0), 0);
+  }, 0);
+
+  document.getElementById('dash-produtos-qtd').innerText = totalUnidadesEstoque;
+  document.getElementById('dash-clientes-qtd').innerText = clientes.length;
+  
+  const estoqueVal = produtos.reduce((acc, p) => acc + p.variacoes.reduce((vAcc, v) => vAcc + (v.preco * v.quantidade), 0), 0);
+  document.getElementById('dash-estoque-val').innerText = `R$ ${estoqueVal.toFixed(2)}`;
+  
+  const vendasVal = vendas.reduce((a, b) => a + b.total, 0);
+  document.getElementById('dash-vendas-val').innerText = `R$ ${vendasVal.toFixed(2)}`;
+}
 
  function carregarEstoque() {
    const container = document.getElementById('lista-estoque-produtos');
