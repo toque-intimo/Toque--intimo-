@@ -1549,18 +1549,21 @@ function deletarVendedor(id) {
    }
  }
 
- function renderizarClientes() {
+  function renderizarClientes() {
    const container = document.getElementById('lista-clientes-container');
-   const busca = document.getElementById('buscaCliente').value.toLowerCase();
+   const buscaInput = document.getElementById('buscaCliente');
+   const busca = buscaInput ? buscaInput.value.toLowerCase() : '';
+   
+   if (!container) return;
    container.innerHTML = '';
 
    const filtrados = clientes.filter(c => 
-     c.nome.toLowerCase().includes(busca) || 
-     c.telefone.includes(busca) || 
-     c.codigo.toLowerCase().includes(busca)
+     (c.nome && c.nome.toLowerCase().includes(busca)) || 
+     (c.telefone && c.telefone.includes(busca)) || 
+     (c.codigo && c.codigo.toLowerCase().includes(busca))
    );
 
-   if(!filtrados.length) {
+   if (!filtrados.length) {
      container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum cliente encontrado.</p>';
      return;
    }
@@ -1568,19 +1571,21 @@ function deletarVendedor(id) {
    filtrados.forEach(c => {
      container.innerHTML += `
      <div class="client-list-card">
-     <div>
-     <div class="item-row"><b>${c.nome}</b> <span style="font-size:11px; background:#eee; padding:2px 6px; border-radius:4px; font-weight:bold;">${c.codigo}</span></div>
-     <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
-     <i class="fa-solid fa-phone"></i> ${c.telefone}<br>
-     <i class="fa-solid fa-envelope"></i> ${c.email || 'Não informado'}<br>
-     <i class="fa-solid fa-location-dot"></i> ${c.endereco || 'Não informado'}<br>
-     <i class="fa-solid fa-calendar"></i> Cadastrado em: ${c.dataCad.split('-').reverse().join('/')}
-     </div>
-     </div>
-     <div class="actions-row">
-     <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-     <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Remover</button>
-     </div>
+       <div>
+         <div class="item-row">
+           <b>${c.nome}</b> 
+           <span style="font-size:11px; background:#eee; padding:2px 6px; border-radius:4px; font-weight:bold;">${c.codigo || ''}</span>
+         </div>
+         <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+           <i class="fa-solid fa-phone"></i> ${c.telefone || 'Sem telefone'}
+         </div>
+         ${c.email ? `<div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-envelope"></i> ${c.email}</div>` : ''}
+         ${c.endereco ? `<div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-location-dot"></i> ${c.endereco}</div>` : ''}
+       </div>
+       <div class="actions-row">
+         <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+         <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
+       </div>
      </div>`;
    });
  }
