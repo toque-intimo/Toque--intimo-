@@ -1675,94 +1675,98 @@ function deletarVendedor(id) {
   const vendasVal = vendas.reduce((a, b) => a + b.total, 0);
   document.getElementById('dash-vendas-val').innerText = `R$ ${vendasVal.toFixed(2)}`;
 }
-
- function carregarEstoque() {
+ 
+  function carregarEstoque() {
    const container = document.getElementById('lista-estoque-produtos');
-   const totalEstoqueEl = document.getElementById('total-produtos-estoque');
    if (!container) return;
-
    container.innerHTML = '';
 
+   let totalCadastrados = produtos.length;
    let totalPecas = 0;
-   
-   const listaProdutosOrdenada = [...produtos].sort((a, b) => {
-     const estA = a.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
-     const estB = b.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
-     
-     if (estA === 0 && estB > 0) return 1;
-     if (estA > 0 && estB === 0) return -1;
-     return 0;
+
+   produtos.forEach(p => {
+     p.variacoes.forEach(v => {
+       totalPecas += v.quantidade;
+       container.innerHTML += `
+         <div class="prod-list-card">
+           <div class="item-row">
+             <b>${p.nome} (${v.cor}/${v.tamanho})</b>
+             <span style="font-size:12px; font-weight:bold; color:${v.quantidade > 0 ? 'green' : 'red'};">Qtd: ${v.quantidade}</span>
+           </div>
+           <div style="font-size:12px; color:#666;">Preço: R$ ${v.preco.toFixed(2)} | Custo: R$ ${v.custo.toFixed(2)}</div>
+         </div>`;
+     });
    });
 
-   if (totalEstoqueEl) {
-     produtos.forEach(p => p.variacoes.forEach(v => totalPecas += v.quantidade));
-     totalEstoqueEl.innerHTML = `Cadastrados: <b>${produtos.length}</b><br>Peças em Estoque: <b>${totalPecas}</b>`;
+   const infoEstoque = document.getElementById('total-produtos-estoque');
+   if (infoEstoque) {
+     infoEstoque.innerHTML = `Cadastrados: <b>${totalCadastrados}</b><br>Peças em Estoque: <b>${totalPecas}</b>`;
    }
+ }
 
-   if (!listaProdutosOrdenada.length) {
-     container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum item cadastrado no estoque.</p>';
-     return;
-   }
+ function carregarFinanceiro() {
+   const tabela = document.getElementById('fin-tabela-corpo');
+   if (!tabela) return;
+   tabela.innerHTML = '';
 
-   listaProdutosOrdenada.forEach(p => {
-     const totalEstoqueProd = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
-     const esgotado = totalEstoqueProd === 0;
+   let totalLucroEstoque = 0;
+   let totalInvestimentoEstoque = 0;
 
-     const bgCard = esgotado ? '#fff5f5' : '#fdfdfd';
-     const borderCard = esgotado ? '1px solid #ffcdd2' : '1px solid #f0f0f0';
-
-     let htmlVariacoes = '';
+   produtos.forEach(p => {
      p.variacoes.forEach(v => {
-       const vEsgotada = v.quantidade === 0;
-       const corTextoVar = vEsgotada ? '#dc3545' : '#2d2d2d';
-
-       let fotoVariacao = `<div style="width:36px; height:36px; background:#eee; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#aaa;"><i class="fa-solid fa-image"></i></div>`;
-       if (v.foto) {
-         fotoVariacao = `<img src="${v.foto}" style="width:36px; height:36px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${p.id}')">`;
-       }
-
-       htmlVariacoes += `
-       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed #eee; font-size:12px; color:${corTextoVar};">
-         <div style="display:flex; align-items:center; gap:10px;">
-           ${fotoVariacao}
-           <div>
-             <b>${v.cor} / ${v.tamanho}</b> <small style="color:#888;">(Cód: ${v.codigo || 'S/C'})</small><br>
-             <span>Custo: R$ ${v.custo ? v.custo.toFixed(2) : '0.00'} | Venda: R$ ${v.preco ? v.preco.toFixed(2) : '0.00'}</span>
-           </div>
-         </div>
-         <div style="text-align:right;">
-           <span style="font-weight:bold; color:${vEsgotada ? '#dc3545' : 'var(--primary)'};">${v.quantidade} un.</span>
-         </div>
-       </div>`;
+       totalLucroEstoque += (v.preco - v.custo) * v.quantidade;
+       totalInvestimentoEstoque += v.custo * v.quantidade;
      });
+   });
 
-     container.innerHTML += `
-     <div class="prod-list-card" style="background:${bgCard}; border:${borderCard};">
-       <div class="item-row">
-         <div>
-           <b style="font-size:15px; color:#501926;">${p.nome}</b>
-           <span style="font-size:11px; background:#eee; padding:2px 6px; border-radius:4px; margin-left:6px;">${p.categoria}</span>
-         </div>
-         <span style="font-size:12px; font-weight:bold; color:${esgotado ? '#dc3545' : 'green'};">
-           ${esgotado ? 'Esgotado' : `Total: ${totalEstoqueProd} un.`}
-         </span>
-       </div>
-       <div style="margin-top:5px;">
-         ${htmlVariacoes}
-       </div>
-       <div class="actions-row">
-         <button class="btn-action btn-edit" onclick="editarProduto('${p.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-         <button class="btn-action btn-delete" onclick="excluirProduto('${p.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
-       </div>
-     </div>`;
+   const faturamentoEl = document.getElementById('fin-card-faturamento');
+   const custoEl = document.getElementById('fin-card-custo');
+   const lucroEl = document.getElementById('fin-card-lucro');
+
+   if (faturamentoEl) faturamentoEl.innerText = `R$ ${totalLucroEstoque.toFixed(2)}`;
+   if (custoEl) custoEl.innerText = `R$ ${totalInvestimentoEstoque.toFixed(2)}`;
+   if (lucroEl) lucroEl.innerText = `R$ ${(totalLucroEstoque - totalInvestimentoEstoque).toFixed(2)}`;
+
+   vendas.forEach(v => {
+     tabela.innerHTML += `
+       <tr>
+         <td>${v.data}</td>
+         <td>${v.clienteNome}</td>
+         <td>${v.formaPagamento}</td>
+         <td>R$ ${v.total.toFixed(2)}</td>
+       </tr>`;
    });
  }
 
- window.onload = function() {
+ function atualizarDash() {
+   const qtdProds = produtos.length;
+   let valEstoque = 0;
+
+   produtos.forEach(p => {
+     p.variacoes.forEach(v => {
+       valEstoque += v.preco * v.quantidade;
+     });
+   });
+
+   const valVendas = vendas.reduce((acc, v) => acc + v.total, 0);
+   const qtdClientes = clientes.length;
+
+   const elProds = document.getElementById('dash-produtos-qtd');
+   const elEstoque = document.getElementById('dash-estoque-val');
+   const elVendas = document.getElementById('dash-vendas-val');
+   const elClientes = document.getElementById('dash-clientes-qtd');
+
+   if (elProds) elProds.innerText = qtdProds;
+   if (elEstoque) elEstoque.innerText = `R$ ${valEstoque.toFixed(2)}`;
+   if (elVendas) elVendas.innerText = `R$ ${valVendas.toFixed(2)}`;
+   if (elClientes) elClientes.innerText = qtdClientes;
+ }
+
+ window.addEventListener('DOMContentLoaded', () => {
    atualizarDash();
-   carregarVendedores();
- };
- </script>
-</div>
+   renderizarClientes();
+ });
+</script>
 </body>
 </html>
+
