@@ -611,6 +611,27 @@ function deletarVendedor(id) {
    }
  }
 
+ function carregarProdutosDoFirebase() {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("produtos").get().then((snapshot) => {
+      if (!snapshot.empty) {
+        produtos = [];
+        snapshot.forEach((doc) => {
+          produtos.push(doc.data());
+        });
+        // Atualiza o localStorage local com o que veio da nuvem
+        localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+        // Atualiza o painel e a exibição da tela
+        atualizarDash();
+        const telaAtiva = document.querySelector('.app-section.active');
+        if (telaAtiva && telaAtiva.id === 'tela-produtos') {
+          renderizarGradeProdutos();
+        }
+      }
+    }).catch(err => console.error("Erro ao carregar do Firebase:", err));
+  }
+}
+ 
  function deletarFirebase(idProduto) {
    if (typeof firebase !== 'undefined' && firebase.apps.length) {
      db.collection("produtos").doc(idProduto).delete()
@@ -1721,9 +1742,10 @@ function deletarVendedor(id) {
  }
 
  // Inicialização do App
- document.addEventListener('DOMContentLoaded', () => {
-   atualizarDash();
- });
+document.addEventListener('DOMContentLoaded', () => {
+  carregarProdutosDoFirebase(); // <-- Adicione esta linha aqui
+  atualizarDash();
+});
 </script>
 </body>
 </html>
