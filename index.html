@@ -1641,20 +1641,20 @@ document.getElementById('formCliente').addEventListener('submit', function(e) {
     clientes.push(clienteSalvo);
   }
 
-  // Sincroniza no Firebase e grava no localStorage
+  // Envia a variável clienteSalvo para o Firebase
   if (clienteSalvo) {
     sincronizarClienteFirebase(clienteSalvo);
   }
-  
+
   localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-  
+
   if (typeof renderizarClientes === 'function') {
     renderizarClientes();
   }
 
   mudarTela('clientes');
 });
-
+  
 function editarCliente(id) {
   const cli = clientes.find(c => c.id === id);
   if (!cli) return;
