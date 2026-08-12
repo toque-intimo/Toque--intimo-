@@ -1581,53 +1581,113 @@ function carregarProdutosDoFirebase() {
      clientes.push({ id: Date.now().toString(), codigo: codigoAutomatico, nome, telefone, email, endereco, dataCad });
    }
 
-  // Função auxiliar para enviar o cliente ao Firebase
+ // --- FUNÇÕES AUXILIARES DO FIREBASE ---
 function sincronizarClienteFirebase(clienteData) {
   if (typeof firebase !== 'undefined' && firebase.apps.length) {
-    // Usamos o CPF ou ID como identificador do documento
     const idDoc = clienteData.cpf ? clienteData.cpf.toString() : clienteData.id.toString();
-    
     db.collection("clientes").doc(idDoc).set(clienteData)
       .then(() => console.log("Cliente sincronizado no Firebase:", idDoc))
       .catch(err => console.error("Erro ao salvar cliente no Firebase:", err));
   }
 }
-  // Exemplo dentro do seu evento de salvar cliente:
-sincronizarClienteFirebase(novoCliente);
-   localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-   mudarTela('clientes');
- });
 
- function editarCliente(id) {
-   const cli = clientes.find(c => c.id === id);
-   if(!cli) return;
-
-   document.getElementById('cli-id').value = cli.id;
-   document.getElementById('cli-nome').value = cli.nome;
-   document.getElementById('cli-telefone').value = cli.telefone;
-   document.getElementById('cli-email').value = cli.email;
-   document.getElementById('cli-endereco').value = cli.endereco;
-   document.getElementById('cli-data').value = cli.dataCad;
-
-   document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
-   mudarTela('cadastro-cliente');
- }
-
- function excluirCliente(id) {
-   if(confirm("Excluir este cliente permanentemente?")) {
-     clientes = clientes.filter(c => c.id !== id);
-     localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-
-    function excluirClienteFirebase(idClienteOuCpf) {
+function excluirClienteFirebase(idClienteOuCpf) {
   if (typeof firebase !== 'undefined' && firebase.apps.length) {
     db.collection("clientes").doc(idClienteOuCpf.toString()).delete()
-      .then(() => console.log("Cliente removido do Firebase"))
+      .then(() => console.log("Cliente removido do Firebase:", idClienteOuCpf))
       .catch(err => console.error("Erro ao remover cliente do Firebase:", err));
   }
 }
+
+// --- CADASTRO E EDIÇÃO DE CLIENTES ---
+function abrirCadastroCliente() {
+  document.getElementById('formCliente').reset();
+  document.getElementById('cli-id').value = '';
+  document.getElementById('cli-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('titulo-cadastro-cliente').innerText = 'Novo Cliente';
+  mudarTela('cadastro-cliente');
+}
+
+document.getElementById('formCliente').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const id = document.getElementById('cli-id').value;
+  const nome = document.getElementById('cli-nome').value;
+  const telefone = document.getElementById('cli-telefone').value;
+  const email = document.getElementById('cli-email').value;
+  const endereco = document.getElementById('cli-endereco').value;
+  const dataCad = document.getElementById('cli-data').value;
+
+  let clienteSalvo;
+
+  if (id) {
+    // Edição de cliente existente
+    const idx = clientes.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      clientes[idx] = { ...clientes[idx], nome, telefone, email, endereco, dataCad };
+      clienteSalvo = clientes[idx];
+    }
+  } else {
+    // Novo cliente
+    const codigoAutomatico = "CLI" + Math.floor(1000 + Math.random() * 9000);
+    clienteSalvo = { 
+      id: Date.now().toString(), 
+      codigo: codigoAutomatico, 
+      nome, 
+      telefone, 
+      email, 
+      endereco, 
+      dataCad 
+    };
+    clientes.push(clienteSalvo);
+  }
+
+  // Sincroniza no Firebase e grava no localStorage
+  if (clienteSalvo) {
+    sincronizarClienteFirebase(clienteSalvo);
+  }
+  
+  localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
+  
+  if (typeof renderizarClientes === 'function') {
     renderizarClientes();
-   }
- }
+  }
+
+  mudarTela('clientes');
+});
+
+function editarCliente(id) {
+  const cli = clientes.find(c => c.id === id);
+  if (!cli) return;
+
+  document.getElementById('cli-id').value = cli.id;
+  document.getElementById('cli-nome').value = cli.nome;
+  document.getElementById('cli-telefone').value = cli.telefone;
+  document.getElementById('cli-email').value = cli.email;
+  document.getElementById('cli-endereco').value = cli.endereco;
+  document.getElementById('cli-data').value = cli.dataCad;
+
+  document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
+  mudarTela('cadastro-cliente');
+}
+
+function excluirCliente(id) {
+  if (confirm("Excluir este cliente permanentemente?")) {
+    const clienteParaRemover = clientes.find(c => c.id === id);
+
+    // Remove do array local
+    clientes = clientes.filter(c => c.id !== id);
+    localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
+
+    // Remove do Firebase
+    if (clienteParaRemover) {
+      excluirClienteFirebase(clienteParaRemover.cpf || clienteParaRemover.id);
+    }
+
+    if (typeof renderizarClientes === 'function') {
+      renderizarClientes();
+    }
+  }
+}
 
  function renderizarClientes() {
    const container = document.getElementById('lista-clientes-container');
