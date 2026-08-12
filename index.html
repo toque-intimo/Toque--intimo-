@@ -642,6 +642,31 @@ function carregarProdutosDoFirebase() {
     }).catch(err => console.error("Erro ao carregar do Firebase:", err));
   }
 } 
+
+ function carregarClientesDoFirebase() {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("clientes").get().then((snapshot) => {
+      if (!snapshot.empty) {
+        clientes = [];
+        snapshot.forEach((doc) => {
+          clientes.push(doc.data());
+        });
+        
+        // 1. Atualiza o banco de dados local do navegador
+        localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
+        
+        // 2. Atualiza a tela de clientes
+        if (typeof renderizarClientes === 'function') {
+          renderizarClientes();
+        } else if (typeof renderizarTabelaClientes === 'function') {
+          renderizarTabelaClientes();
+        } else if (typeof atualizarTabelaClientes === 'function') {
+          atualizarTabelaClientes();
+        }
+      }
+    }).catch(err => console.error("Erro ao carregar clientes do Firebase:", err));
+  }
+}
  
  function deletarFirebase(idProduto) {
    if (typeof firebase !== 'undefined' && firebase.apps.length) {
@@ -1556,6 +1581,19 @@ function carregarProdutosDoFirebase() {
      clientes.push({ id: Date.now().toString(), codigo: codigoAutomatico, nome, telefone, email, endereco, dataCad });
    }
 
+  // Função auxiliar para enviar o cliente ao Firebase
+function sincronizarClienteFirebase(clienteData) {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    // Usamos o CPF ou ID como identificador do documento
+    const idDoc = clienteData.cpf ? clienteData.cpf.toString() : clienteData.id.toString();
+    
+    db.collection("clientes").doc(idDoc).set(clienteData)
+      .then(() => console.log("Cliente sincronizado no Firebase:", idDoc))
+      .catch(err => console.error("Erro ao salvar cliente no Firebase:", err));
+  }
+}
+  // Exemplo dentro do seu evento de salvar cliente:
+sincronizarClienteFirebase(novoCliente);
    localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
    mudarTela('clientes');
  });
@@ -1579,7 +1617,15 @@ function carregarProdutosDoFirebase() {
    if(confirm("Excluir este cliente permanentemente?")) {
      clientes = clientes.filter(c => c.id !== id);
      localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-     renderizarClientes();
+
+    function excluirClienteFirebase(idClienteOuCpf) {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("clientes").doc(idClienteOuCpf.toString()).delete()
+      .then(() => console.log("Cliente removido do Firebase"))
+      .catch(err => console.error("Erro ao remover cliente do Firebase:", err));
+  }
+}
+    renderizarClientes();
    }
  }
 
@@ -1754,7 +1800,8 @@ function carregarProdutosDoFirebase() {
 
  // Inicialização do App
 document.addEventListener('DOMContentLoaded', () => {
-  carregarProdutosDoFirebase(); // <-- Adicione esta linha aqui
+  carregarProdutosDoFirebase();
+  carregarClientesDoFirebase(); // <-- ADICIONE ESTA LINHA
   atualizarDash();
 });
 </script>
