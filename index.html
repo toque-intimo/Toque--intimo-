@@ -611,7 +611,7 @@ function deletarVendedor(id) {
    }
  }
 
- function carregarProdutosDoFirebase() {
+function carregarProdutosDoFirebase() {
   if (typeof firebase !== 'undefined' && firebase.apps.length) {
     db.collection("produtos").get().then((snapshot) => {
       if (!snapshot.empty) {
@@ -619,18 +619,29 @@ function deletarVendedor(id) {
         snapshot.forEach((doc) => {
           produtos.push(doc.data());
         });
-        // Atualiza o localStorage local com o que veio da nuvem
+        // 1. Atualiza o banco de dados local do navegador
         localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-        // Atualiza o painel e a exibição da tela
+        
+        // 2. Atualiza as telas da aplicação com os dados novos
         atualizarDash();
-        const telaAtiva = document.querySelector('.app-section.active');
-        if (telaAtiva && telaAtiva.id === 'tela-produtos') {
+        
+        if (typeof renderizarGradeProdutos === 'function') {
           renderizarGradeProdutos();
         }
+        
+        // 3. ADICIONE ESTA LINHA para renderizar a aba de Estoque:
+        if (typeof renderizarEstoque === 'function') {
+          renderizarEstoque();
+        } else if (typeof renderizarTabelaEstoque === 'function') {
+          renderizarTabelaEstoque();
+        } else if (typeof atualizarTabelaEstoque === 'function') {
+          atualizarTabelaEstoque();
+        }
+
       }
     }).catch(err => console.error("Erro ao carregar do Firebase:", err));
   }
-}
+} 
  
  function deletarFirebase(idProduto) {
    if (typeof firebase !== 'undefined' && firebase.apps.length) {
