@@ -614,34 +614,44 @@ function deletarVendedor(id) {
 function carregarProdutosDoFirebase() {
   if (typeof firebase !== 'undefined' && firebase.apps.length) {
     db.collection("produtos").get().then((snapshot) => {
+      // SÓ atualiza a lista se o Firebase trouxer dados válidos
       if (!snapshot.empty) {
         produtos = [];
         snapshot.forEach((doc) => {
           produtos.push(doc.data());
         });
-        // 1. Atualiza o banco de dados local do navegador
+        
+        // Salva os dados baixados no localStorage
         localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-        
-        // 2. Atualiza as telas da aplicação com os dados novos
-        atualizarDash();
-        
-        if (typeof renderizarGradeProdutos === 'function') {
-          renderizarGradeProdutos();
+      } else {
+        // Se o Firebase estiver vazio, mantém os produtos locais salvos anteriormente
+        const dadosLocais = localStorage.getItem('ti_v4_prod');
+        if (dadosLocais) {
+          produtos = JSON.parse(dadosLocais);
         }
-        
-        // 3. ADICIONE ESTA LINHA para renderizar a aba de Estoque:
-        if (typeof renderizarEstoque === 'function') {
-          renderizarEstoque();
-        } else if (typeof renderizarTabelaEstoque === 'function') {
-          renderizarTabelaEstoque();
-        } else if (typeof atualizarTabelaEstoque === 'function') {
-          atualizarTabelaEstoque();
-        }
-
       }
-    }).catch(err => console.error("Erro ao carregar do Firebase:", err));
+
+      // Atualiza as telas
+      atualizarDash();
+      if (typeof renderizarGradeProdutos === 'function') {
+        renderizarGradeProdutos();
+      }
+      if (typeof renderizarEstoque === 'function') {
+        renderizarEstoque();
+      } else if (typeof renderizarTabelaEstoque === 'function') {
+        renderizarTabelaEstoque();
+      }
+    }).catch(err => {
+      console.error("Erro ao carregar do Firebase:", err);
+      // Se houver erro de rede, recarrega do localStorage local
+      const dadosLocais = localStorage.getItem('ti_v4_prod');
+      if (dadosLocais) {
+        produtos = JSON.parse(dadosLocais);
+        atualizarDash();
+      }
+    });
   }
-} 
+}
 
  function carregarClientesDoFirebase() {
   if (typeof firebase !== 'undefined' && firebase.apps.length) {
