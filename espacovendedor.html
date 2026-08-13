@@ -342,7 +342,8 @@
   if (e && e.preventDefault) e.preventDefault();
 
   const nome = document.getElementById('login-nome').value.trim();
-  const codigo = document.getElementById('login-codigo').value.trim();
+  // Converte para maiúsculas automaticamente para evitar erros de digitação
+  const codigo = document.getElementById('login-codigo').value.trim().toUpperCase();
 
   if (!nome || !codigo) {
     alert("Preencha o nome e o código para continuar.");
@@ -350,25 +351,34 @@
   }
 
   try {
-    // Busca na coleção 'vendedoras' do Firebase se existe um documento com esse código
-    const docRef = await db.collection("vendedoras").doc(codigo).get();
+    // Faz a consulta na coleção 'vendedores' onde o campo 'codigo' seja igual ao digitado
+    const snapshot = await db.collection("vendedores")
+                             .where("codigo", "==", codigo)
+                             .get();
 
-    if (docRef.exists) {
-      // Código existe no banco de dados
-      vendedoraAtual = { nome, codigo };
-      document.getElementById('header-nome-vendedora').innerText = nome;
+    if (!snapshot.empty) {
+      // Encontrou a vendedora!
+      const dadosVendedora = snapshot.docs[0].data();
+
+      // Atualiza os dados com as informações do banco
+      vendedoraAtual = { 
+        nome: dadosVendedora.nome || nome, 
+        codigo: codigo 
+      };
+
+      document.getElementById('header-nome-vendedora').innerText = vendedoraAtual.nome;
 
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app-screen').classList.remove('hidden');
 
       carregarProdutosNuvem();
     } else {
-      // Código incorreto/não cadastrado
+      // Não encontrou nenhum documento com esse campo 'codigo'
       alert("Código de vendedora inválido! Verifique o código e tente novamente.");
     }
   } catch (error) {
     console.error("Erro na validação do login:", error);
-    alert("Erro ao validar login. Verifique sua conexão.");
+    alert("Erro ao validar login. Verifique sua conexão com a internet.");
   }
 }
 
