@@ -631,8 +631,8 @@
       const novoPedido = {
         vendedoraNome: vendedoraAtual.nome,
         vendedoraCodigo: vendedoraAtual.codigo,
-        cliente: clienteNome,
-        fone: clienteFone,
+        clienteNome: clienteNome,
+        telefoneCliente: clienteFone,
         itens: carrinho.map(i => {
           let cor = "";
           let tamanho = "";
@@ -652,10 +652,10 @@
           };
         }),
         total: total,
-        pagamento: "Pendente",
+        pagamento: "FormaPagamento",
         status: "Pendente",
         data: new Date().toLocaleString('pt-BR'),
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
       };
 
       try {
