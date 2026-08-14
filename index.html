@@ -251,6 +251,20 @@
  <div id="venda-direta-opcoes"></div>
  </section>
 
+ <!-- TELA DE PEDIDOS RECEBIDOS -->
+    <section id="tela-pedidos" class="app-section">
+      <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <span style="font-size: 18px; font-weight: bold; color: var(--primary);">Pedidos Recebidos</span>
+        <button onclick="carregarPedidosFirebase()" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+          <i class="fa-solid fa-rotate-right"></i> Atualizar
+        </button>
+      </div>
+
+      <!-- Onde os cards de pedidos vão aparecer -->
+      <div id="listaPedidosFirebase" style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="color: #888; font-size: 13px;">Carregando pedidos...</p>
+      </div>
+    </section>
  <!-- FORMULÁRIO DE PRODUTO -->
  <section id="tela-cadastro-produto" class="app-section">
  <div class="section-title" style="font-size: 20px; color: #501926; display: flex; justify-content: space-between; align-items: center;">
@@ -2021,12 +2035,84 @@ function gerarPDFSeparacao(idPedido) {
    if (document.getElementById('dash-vendas-val')) document.getElementById('dash-vendas-val').innerText = `R$ ${totalVendas.toFixed(2)}`;
    if (document.getElementById('dash-clientes-qtd')) document.getElementById('dash-clientes-qtd').innerText = totalClientes;
  }
+// --- FUNÇÃO PARA CARREGAR PEDIDOS DO FIREBASE ---
+function carregarPedidosFirebase() {
+  const container = document.getElementById('listaPedidosFirebase');
+  if (!container) return;
 
- document.addEventListener('DOMContentLoaded', () => {
-   carregarProdutosDoFirebase();
-   carregarClientesDoFirebase();
-   atualizarDash();
- });
-</script>
-</body>
-</html>
+  container.innerHTML = '<p style="color: #888; font-size: 13px;">Buscando pedidos...</p>';
+
+  db.collection("pedidos").orderBy("timestamp", "desc").get()
+    .then((snapshot) => {
+      if (snapshot.empty) {
+        container.innerHTML = '<p style="color: #888; font-size: 13px;">Nenhum pedido recebido até o momento.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      snapshot.forEach((doc) => {
+        const ped = doc.data();
+        const idPed = doc.id;
+
+        let itensHTML = '';
+        if (ped.itens) {
+          ped.itens.forEach(i => {
+            itensHTML += `<li>${i.quantidade}x ${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(i.preco * i.quantidade).toFixed(2)}</li>`;
+          });
+        }
+
+        container.innerHTML += `
+          <div style="background: white; border-radius: 12px; padding: 15px; border: 1px solid #eef0f2; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+              <div>
+                <strong style="color: var(--primary); font-size: 14px;">REV: ${ped.vendedoraNome || 'N/A'}</strong><br>
+                <small style="color: #666; font-size: 12px;">Cliente: ${ped.clienteNome} ${ped.telefoneCliente ? `(${ped.telefoneCliente})` : ''}</small>
+              </div>
+              <div style="text-align: right;">
+                <span style="background: #fbeee0; color: var(--primary); padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;">
+                  ${ped.status || 'Pendente'}
+                </span><br>
+                <small style="color: #888; font-size: 11px;">${ped.data || ''}</small>
+              </div>
+            </div>
+
+            <ul style="font-size: 12px; color: #444; margin-left: 18px; margin-bottom: 10px;">
+              ${itensHTML}
+            </ul>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 8px;">
+              <div style="font-size: 13px;">
+                <strong>Total:</strong> 
+                <span style="color: #25D366; font-weight: bold;">R$ ${parseFloat(ped.total).toFixed(2)}</span> 
+                <small style="color: #666;">(${ped.formaPagamento})</small>
+              </div>
+              <button onclick="excluirPedido('${idPed}')" style="background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;">
+                Finalizar
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    })
+    .catch((err) => {
+      container.innerHTML = `<p style="color: red; font-size: 13px;">Erro ao carregar pedidos: ${err.message}</p>`;
+    });
+}
+
+function excluirPedido(id) {
+  if (confirm("Deseja finalizar/remover este pedido?")) {
+    db.collection("pedidos").doc(id).delete().then(() => {
+      carregarPedidosFirebase();
+    });
+  }
+}
+
+// --- CARREGAMENTO INICIAL DA PÁGINA ---
+document.addEventListener('DOMContentLoaded', () => {
+  carregarProdutosDoFirebase();
+  carregarClientesDoFirebase();
+  carregarPedidosFirebase();
+  atualizarDash();
+});
+ 
+ 
