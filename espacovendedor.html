@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espaço da Vendedora - Toque Íntimo GS</title>
+
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #70293b;
+      --primary-light: #fbeee0;
+      --bg: #f8f9fa;
+      --text-dark: #2d2d2d;
+      --text-muted: #6c757d;
+      --success: #25D366;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-dark); padding-bottom: 90px; }
+
+    .brand-header { background: white; padding: 15px; text-align: center; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 100; }
+    .brand-title { font-size: 20px; font-weight: bold; color: #501926; }
+    .brand-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .categories-bar { display: flex; gap: 8px; overflow-x: auto; padding: 10px 15px; scrollbar-width: none; }
+    .categories-bar::-webkit-scrollbar { display: none; }
+    .cat-chip { background: white; border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; color: var(--text-dark); }
+    .cat-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .grid-catalogo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 15px; }
+    @media (min-width: 640px) {
+      .grid-catalogo { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    }
+
+    .card-prod { background: white; border-radius: 14px; border: 1px solid #eef0f2; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
+    .img-container-cat { width: 100%; height: 130px; background: #f5f5f5; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .img-container-cat img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .prod-title-cat { font-size: 13px; font-weight: bold; margin-top: 6px; color: var(--text-dark); }
+    .prod-price-cat { font-size: 14px; font-weight: bold; color: var(--primary); margin: 2px 0 6px 0; }
+    
+    .variation-select-cat { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 11px; margin-bottom: 8px; background: #fff; }
+    .btn-add-cart-cat { background-color: var(--primary); color: white; border: none; padding: 8px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+
+    .cart-float-btn { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 20px; border: none; cursor: pointer; z-index: 1000; }
+    .cart-badge { position: absolute; top: -2px; right: -2px; background: #25D366; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; padding: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO DA LOJA -->
+  <div class="brand-header">
+    <div class="brand-title">Espaço da Revendedora</div>
+    <div class="brand-subtitle">Toque Íntimo GS</div>
+  </div>
+
+  <!-- CATEGORIAS -->
+  <div class="categories-bar" id="categoriasFiltro"></div>
+
+  <!-- BUSCA -->
+  <div style="padding: 10px 15px;">
+    <input type="text" id="buscaProduto" placeholder="Buscar produtos..." oninput="renderizarProdutos()" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; outline: none; font-size: 13px;">
+  </div>
+
+  <!-- GRADE DE PRODUTOS -->
+  <div class="grid-catalogo" id="gradeProdutos"></div>
+
+  <!-- BOTÃO FLUTUANTE CARRINHO -->
+  <button class="cart-float-btn" onclick="abrirModalCarrinho()">
+    <i class="fa-solid fa-cart-shopping"></i>
+    <span class="cart-badge" id="carrinhoQtd">0</span>
+  </button>
+
+  <!-- MODAL IDENTIFICAÇÃO REVENDEDORA -->
+  <div id="login-vendedora-box" class="modal-overlay active">
+    <div class="modal-card">
+      <h3 style="font-weight: bold; font-size: 18px; color: var(--primary); margin-bottom: 10px;">Acesso da Revendedora</h3>
+      <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Informe seu nome ou código de revendedora para iniciar o pedido.</p>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="text" id="inputNomeVendedora" placeholder="Seu Nome ou Código REV" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+        <button onclick="confirmarVendedora()" style="background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">Entrar no Painel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CARRINHO / FECHAR PEDIDO -->
+  <div id="modalCarrinho" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="font-weight: bold; font-size: 16px; color: var(--primary);">Carrinho do Pedido</h3>
+        <button onclick="fecharModalCarrinho()" style="background: none; border: none; font-size: 18px; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="itensCarrinhoModal" style="display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
+
+      <div style="border-top: 1px dashed #ddd; padding-top: 10px; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; color: var(--primary); margin-bottom: 15px;">
+          <span>Total:</span>
+          <span id="totalCarrinhoModal">R$ 0,00</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <input type="text" id="nomeClienteFinal" placeholder="Nome do Cliente Final" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px;">
+          <input type="text" id="telClienteFinal" placeholder="WhatsApp do Cliente (Opcional)" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px;">
+          
+          <select id="pagamentoPedido" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px;">
+            <option value="Pix">Pagamento: Pix</option>
+            <option value="Dinheiro">Pagamento: Dinheiro</option>
+            <option value="Cartão de Crédito">Pagamento: Cartão de Crédito</option>
+            <option value="A prazo">Pagamento: A prazo</option>
+          </select>
+
+          <button onclick="enviarPedidoParaMatriz()" style="background: #25D366; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 5px;">
+            <i class="fa-solid fa-paper-plane"></i> Confirmar Pedido
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS DO FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6QAOn1t-W6E4465u3ACZ2bB25RIAkpbo",
+      authDomain: "meucatalogoapp-c7e39.firebaseapp.com",
+      projectId: "meucatalogoapp-c7e39",
+      storageBucket: "meucatalogoapp-c7e39.appspot.com",
+      messagingSenderId: "311764083576",
+      appId: "1:311764083576:web:2630353079ec5294031e8d", 
+      measurementId: "G-N3DFKJG9FP"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let produtos = [];
+    let carrinho = [];
+    let vendedoraIdentificada = '';
+    let categoriaSelecionada = 'Todos';
+
+    function confirmarVendedora() {
+      const val = document.getElementById('inputNomeVendedora').value;
+      if (!val) {
+        alert("Por favor, digite seu nome ou código.");
+        return;
+      }
+      vendedoraIdentificada = val;
+      document.getElementById('login-vendedora-box').classList.remove('active');
+      carregarProdutos();
+    }
+
+    function carregarProdutos() {
+      db.collection("produtos").get().then((snapshot) => {
+        produtos = [];
+        snapshot.forEach((doc) => {
+          produtos.push(doc.data());
+        });
+        renderizarCategorias();
+        renderizarProdutos();
+      });
+    }
+
+    function renderizarCategorias() {
+      const container = document.getElementById('categoriasFiltro');
+      const cats = ["Todos", ...new Set(produtos.map(p => p.categoria))];
+      container.innerHTML = '';
+      cats.forEach(c => {
+        container.innerHTML += `<div class="cat-chip ${c === categoriaSelecionada ? 'active' : ''}" onclick="filtrarCategoria('${c}')">${c}</div>`;
+      });
+    }
+
+    function filtrarCategoria(cat) {
+      categoriaSelecionada = cat;
+      renderizarCategorias();
+      renderizarProdutos();
+    }
+
+    function renderizarProdutos() {
+      const grade = document.getElementById('gradeProdutos');
+      const busca = document.getElementById('buscaProduto').value.toLowerCase();
+      grade.innerHTML = '';
+
+      const filtrados = produtos.filter(p => {
+        const catMatch = categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada;
+        const buscaMatch = p.nome.toLowerCase().includes(busca);
+        return catMatch && buscaMatch;
+      });
+
+      filtrados.forEach(p => {
+        let varOpts = '';
+        if (p.variacoes) {
+          p.variacoes.forEach((v, idx) => {
+            if (v.quantidade > 0) {
+              varOpts += `<option value="${idx}">${v.cor} (${v.tamanho}) - R$ ${parseFloat(v.preco).toFixed(2)}</option>`;
+            }
+          });
+        }
+
+        const foto = (p.variacoes && p.variacoes.find(v => v.foto)) ? p.variacoes.find(v => v.foto).foto : '';
+
+        grade.innerHTML += `
+          <div class="card-prod">
+            <div class="img-container-cat">
+              ${foto ? `<img src="${foto}">` : '<i class="fa-solid fa-image fa-2x" style="color:#ccc;"></i>'}
+            </div>
+            <div class="prod-title-cat">${p.nome}</div>
+            <div class="prod-price-cat">R$ ${p.variacoes && p.variacoes[0] ? parseFloat(p.variacoes[0].preco).toFixed(2) : '0.00'}</div>
+            
+            <select id="select-var-${p.id}" class="variation-select-cat">
+              ${varOpts || '<option>Esgotado</option>'}
+            </select>
+
+            <button class="btn-add-cart-cat" ${!varOpts ? 'disabled style="background:#ccc;"' : ''} onclick="adicionarAoCarrinho('${p.id}')">
+              <i class="fa-solid fa-plus"></i> Adicionar
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    function adicionarAoCarrinho(prodId) {
+      const p = produtos.find(item => item.id === prodId);
+      const sel = document.getElementById(`select-var-${prodId}`);
+      if (!p || !sel) return;
+
+      const vIdx = sel.value;
+      const variacao = p.variacoes[vIdx];
+
+      carrinho.push({
+        idProd: p.id,
+        nome: p.nome,
+        cor: variacao.cor,
+        tamanho: variacao.tamanho,
+        preco: parseFloat(variacao.preco),
+        quantidade: 1
+      });
+
+      atualizarCarrinhoBadge();
+      alert('Produto adicionado ao carrinho!');
+    }
+
+    function atualizarCarrinhoBadge() {
+      document.getElementById('carrinhoQtd').innerText = carrinho.length;
+    }
+
+    function abrirModalCarrinho() {
+      const container = document.getElementById('itensCarrinhoModal');
+      container.innerHTML = carrinho.length ? '' : '<p style="text-align:center; color:#888;">Carrinho vazio.</p>';
+      
+      let total = 0;
+      carrinho.forEach((item, idx) => {
+        total += item.preco;
+        container.innerHTML += `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:8px; border-radius:6px; font-size:12px;">
+            <div>
+              <b>${item.nome}</b> (${item.cor}/${item.tamanho})<br>
+              <span style="color:var(--primary);">R$ ${item.preco.toFixed(2)}</span>
+            </div>
+            <button onclick="removerDoCarrinho(${idx})" style="border:none; background:none; color:red; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+      });
+
+      document.getElementById('totalCarrinhoModal').innerText = `R$ ${total.toFixed(2)}`;
+      document.getElementById('modalCarrinho').classList.add('active');
+    }
+
+    function removerDoCarrinho(idx) {
+      carrinho.splice(idx, 1);
+      atualizarCarrinhoBadge();
+      abrirModalCarrinho();
+    }
+
+    function fecharModalCarrinho() {
+      document.getElementById('modalCarrinho').classList.remove('active');
+    }
+
+    function enviarPedidoParaMatriz() {
+      if (!carrinho.length) {
+        alert("O carrinho está vazio!");
+        return;
+      }
+
+      const clienteNome = document.getElementById('nomeClienteFinal').value || 'Cliente Final';
+      const telefoneCliente = document.getElementById('telClienteFinal').value || '';
+      const formaPagamento = document.getElementById('pagamentoPedido').value;
+
+      const total = carrinho.reduce((acc, i) => acc + i.preco, 0);
+
+      const novoPedido = {
+        vendedoraNome: vendedoraIdentificada,
+        clienteNome: clienteNome,
+        telefoneCliente: telefoneCliente,
+        formaPagamento: formaPagamento,
+        total: total,
+        status: 'Pendente',
+        data: new Date().toLocaleDateString('pt-BR'),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        itens: carrinho
+      };
+
+      db.collection("pedidos").add(novoPedido)
+        .then(() => {
+          alert("Pedido enviado com sucesso para a aba 'Pedidos' no sistema principal!");
+          carrinho = [];
+          atualizarCarrinhoBadge();
+          fecharModalCarrinho();
+        })
+        .catch((err) => {
+          alert("Erro ao enviar pedido: " + err.message);
+        });
+    }
+  </script>
+</body>
+</html>
