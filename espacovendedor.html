@@ -601,35 +601,69 @@
       document.getElementById('carrinho-total').innerText = `R$ ${total.toFixed(2)}`;
     }
 
-    function finalizarPedido() {
-      const clienteNome = document.getElementById('cliente-nome').value;
-      const clienteFone = document.getElementById('cliente-fone').value;
+    async function finalizarPedido() {
+  const clienteNome = document.getElementById('cliente-nome').value.trim();
+  const clienteFone = document.getElementById('cliente-fone').value.trim();
 
-      if (!clienteNome || carrinho.length === 0) {
-        alert("Preencha o nome do cliente e adicione itens ao carrinho.");
-        return;
+  if (!clienteNome || carrinho.length === 0) {
+    alert("Preencha o nome do cliente e adicione itens ao carrinho.");
+    return;
+  }
+
+  const total = carrinho.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
+  
+  // Estrutura do pedido a ser gravado no Firestore
+  const novoPedido = {
+    vendedoraNome: vendedoraAtual.nome,
+    vendedoraCodigo: vendedoraAtual.codigo,
+    cliente: clienteNome,
+    fone: clienteFone,
+    itens: carrinho.map(i => {
+      let cor = "";
+      let tamanho = "";
+      const regexMatch = i.nome.match(/\((.*?)\s*\/\s*Tam:\s*(.*?)\)/);
+      if (regexMatch) {
+        cor = regexMatch[1].trim();
+        tamanho = regexMatch[2].trim();
       }
 
-      const total = carrinho.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
-      const novaVenda = {
-        id: Date.now(),
-        data: new Date().toLocaleString('pt-BR'),
-        cliente: clienteNome,
-        fone: clienteFone,
-        itens: [...carrinho],
-        total: total,
-        pagamento: "",
-        status: "Pendente"
+      return {
+        id: i.id,
+        nome: i.nome,
+        cor: cor,
+        tamanho: tamanho,
+        quantidade: i.qtd,
+        preco: i.preco
       };
+    }),
+    total: total,
+    pagamento: "Pendente",
+    status: "Pendente",
+    data: new Date().toLocaleString('pt-BR'),
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
 
-      vendas.push(novaVenda);
-      carrinho = [];
-      document.getElementById('cliente-nome').value = "";
-      document.getElementById('cliente-fone').value = "";
-      renderizarCarrinho();
-      
-      mudarAba('vendas');
-    }
+  try {
+    // Salva o pedido diretamente na coleção 'pedidos' do Firebase
+    const docRef = await db.collection("pedidos").add(novoPedido);
+    
+    // Adiciona o ID do documento do Firebase ao objeto local
+    novoPedido.id = docRef.id;
+    vendas.push(novoPedido);
+
+    // Limpa o carrinho e formulário
+    carrinho = [];
+    document.getElementById('cliente-nome').value = "";
+    document.getElementById('cliente-fone').value = "";
+    renderizarCarrinho();
+    
+    alert("Venda salva com sucesso no banco de dados!");
+    mudarAba('vendas');
+  } catch (error) {
+    console.error("Erro ao salvar venda no Firebase:", error);
+    alert("Erro ao salvar a venda. Tente novamente.");
+  }
+}
 
     function renderizarVendas() {
       const container = document.getElementById('lista-vendas');
@@ -683,10 +717,23 @@
       atualizarDashboard();
     }
 
-    function atualizarPagamento(vendaId, forma) {
-      const venda = vendas.find(v => v.id === vendaId);
-      if (venda) venda.pagamento = forma;
+    async function atualizarPagamento(vendaId, forma) {
+  const venda = vendas.find(v => v.id === vendaId);
+  if (!venda) return;
+
+  venda.pagamento = forma;
+
+  // Atualiza no Firebase se a venda possuir um ID de documento válido
+  if (typeof vendaId === 'string') {
+    try {
+      await db.collection("pedidos").doc(vendaId).update({
+        pagamento: forma
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar pagamento no Firebase:", error);
     }
+  }
+}
 
     function enviarNotaWhats(vendaId) {
       const v = vendas.find(x => x.id === vendaId);
