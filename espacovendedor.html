@@ -632,7 +632,15 @@
         vendedoraNome: vendedoraAtual.nome,
         vendedoraCodigo: vendedoraAtual.codigo,
         clienteNome: clienteNome,
-        telefoneCliente: clienteFone,
+        cliente: clienteNome,               // Para compatibilidade na aba Vendas
+        clienteTelefone: clienteFone,
+        fone: clienteFone,                  // Para compatibilidade na aba Vendas
+        formaPagamento: "Pendente",
+        pagamento: "Pendente",
+        status: "Pendente",
+        total: total,
+        data: new Date().toLocaleString('pt-BR'),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         itens: carrinho.map(i => {
           let cor = "";
           let tamanho = "";
@@ -648,14 +656,10 @@
             cor: cor,
             tamanho: tamanho,
             quantidade: i.qtd,
+            precoUnitario: i.preco,
             preco: i.preco
           };
-        }),
-        total: total,
-        pagamento: "FormaPagamento",
-        status: "Pendente",
-        data: new Date().toLocaleString('pt-BR'),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
       };
 
       try {
