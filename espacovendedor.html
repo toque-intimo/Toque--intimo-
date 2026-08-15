@@ -618,65 +618,51 @@
     }
 
     async function finalizarPedido() {
-      const clienteNome = document.getElementById('cliente-nome').value.trim();
-      const clienteFone = document.getElementById('cliente-fone').value.trim();
+    const clienteNome = document.getElementById('cliente-nome').value.trim();
+    const clienteFone = document.getElementById('cliente-fone').value.trim();
 
-      if (!clienteNome || carrinho.length === 0) {
+    if (!clienteNome || carrinho.length === 0) {
         alert("Preencha o nome do cliente e adicione itens ao carrinho.");
         return;
-      }
-
-      const total = carrinho.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
-      
-      const novoPedido = {
-        vendedoraNome: vendedoraAtual.nome,
-        vendedoraCodigo: vendedoraAtual.codigo,
-        clienteNome: clienteNome,
-        cliente: clienteNome,               // Para compatibilidade na aba Vendas
-        clienteTelefone: clienteFone,
-        fone: clienteFone,                  // Para compatibilidade na aba Vendas
-        formaPagamento: "Pendente",
-        pagamento: "Pendente",
-        status: "Pendente",
-        total: total,
-        data: new Date().toLocaleString('pt-BR'),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        itens: carrinho.map(i => {
-          let cor = "";
-          let tamanho = "";
-          const regexMatch = i.nome.match(/\((.*?)\s*\/\s*Tam:\s*(.*?)\)/);
-          if (regexMatch) {
-            cor = regexMatch[1].trim();
-            tamanho = regexMatch[2].trim();
-          }
-
-          return {
-            id: i.id,
-            nome: i.nome,
-            cor: cor,
-            tamanho: tamanho,
-            quantidade: i.qtd,
-            precoUnitario: i.preco,
-            preco: i.preco
-          };
-        })
-      };
-
-      try {
-        const docRef = await db.collection("pedidos").add(novoPedido);
-        
-        carrinho = [];
-        document.getElementById('cliente-nome').value = "";
-        document.getElementById('cliente-fone').value = "";
-        renderizarCarrinho();
-        
-        alert("Venda salva com sucesso!");
-        mudarAba('vendas');
-      } catch (error) {
-        console.error("Erro ao salvar venda no Firebase:", error);
-        alert("Erro ao salvar a venda. Tente novamente.");
-      }
     }
+
+    const total = carrinho.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
+
+    const novoPedido = {
+        vendedoraNome: vendedoraAtual ? vendedoraAtual.nome : "Vendedora",
+        vendedoraCodigo: vendedoraAtual ? vendedoraAtual.codigo : "",
+        clienteNome: clienteNome,
+        cliente: clienteNome,
+        clienteTelefone: clienteFone,
+        fone: clienteFone,
+        status: "Pendente", // Garante inicial maiúscula para aparecer no index.html
+        data: new Date().toLocaleDateString('pt-BR'),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        total: total,
+        itens: carrinho.map(i => ({
+            nome: i.nome,
+            cor: i.cor || '',
+            tamanho: i.tamanho || '',
+            quantidade: i.qtd,
+            preco: i.preco
+        }))
+    };
+
+    try {
+        // Envia diretamente para a coleção "pedidos"
+        await db.collection("pedidos").add(novoPedido);
+        alert("Pedido enviado com sucesso!");
+
+        // Limpa formulário e carrinho
+        document.getElementById('cliente-nome').value = '';
+        document.getElementById('cliente-fone').value = '';
+        carrinho = [];
+        if (typeof renderizarCarrinho === 'function') renderizarCarrinho();
+    } catch (error) {
+        console.error("Erro ao salvar pedido: ", error);
+        alert("Erro ao enviar o pedido. Tente novamente.");
+    }
+}
 
     function renderizarVendas() {
       const container = document.getElementById('lista-vendas');
