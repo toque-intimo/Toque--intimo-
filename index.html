@@ -663,7 +663,39 @@ function carregarProdutosDoFirebase() {
     }).catch(err => console.error("Erro ao carregar clientes do Firebase:", err));
   }
 }
- 
+// --- FUNÇÕES DO FIREBASE PARA VENDAS ---
+function sincronizarVendaFirebase(vendaData) {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("vendas").doc(vendaData.id).set(vendaData)
+      .then(() => console.log("Venda salva no Firebase:", vendaData.id))
+      .catch(err => console.error("Erro ao salvar venda no Firebase:", err));
+  }
+}
+
+function carregarVendasDoFirebase() {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("vendas").get().then((snapshot) => {
+      if (!snapshot.empty) {
+        vendas = [];
+        snapshot.forEach((doc) => {
+          vendas.push(doc.data());
+        });
+        localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+        if (typeof carregarVendas === 'function') {
+          carregarVendas();
+        }
+      }
+    }).catch(err => console.error("Erro ao carregar vendas do Firebase:", err));
+  }
+}
+
+function excluirVendaFirebase(idVenda) {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("vendas").doc(idVenda.toString()).delete()
+      .then(() => console.log("Venda removida do Firebase:", idVenda))
+      .catch(err => console.error("Erro ao remover venda do Firebase:", err));
+  }
+} 
  function deletarFirebase(idProduto) {
    if (typeof firebase !== 'undefined' && firebase.apps.length) {
      db.collection("produtos").doc(idProduto).delete()
@@ -1267,7 +1299,7 @@ function carregarProdutosDoFirebase() {
    const custoTotalVenda = carrinho.reduce((acc, item) => acc + ((item.custo || 0) * item.quantidade), 0);
    const itensVendidos = JSON.parse(JSON.stringify(carrinho));
 
-   vendas.push({
+   const novaVenda = {
      id: Date.now().toString(),
      data: new Date().toLocaleDateString(),
      total: total,
@@ -1278,10 +1310,14 @@ function carregarProdutosDoFirebase() {
      telefoneCliente: clienteTel,
      notaCompleta: cupomTexto,
      itens: itensVendidos
-   });
+   };
 
+   vendas.push(novaVenda);
    localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
    
+   // SINCRONIZA A VENDA NO FIREBASE
+   sincronizarVendaFirebase(novaVenda);
+
    carrinho = [];
    localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
    document.getElementById('cart-desconto').value = "0.00";
@@ -1547,11 +1583,14 @@ function carregarProdutosDoFirebase() {
 
      vendas = vendas.filter(v => v.id !== id);
      localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+     
+     // REMOVE A VENDA DO FIREBASE
+     excluirVendaFirebase(id);
+
      carregarVendas();
      atualizarDash();
    }
  }
-
  // --- FUNÇÕES AUXILIARES DO FIREBASE PARA CLIENTES ---
  function sincronizarClienteFirebase(clienteData) {
    if (typeof firebase !== 'undefined' && firebase.apps.length) {
@@ -1828,7 +1867,8 @@ function carregarProdutosDoFirebase() {
  document.addEventListener('DOMContentLoaded', () => {
    carregarProdutosDoFirebase();
    carregarClientesDoFirebase();
-   atualizarDash();
+   carregarVendasDoFirebase():
+  atualizarDash();
  });
 </script>
 </body>
