@@ -523,7 +523,6 @@
  let carrinho = JSON.parse(localStorage.getItem('ti_v4_car')) || [];
  let vendas = JSON.parse(localStorage.getItem('ti_v4_vend')) || [];
 
-// FUNÇÕES DA ABA VENDEDOR / REVENDEDORAS
 function cadastrarEEnviarWhatsApp() {
   const nome = document.getElementById('nomeVendedor').value;
   const tel = document.getElementById('telVendedor').value;
@@ -550,7 +549,11 @@ function cadastrarEEnviarWhatsApp() {
       document.getElementById('nomeVendedor').value = '';
       document.getElementById('telVendedor').value = '';
       
-      const msg = encodeURIComponent(`Olá ${nome}! Você foi cadastrada como revendedora Toque Íntimo GS. Seu código de identificação é: ${codigo}`);
+      // Monta o link do arquivo de revendedora hospedado
+      const urlBase = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/revendedor.html';
+      
+      const msg = encodeURIComponent(`Olá ${nome}! Você foi cadastrada como revendedora Toque Íntimo GS. Acesse seu painel de cadastro e vendas por este link: ${urlBase}`);
+      
       const numLimpo = tel.replace(/\D/g, '');
       const numFormatted = numLimpo.startsWith('55') ? numLimpo : '55' + numLimpo;
       window.open(`https://wa.me/${numFormatted}?text=${msg}`, '_blank');
