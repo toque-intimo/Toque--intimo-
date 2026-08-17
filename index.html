@@ -676,12 +676,58 @@ function carregarPedidosRevendedoras() {
 }
 
 function atualizarStatusPedidoRevendedora(id, novoStatus) {
-  db.collection("pedidos_vendedoras").doc(id).update({
-    status: novoStatus
-  }).then(() => {
-    alert(`Status do pedido atualizado para: ${novoStatus}`);
-  }).catch(err => {
-    alert("Erro ao atualizar o pedido: " + err);
+  // 1. Busca o pedido específico no Firebase
+  db.collection("pedidos_vendedoras").doc(id).get().then((doc) => {
+    if (!doc.exists) {
+      alert("Pedido não encontrado!");
+      return;
+    }
+
+    const pedido = doc.data();
+
+    // Se a solicitação já estiver no status desejado
+    if (pedido.status === novoStatus) {
+      alert(`Este pedido já se encontra no status: ${novoStatus}`);
+      return;
+    }
+
+    // 2. Se for aprovado, realiza o abatimento do estoque do produto principal
+    if (novoStatus === 'Aprovado') {
+      if (pedido.itens && Array.isArray(pedido.itens)) {
+        pedido.itens.forEach(item => {
+          // Busca o produto correspondente no estoque principal
+          const prod = produtos.find(p => p.id === item.idProd || p.nome === item.nome);
+          if (prod) {
+            const v = prod.variacoes.find(varItem => varItem.cor === item.cor && varItem.tamanho === item.tamanho);
+            if (v) {
+              // Reduz a quantidade informada ou 1 por padrão
+              const qtdSubtrair = item.quantidade || 1;
+              v.quantidade = Math.max(0, v.quantidade - qtdSubtrair);
+              // Sincroniza o estoque atualizado com o Firebase
+              sincronizarFirebase(prod);
+            }
+          }
+        });
+        // Atualiza a visualização local do estoque
+        localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+      }
+    }
+
+    // 3. Atualiza o status do pedido para "Aprovado" no Firebase
+    // Isso fará com que o arquivo 'revendedor.html' da vendedora leia a mudança em tempo real
+    db.collection("pedidos_vendedoras").doc(id).update({
+      status: novoStatus,
+      dataAprovacao: new Date().toISOString()
+    }).then(() => {
+      alert(`Pedido de ${pedido.vendedoraNome || 'Vendedora'} atualizado para: ${novoStatus}!`);
+      atualizarDash();
+    }).catch(err => {
+      alert("Erro ao atualizar o status do pedido: " + err);
+    });
+
+  }).catch((err) => {
+    console.error("Erro ao buscar pedido:", err);
+    alert("Falha ao se comunicar com o banco de dados.");
   });
 }
 
