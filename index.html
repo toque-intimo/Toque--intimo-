@@ -614,14 +614,14 @@ function deletarVendedora(id) {
   }
 }
 
-// --- INTEGRAÇÃO DA TELA DE PEDIDOS DAS VENDEDORAS ---
 function carregarPedidos() {
   const container = document.getElementById('lista-pedidos');
   if (!container) return;
 
   container.innerHTML = '<p style="text-align: center; color: #999;">Carregando solicitações...</p>';
 
-  db.collection("pedidos").orderBy("dataCriacao", "desc").onSnapshot((snapshot) => {
+  // Busca na coleção 'pedidos' do Firebase
+  db.collection("pedidos").onSnapshot((snapshot) => {
     if (snapshot.empty) {
       container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum pedido recebido das vendedoras até o momento.</p>';
       return;
@@ -632,6 +632,12 @@ function carregarPedidos() {
       const p = doc.data();
       const id = doc.id;
       
+      // Mapeamento flexível de nomes de campos
+      const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
+      const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
+      const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
+      const clienteTel = p.clienteTelefone || p.telefoneCliente || p.telefone || 'Sem Tel';
+
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
       if (p.status === 'Aprovado') { badgeCor = '#1e7e48'; badgeBg = '#e8f8f0'; }
@@ -647,12 +653,12 @@ function carregarPedidos() {
       container.innerHTML += `
         <div class="prod-list-card" style="border-left: 4px solid ${badgeCor};">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <b style="font-size: 14px; color: var(--primary);">${p.vendedoraNome || 'Vendedora'}</b>
+            <b style="font-size: 14px; color: var(--primary);">${vendedoraNome}</b>
             <span style="background: ${badgeBg}; color: ${badgeCor}; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">${p.status || 'Pendente'}</span>
           </div>
           <div style="font-size: 12px; color: #777;">
-            <b>Data:</b> ${p.data || '-'} | <b>Cód. Vendedora:</b> ${p.vendedoraCodigo || '-'}<br>
-            <b>Cliente Final:</b> ${p.clienteNome || 'Não informado'} (${p.clienteTelefone || 'Sem Tel'})
+            <b>Data:</b> ${p.data || '-'} | <b>Cód. Vendedora:</b> ${vendedoraCodigo}<br>
+            <b>Cliente Final:</b> ${clienteNome} (${clienteTel})
           </div>
           <div style="background: #fafafa; padding: 8px; border-radius: 8px; border: 1px dashed #ddd; margin-top: 4px;">
             <b style="font-size: 11px; color: #333;">Itens Solicitados:</b>
