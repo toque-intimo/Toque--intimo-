@@ -620,7 +620,7 @@ function carregarPedidos() {
 
   container.innerHTML = '<p style="text-align: center; color: #999;">Carregando solicitações...</p>';
 
-  // Busca na coleção 'pedidos' do Firebase
+  // Lendo diretamente da coleção 'pedidos'
   db.collection("pedidos").onSnapshot((snapshot) => {
     if (snapshot.empty) {
       container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum pedido recebido das vendedoras até o momento.</p>';
@@ -632,7 +632,7 @@ function carregarPedidos() {
       const p = doc.data();
       const id = doc.id;
       
-      // Mapeamento flexível de nomes de campos
+      // Aceita variações de nomes dos campos para evitar erro de leitura
       const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
       const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
       const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
