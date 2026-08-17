@@ -296,7 +296,7 @@
    };
 
    // CORRIGIDO: Envia apenas uma vez para a coleção de pedidos das vendedoras
-   db.collection("pedidos_vendedoras").add(pedidoData)
+   db.collection("pedidos").add(pedidoData)
      .then(() => {
        alert("Pedido enviado com sucesso para confirmação e separação na Toque Íntimo GS!");
        venCarrinho = [];
@@ -314,7 +314,7 @@
 
  function carregarMetricasVendedora() {
    // CORRIGIDO: Busca na coleção "pedidos_vendedoras"
-   db.collection("pedidos_vendedoras").where("telefone", "==", venDados.telefone).get().then(snapshot => {
+   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
      let qtdVendas = snapshot.size;
      let valVendas = 0;
      let valComissao = 0;
@@ -332,7 +332,7 @@
  function carregarHistoricoVendedora() {
    const container = document.getElementById('ven-historico-vendas');
    container.innerHTML = 'Carregando...';
-   db.collection("pedidos_vendedoras").where("telefone", "==", venDados.telefone).get().then(snapshot => {
+   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
      container.innerHTML = '';
      if (snapshot.empty) {
        container.innerHTML = '<p>Nenhuma venda registrada ainda.</p>';
