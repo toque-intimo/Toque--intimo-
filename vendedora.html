@@ -3,9 +3,9 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Painel da Revendedora - Toque Íntimo GS</title>
+ <title>Painel da Vendedora - Toque Íntimo GS</title>
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
- <style>
+ <style> 
  :root {
    --primary: #70293b;
    --primary-light: #f9f0f2;
@@ -48,43 +48,43 @@
 <body>
 
 <div class="container">
- <div class="brand-title">Toque Íntimo GS <br><span style="font-size: 14px; color: var(--text-muted);">Portal da Revendedora</span></div>
+ <div class="brand-title">Toque Íntimo GS <br><span style="font-size: 14px; color: var(--text-muted);">Portal da Vendedora</span></div>
 
  <!-- TELA DE CADASTRO DA VENDEDORA -->
- <section id="tela-cadastro-revendedora" class="app-section active">
+ <section id="tela-cadastro-vendedora" class="app-section active">
    <div class="section-title" style="font-size: 18px; color: #501926;">Cadastre-se para Começar</div>
    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Preencha seus dados para acessar o painel de vendas e receber suas comissões.</p>
    
-   <form id="formRevendedora" class="grid-form">
-     <div class="form-group"><label>Nome Completo</label><input type="text" id="rev-nome" required></div>
-     <div class="form-group"><label>Número de Telefone (WhatsApp)</label><input type="text" id="rev-tel" placeholder="11999999999" required></div>
-     <div class="form-group"><label>Endereço de E-mail</label><input type="email" id="rev-email" required></div>
-     <div class="form-group"><label>Endereço (Rua, Bairro, Cidade)</label><input type="text" id="rev-endereco" required></div>
-     <div class="form-group"><label>Número da Residência</label><input type="text" id="rev-num" required></div>
-     <div class="form-group"><label>Chave Pix (Para recebimento das comissões)</label><input type="text" id="rev-pix" placeholder="CPF, E-mail ou Telefone" required></div>
+   <form id="formVendedora" class="grid-form">
+     <div class="form-group"><label>Nome Completo</label><input type="text" id="ven-nome" required></div>
+     <div class="form-group"><label>Número de Telefone (WhatsApp)</label><input type="text" id="ven-tel" placeholder="11999999999" required></div>
+     <div class="form-group"><label>Endereço de E-mail</label><input type="email" id="ven-email" required></div>
+     <div class="form-group"><label>Endereço (Rua, Bairro, Cidade)</label><input type="text" id="ven-endereco" required></div>
+     <div class="form-group"><label>Número da Residência</label><input type="text" id="ven-num" required></div>
+     <div class="form-group"><label>Chave Pix (Para recebimento das comissões)</label><input type="text" id="ven-pix" placeholder="CPF, E-mail ou Telefone" required></div>
      <button type="submit" class="btn">Finalizar Cadastro</button>
    </form>
  </section>
 
  <!-- PAINEL PRINCIPAL DA VENDEDORA -->
- <section id="tela-painel-revendedora" class="app-section">
+ <section id="tela-painel-vendedora" class="app-section">
    <div style="text-align: center; margin-bottom: 20px;">
-     <h2 id="painel-nome-revendedora" style="color: var(--primary);">Olá, Vendedora</h2>
+     <h2 id="painel-nome-vendedora" style="color: var(--primary);">Olá, Vendedora</h2>
      <p style="font-size: 12px; color: var(--text-muted);">Comissão Ativa: <b>15% sobre as vendas</b></p>
    </div>
 
    <!-- MÉTRICAS -->
    <div class="summary-grid">
      <div class="summary-card">
-       <div class="summary-value" id="rev-qtd-vendas">0</div>
+       <div class="summary-value" id="ven-qtd-vendas">0</div>
        <div class="summary-label">Qtd Vendas do Mês</div>
      </div>
      <div class="summary-card">
-       <div class="summary-value" id="rev-val-vendas">R$ 0,00</div>
+       <div class="summary-value" id="ven-val-vendas">R$ 0,00</div>
        <div class="summary-label">Vendas do Mês</div>
      </div>
      <div class="summary-card" style="grid-column: span 2; background: #fdf2f4;">
-       <div class="summary-value" id="rev-val-comissao" style="color: var(--primary);">R$ 0,00</div>
+       <div class="summary-value" id="ven-val-comissao" style="color: var(--primary);">R$ 0,00</div>
        <div class="summary-label">Comissão Mensal (15%)</div>
      </div>
    </div>
@@ -92,19 +92,19 @@
    <!-- ACESSO RÁPIDO -->
    <div class="section-title">Acesso Rápido</div>
    <div class="acesso-rapido-grid">
-     <div class="menu-btn" onclick="mudarPainelRev( 'produtos' )">
+     <div class="menu-btn" onclick="mudarPainelVen( 'produtos' )">
        <div class="icon-wrapper"><i class="fa-solid fa-box"></i></div>
        <span>Produtos</span>
      </div>
-     <div class="menu-btn" onclick="mudarPainelRev( 'carrinho' )">
+     <div class="menu-btn" onclick="mudarPainelVen( 'carrinho' )">
        <div class="icon-wrapper"><i class="fa-solid fa-cart-shopping"></i></div>
        <span>Carrinho</span>
      </div>
-     <div class="menu-btn" onclick="mudarPainelRev( 'vendas' )">
+     <div class="menu-btn" onclick="mudarPainelVen( 'vendas' )">
        <div class="icon-wrapper"><i class="fa-solid fa-file-invoice-dollar"></i></div>
        <span>Minhas Vendas</span>
      </div>
-     <div class="menu-btn" onclick="mudarPainelRev( 'financeiro' )">
+     <div class="menu-btn" onclick="mudarPainelVen( 'financeiro' )">
        <div class="icon-wrapper"><i class="fa-solid fa-wallet"></i></div>
        <span>Financeiro</span>
      </div>
@@ -116,31 +116,31 @@
  </section>
 
  <!-- SUB-TELA PRODUTOS / CATÁLOGO -->
- <section id="rev-sub-produtos" class="app-section">
+ <section id="ven-sub-produtos" class="app-section">
    <div class="section-title" style="display: flex; justify-content: space-between;">
      <span>Catálogo Disponível</span>
-     <button onclick="mudarPainelRev('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+     <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
    </div>
-   <div id="rev-grade-produtos" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;"></div>
+   <div id="ven-grade-produtos" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;"></div>
  </section>
 
  <!-- SUB-TELA CARRINHO / PEDIDOS -->
- <section id="rev-sub-carrinho" class="app-section">
+ <section id="ven-sub-carrinho" class="app-section">
    <div class="section-title" style="display: flex; justify-content: space-between;">
      <span>Carrinho / Pedidos</span>
-     <button onclick="mudarPainelRev('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+     <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
    </div>
-   <div id="rev-itens-carrinho" style="margin-top: 10px;"></div>
+   <div id="ven-itens-carrinho" style="margin-top: 10px;"></div>
    <button class="btn" style="background: #1e7e48; margin-top: 15px;" onclick="enviarPedidoParaLojaPrincipal()">Enviar Pedido para Toque Íntimo GS</button>
  </section>
 
  <!-- SUB-TELA MINHAS VENDAS / FINANCEIRO -->
- <section id="rev-sub-vendas" class="app-section">
+ <section id="ven-sub-vendas" class="app-section">
    <div class="section-title" style="display: flex; justify-content: space-between;">
      <span>Minhas Vendas & Financeiro</span>
-     <button onclick="mudarPainelRev('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+     <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
    </div>
-   <div id="rev-historico-vendas" style="margin-top: 10px;"></div>
+   <div id="ven-historico-vendas" style="margin-top: 10px;"></div>
  </section>
 </div>
 
@@ -159,62 +159,62 @@
  firebase.initializeApp(firebaseConfig);
  const db = firebase.firestore();
 
- let revCarrinho = JSON.parse(localStorage.getItem('rev_carrinho')) || [];
- let revDados = JSON.parse(localStorage.getItem('rev_dados')) || null;
+ let venCarrinho = JSON.parse(localStorage.getItem('ven_carrinho')) || [];
+ let venDados = JSON.parse(localStorage.getItem('ven_dados')) || null;
 
  window.addEventListener('DOMContentLoaded', () => {
-   if (revDados) {
+   if (venDados) {
      mostrarPainelPrincipal();
    }
  });
 
- document.getElementById('formRevendedora').addEventListener('submit', (e) => {
+ document.getElementById('formVendedora').addEventListener('submit', (e) => {
    e.preventDefault();
-   revDados = {
-     nome: document.getElementById('rev-nome').value,
-     telefone: document.getElementById('rev-tel').value,
-     email: document.getElementById('rev-email').value,
-     endereco: document.getElementById('rev-endereco').value,
-     numero: document.getElementById('rev-num').value,
-     pix: document.getElementById('rev-pix').value,
+   venDados = {
+     nome: document.getElementById('ven-nome').value,
+     telefone: document.getElementById('ven-tel').value,
+     email: document.getElementById('ven-email').value,
+     endereco: document.getElementById('ven-endereco').value,
+     numero: document.getElementById('ven-num').value,
+     pix: document.getElementById('ven-pix').value,
      dataCadastro: new Date().toLocaleDateString()
    };
 
-   localStorage.setItem('rev_dados', JSON.stringify(revDados));
+   localStorage.setItem('ven_dados', JSON.stringify(venDados));
    
    // Salva no Firebase para a matriz visualizar
-   db.collection("vendedores").add(revDados).catch(err => console.log(err));
+   db.collection("vendedoras").add(venDados).catch(err => console.log(err));
 
-   alert(`Boas-vindas à Toque Íntimo GS, ${revDados.nome}! Seu cadastro foi concluído com sucesso.`);
+   alert(`Boas-vindas à Toque Íntimo GS, ${venDados.nome}! Seu cadastro foi concluído com sucesso.`);
    mostrarPainelPrincipal();
  });
 
  function mostrarPainelPrincipal() {
-   document.getElementById('tela-cadastro-revendedora').classList.remove('active');
-   document.getElementById('tela-painel-revendedora').classList.add('active');
-   document.getElementById('painel-nome-revendedora').innerText = `Olá, ${revDados.nome}`;
-   carregarMetricasRevendedora();
+   document.getElementById('tela-cadastro-vendedora').classList.remove('active');
+   document.getElementById('tela-painel-vendedora').classList.add('active');
+   document.getElementById('painel-nome-vendedora').innerText = `Olá, ${venDados.nome}`;
+   carregarMetricasVendedora();
  }
 
- function mudarPainelRev(tela) {
+ function mudarPainelVen(tela) {
    document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
    if (tela === 'painel') {
-     document.getElementById('tela-painel-revendedora').classList.add('active');
-     carregarMetricasRevendedora();
+     document.getElementById('tela-painel-vendedora').classList.add('active');
+     carregarMetricasVendedora();
    } else if (tela === 'produtos') {
-     document.getElementById('rev-sub-produtos').classList.add('active');
-     carregarCatalogoRevendedora();
+     document.getElementById('ven-sub-produtos').classList.add('active');
+     carregarCatalogoVendedora();
    } else if (tela === 'carrinho') {
-     document.getElementById('rev-sub-carrinho').classList.add('active');
-     carregarCarrinhoRevendedora();
+     document.getElementById('ven-sub-carrinho').classList.add('active');
+     carregarCarrinhoVendedora();
    } else if (tela === 'vendas' || tela === 'financeiro') {
-     document.getElementById('rev-sub-vendas').classList.add('active');
-     carregarHistoricoRevendedora();
+     document.getElementById('Ven-sub-vendas').classList.add('active');
+     carregarHistoricoVendedora();
    }
  }
 
- function carregarCatalogoRevendedora() {
-   const container = document.getElementById('rev-grade-produtos');
+ function carregarCatalogoVendedora() {
+   const container = document.getElementById('ven-grade-produtos');
    container.innerHTML = 'Carregando produtos...';
    
    db.collection("produtos").get().then(snapshot => {
@@ -232,7 +232,7 @@
                <b style="font-size:13px;">${p.nome}</b>
                <small>${v.cor} / ${v.tamanho}</small>
                <span style="color:var(--primary); font-weight:bold;">R$ ${v.preco.toFixed(2)}</span>
-               <button class="btn" style="padding:6px; font-size:12px; margin-top:5px;" onclick='adicionarAoCarrinhoRev("${p.id}", "${p.nome}", "${v.cor}", "${v.tamanho}", ${v.preco})'>Adicionar</button>
+               <button class="btn" style="padding:6px; font-size:12px; margin-top:5px;" onclick='adicionarAoCarrinhoVen("${p.id}", "${p.nome}", "${v.cor}", "${v.tamanho}", ${v.preco})'>Adicionar</button>
              </div>
            `;
          }
@@ -241,33 +241,33 @@
    });
  }
 
- function adicionarAoCarrinhoRev(idProd, nome, cor, tamanho, preco) {
-   revCarrinho.push({ idProd, nome, cor, tamanho, preco, quantidade: 1 });
-   localStorage.setItem('rev_carrinho', JSON.stringify(revCarrinho));
+ function adicionarAoCarrinhoVen(idProd, nome, cor, tamanho, preco) {
+   venCarrinho.push({ idProd, nome, cor, tamanho, preco, quantidade: 1 });
+   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
    alert("Produto adicionado ao carrinho!");
  }
 
- function carregarCarrinhoRevendedora() {
-   const container = document.getElementById('rev-itens-carrinho');
-   if (!revCarrinho.length) {
+ function carregarCarrinhoVendedora() {
+   const container = document.getElementById('ven-itens-carrinho');
+   if (!venCarrinho.length) {
      container.innerHTML = '<p>Carrinho vazio.</p>';
      return;
    }
    container.innerHTML = '';
-   revCarrinho.forEach((item, index) => {
+   venCarrinho.forEach((item, index) => {
      container.innerHTML += `
        <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center;">
          <div><b>${item.nome}</b> (${item.cor}/${item.tamanho})<br>R$ ${item.preco.toFixed(2)}</div>
-         <button style="background:red; color:white; border:none; padding:5px 8px; border-radius:6px;" onclick="removerCarrinhoRev(${index})">X</button>
+         <button style="background:red; color:white; border:none; padding:5px 8px; border-radius:6px;" onclick="removerCarrinhoVen(${index})">X</button>
        </div>
      `;
    });
  }
 
- function removerCarrinhoRev(index) {
-   revCarrinho.splice(index, 1);
-   localStorage.setItem('rev_carrinho', JSON.stringify(revCarrinho));
-   carregarCarrinhoRevendedora();
+ function removerCarrinhoVen(index) {
+   venCarrinho.splice(index, 1);
+   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+   carregarCarrinhoVendedora();
  }
 
  function enviarPedidoParaLojaPrincipal() {
@@ -275,15 +275,15 @@
      alert("Seu carrinho está vazio!");
      return;
    }
-   const totalPedido = revCarrinho.reduce((acc, i) => acc + i.preco, 0);
+   const totalPedido = venCarrinho.reduce((acc, i) => acc + i.preco, 0);
    const comissao = totalPedido * 0.15;
 
    const pedidoData = {
-     revendedora: revDados.nome,
-     vendedoraNome: revDados.nome,
-     telefone: revDados.telefone,
-     pix: revDados.pix,
-     itens: revCarrinho,
+     vendedora: venDados.nome,
+     vendedoraNome: venDados.nome,
+     telefone: venDados.telefone,
+     pix: venDados.pix,
+     itens: venCarrinho,
      total: totalPedido,
      comissao: comissao,
      data: new Date().toLocaleDateString('pt-BR'),
@@ -292,25 +292,25 @@
    };
 
    // Enviando para as coleções utilizadas pelo sistema da matriz
-   db.collection("pedidos_revendedoras").add(pedidoData)
+   db.collection("pedidos_vendedoras").add(pedidoData)
      .then(() => db.collection("pedidos_vendedoras").add(pedidoData))
      .then(() => {
        alert("Pedido enviado com sucesso para confirmação e separação na Toque Íntimo GS!");
-       revCarrinho = [];
-       localStorage.setItem('rev_carrinho', JSON.stringify(revCarrinho));
-       mudarPainelRev('painel');
+       venCarrinho = [];
+       localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+       mudarPainelVen('painel');
      })
      .catch(err => alert("Erro ao enviar: " + err));
  }
 
  function enviarCatalogoClienteWhatsapp() {
-   const urlCatalogo = window.location.href.split('?')[0].replace('revendedor.html', 'catalogo.html');
-   const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${revDados.nome}: ${urlCatalogo}`);
+   const urlCatalogo = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
+   const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlCatalogo}`);
    window.open(`https://wa.me/?text=${msg}`, '_blank');
  }
 
- function carregarMetricasRevendedora() {
-   db.collection("pedidos_revendedoras").where("telefone", "==", revDados.telefone).get().then(snapshot => {
+ function carregarMetricasVendedora() {
+   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
      let qtdVendas = snapshot.size;
      let valVendas = 0;
      let valComissao = 0;
@@ -319,16 +319,16 @@
        valVendas += d.total;
        valComissao += d.comissao;
      });
-     document.getElementById('rev-qtd-vendas').innerText = qtdVendas;
-     document.getElementById('rev-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
-     document.getElementById('rev-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
+     document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
+     document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
+     document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
    });
  }
 
- function carregarHistoricoRevendedora() {
-   const container = document.getElementById('rev-historico-vendas');
+ function carregarHistoricoVendedora() {
+   const container = document.getElementById('ven-historico-vendas');
    container.innerHTML = 'Carregando...';
-   db.collection("pedidos_revendedoras").where("telefone", "==", revDados.telefone).get().then(snapshot => {
+   db.collection("pedidos_vendedoras").where("telefone", "==", venDados.telefone).get().then(snapshot => {
      container.innerHTML = '';
      if (snapshot.empty) {
        container.innerHTML = '<p>Nenhuma venda registrada ainda.</p>';
