@@ -208,7 +208,7 @@
      document.getElementById('ven-sub-carrinho').classList.add('active');
      carregarCarrinhoVendedora();
    } else if (tela === 'vendas' || tela === 'financeiro') {
-     document.getElementById('Ven-sub-vendas').classList.add('active');
+     document.getElementById('ven-sub-vendas').classList.add('active');
      carregarHistoricoVendedora();
    }
  }
@@ -292,8 +292,8 @@
    };
 
    // Enviando para as coleções utilizadas pelo sistema da matriz
-   db.collection("pedidos_vendedoras").add(pedidoData)
-     .then(() => db.collection("pedidos_vendedoras").add(pedidoData))
+   db.collection("pedidos").add(pedidoData)
+     .then(() => db.collection("pedidos").add(pedidoData))
      .then(() => {
        alert("Pedido enviado com sucesso para confirmação e separação na Toque Íntimo GS!");
        venCarrinho = [];
