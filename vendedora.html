@@ -511,56 +511,154 @@
    document.getElementById('ven-modal-foto').style.display = 'none';
  }
 
- function adicionarVariacaoPorId(pId) {
-   const prod = mapaProdutosVen[pId];
-   const select = document.getElementById(`select-var-${pId}`);
-   if (!prod || !select) return;
+ // Adiciona o produto ao carrinho verificando o estoque disponível
+function adicionarVariacaoPorId(pId) {
+  const prod = mapaProdutosVen[pId];
+  const select = document.getElementById(`select-var-${pId}`);
+  if (!prod || !select) return;
 
-   const vEscolhida = prod.variacoes[select.value];
-   if (vEscolhida) {
-     venCarrinho.push({ idProd: pId, nome: prod.nome, cor: vEscolhida.cor, tamanho: vEscolhida.tamanho, preco: Number(vEscolhida.preco) || 0 });
-     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
-     atualizarBadgeCarrinho();
-     alert("Produto adicionado ao carrinho!");
-   }
- }
+  const vEscolhida = prod.variacoes[select.value];
+  if (!vEscolhida) return;
 
- function carregarCarrinhoVendedora() {
-   const container = document.getElementById('ven-itens-carrinho');
-   if (!venCarrinho.length) {
-     container.innerHTML = '<p style="text-align: center; color: #777;">Carrinho vazio.</p>';
-     return;
-   }
-   container.innerHTML = '';
-   venCarrinho.forEach((item, index) => {
-     container.innerHTML += `
-       <div style="background: #fff; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-         <div>
-           <b style="font-size: 13px;">${item.nome}</b><br>
-           <small style="color: #666;">${item.cor} / ${item.tamanho} - R$ ${item.preco.toFixed(2)}</small>
-         </div>
-         <button onclick="removerCarrinhoVen(${index})" style="background: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;">X</button>
-       </div>
-     `;
-   });
- }
+  const estoqueMax = Number(vEscolhida.quantidade) || 0;
+  if (estoqueMax <= 0) {
+    alert("Produto sem estoque disponível!");
+    return;
+  }
 
- function removerCarrinhoVen(index) {
-   venCarrinho.splice(index, 1);
-   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
-   atualizarBadgeCarrinho();
-   carregarCarrinhoVendedora();
- }
+  // Verifica se a variação já está no carrinho
+  const indexExistente = venCarrinho.findIndex(
+    item => item.idProd === pId && item.cor === vEscolhida.cor && item.tamanho === vEscolhida.tamanho
+  );
 
- function enviarPedidoParaLojaPrincipal() {
+  if (indexExistente !== -1) {
+    if (venCarrinho[indexExistente].qtd < estoqueMax) {
+      venCarrinho[indexExistente].qtd += 1;
+      alert("Quantidade atualizada no carrinho!");
+    } else {
+      alert(`Limite de estoque atingido! Disponível: ${estoqueMax} unid.`);
+      return;
+    }
+  } else {
+    venCarrinho.push({
+      idProd: pId,
+      nome: prod.nome,
+      cor: vEscolhida.cor,
+      tamanho: vEscolhida.tamanho,
+      preco: Number(vEscolhida.preco) || 0,
+      qtd: 1,
+      estoqueMax: estoqueMax
+    });
+    alert("Produto adicionado ao carrinho!");
+  }
+
+  localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+  atualizarBadgeCarrinho();
+}
+
+// Renderiza a lista do carrinho com seletores de quantidade
+function carregarCarrinhoVendedora() {
+  const container = document.getElementById('ven-itens-carrinho');
+  if (!venCarrinho.length) {
+    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Carrinho vazio.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  venCarrinho.forEach((item, index) => {
+    // Garante retrocompatibilidade para itens antigos no carrinho
+    if (!item.qtd) item.qtd = 1;
+    if (!item.estoqueMax) item.estoqueMax = 99;
+
+    const subtotal = item.preco * item.qtd;
+
+    container.innerHTML += `
+      <div style="background: #fff; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div>
+            <b style="font-size: 13px; color: #333;">${item.nome}</b><br>
+            <small style="color: #666;">${item.cor} / ${item.tamanho} - R$ ${item.preco.toFixed(2)} un.</small><br>
+            <small style="color: #888; font-size: 10px;">Estoque disponível: ${item.estoqueMax}</small>
+          </div>
+          <button onclick="removerCarrinhoVen(${index})" style="background: #ff4d4d; color: white; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px;">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 8px;">
+          <!-- Controle de Quantidade -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button onclick="alterarQtdCarrinho(${index}, -1)" style="width: 28px; height: 28px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">-</button>
+            <input type="number" value="${item.qtd}" min="1" max="${item.estoqueMax}" onchange="digitarQtdCarrinho(${index}, this.value)" style="width: 45px; height: 28px; text-align: center; border: 1px solid #ccc; border-radius: 6px; font-size: 12px;">
+            <button onclick="alterarQtdCarrinho(${index}, 1)" style="width: 28px; height: 28px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">+</button>
+          </div>
+
+          <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
+            Subtotal: R$ ${subtotal.toFixed(2)}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// Altera a quantidade pelos botões + e -
+function alterarQtdCarrinho(index, delta) {
+  const item = venCarrinho[index];
+  const novaQtd = item.qtd + delta;
+
+  if (novaQtd < 1) return;
+  if (novaQtd > item.estoqueMax) {
+    alert(`Quantidade máxima em estoque atingida (${item.estoqueMax} unid.)`);
+    return;
+  }
+
+  item.qtd = novaQtd;
+  localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+  carregarCarrinhoVendedora();
+  atualizarBadgeCarrinho();
+}
+
+// Altera a quantidade caso a vendedora digite diretamente no campo
+function digitarQtdCarrinho(index, valor) {
+  const item = venCarrinho[index];
+  let valNum = parseInt(valor) || 1;
+
+  if (valNum < 1) valNum = 1;
+  if (valNum > item.estoqueMax) {
+    alert(`Quantidade ajustada para o limite em estoque (${item.estoqueMax} unid.)`);
+    valNum = item.estoqueMax;
+  }
+
+  item.qtd = valNum;
+  localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+  carregarCarrinhoVendedora();
+  atualizarBadgeCarrinho();
+}
+
+function removerCarrinhoVen(index) {
+  venCarrinho.splice(index, 1);
+  localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+  atualizarBadgeCarrinho();
+  carregarCarrinhoVendedora();
+}
+
+// Atualiza a badge do número total de itens somando as quantidades
+function atualizarBadgeCarrinho() {
+  const totalItens = venCarrinho.reduce((acc, item) => acc + (item.qtd || 1), 0);
+  document.getElementById('qtd-carrinho-badge').innerText = totalItens;
+}
+
+// Envia o pedido calculando quantidade x preço de cada item
+function enviarPedidoParaLojaPrincipal() {
   if (!venCarrinho.length) return alert("Seu carrinho está vazio!");
-  
+
   if (!venDados) {
     alert("Sua sessão expirou. Faça login novamente.");
     return logoutVendedora();
   }
 
-  const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
+  const totalPedido = venCarrinho.reduce((acc, i) => acc + ((Number(i.preco) || 0) * (i.qtd || 1)), 0);
   const comissao = totalPedido * 0.15;
   const timestampAtual = new Date();
 
@@ -582,10 +680,7 @@
     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
     atualizarBadgeCarrinho();
     
-    // Atualiza as métricas com segurança
     carregarMetricasVendedora();
-    
-    // Redireciona para a aba Minhas Vendas
     const abas = document.querySelectorAll('.tab-btn');
     if (abas[2]) alternarAba('vendas', abas[2]);
   }).catch((error) => {
