@@ -115,14 +115,21 @@
    </button>
  </section>
 
- <!-- SUB-TELA PRODUTOS / CATÁLOGO -->
- <section id="ven-sub-produtos" class="app-section">
-   <div class="section-title" style="display: flex; justify-content: space-between;">
-     <span>Catálogo Disponível</span>
-     <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-   </div>
-   <div id="ven-grade-produtos" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;"></div>
- </section>
+<!-- SUB-TELA PRODUTOS / CATÁLOGO -->
+<section id="ven-sub-produtos" class="app-section">
+  <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+    <span>Catálogo Disponível</span>
+    <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <!-- Filtro de Categorias -->
+  <div id="ven-categorias-bar" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none;">
+    <button class="btn-cat active" onclick="filtrarCategoriaVen('todas', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--primary); background: var(--primary); color: white; font-size: 12px; white-space: nowrap; cursor: pointer;">Todas</button>
+  </div>
+
+  <!-- Grade de Produtos -->
+  <div id="ven-grade-produtos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;"></div>
+</section>
 
  <!-- SUB-TELA CARRINHO / PEDIDOS -->
  <section id="ven-sub-carrinho" class="app-section">
@@ -213,36 +220,99 @@
    }
  }
 
- function carregarCatalogoVendedora() {
-   const container = document.getElementById('ven-grade-produtos');
-   container.innerHTML = 'Carregando produtos...';
-   
-   db.collection("produtos").get().then(snapshot => {
-     container.innerHTML = '';
-     if (snapshot.empty) {
-       container.innerHTML = '<p>Nenhum produto disponível.</p>';
-       return;
-     }
-     snapshot.forEach(doc => {
-       const p = doc.data();
-       if (p.variacoes && Array.isArray(p.variacoes)) {
-         p.variacoes.forEach(v => {
-           if (v.quantidade > 0) {
-             const preco = Number(v.preco) || 0;
-             container.innerHTML += `
-               <div class="prod-list-card">
-                 <b style="font-size:13px;">${p.nome}</b>
-                 <small>${v.cor} / ${v.tamanho}</small>
-                 <span style="color:var(--primary); font-weight:bold;">R$ ${preco.toFixed(2)}</span>
-                 <button class="btn" style="padding:6px; font-size:12px; margin-top:5px;" onclick='adicionarAoCarrinhoVen("${doc.id}", "${p.nome}", "${v.cor}", "${v.tamanho}", ${preco})'>Adicionar</button>
-               </div>
-             `;
-           }
-         });
-       }
-     });
-   });
- }
+ let todosProdutosVen = []; // Armazena os produtos carregados para filtragem rápida
+
+function carregarCatalogoVendedora() {
+  const container = document.getElementById('ven-grade-produtos');
+  const catBar = document.getElementById('ven-categorias-bar');
+  container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Carregando produtos...</p>';
+
+  db.collection("produtos").get().then(snapshot => {
+    todosProdutosVen = [];
+    const categorias = new Set();
+
+    if (snapshot.empty) {
+      container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Nenhum produto disponível.</p>';
+      return;
+    }
+
+    snapshot.forEach(doc => {
+      const p = doc.data();
+      p.id = doc.id;
+      todosProdutosVen.push(p);
+      if (p.categoria) categorias.add(p.categoria);
+    });
+
+    // Renderizar Botões de Categoria
+    catBar.innerHTML = `<button class="btn-cat active" onclick="filtrarCategoriaVen('todas', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--primary); background: var(--primary); color: white; font-size: 12px; white-space: nowrap; cursor: pointer;">Todas</button>`;
+    categorias.forEach(cat => {
+      catBar.innerHTML += `<button class="btn-cat" onclick="filtrarCategoriaVen('${cat}', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #f5f5f5; color: #333; font-size: 12px; white-space: nowrap; cursor: pointer;">${cat}</button>`;
+    });
+
+    renderizarCardsVendedora(todosProdutosVen);
+  }).catch(err => {
+    console.error(err);
+    container.innerHTML = '<p style="grid-column: span 2; text-align: center; color: red;">Erro ao carregar catálogo.</p>';
+  });
+}
+
+function renderizarCardsVendedora(lista) {
+  const container = document.getElementById('ven-grade-produtos');
+  container.innerHTML = '';
+
+  if (!lista.length) {
+    container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Nenhum produto nesta categoria.</p>';
+    return;
+  }
+
+  lista.forEach(p => {
+    const fotoUrl = p.foto || p.imagem || 'https://via.placeholder.com/150?text=Sem+Foto';
+    
+    if (p.variacoes && Array.isArray(p.variacoes)) {
+      p.variacoes.forEach(v => {
+        const qtdEstoque = Number(v.quantidade) || 0;
+        if (qtdEstoque > 0) {
+          const preco = Number(v.preco) || 0;
+          container.innerHTML += `
+            <div class="prod-list-card" style="padding: 10px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+              <div style="width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px;">
+                <img src="${fotoUrl}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;">
+              </div>
+              <b style="font-size: 13px; color: #333; line-height: 1.2; margin-bottom: 4px;">${p.nome}</b>
+              <small style="color: #666; font-size: 11px;">Cor/Tam: <b>${v.cor} / ${v.tamanho}</b></small>
+              <small style="color: ${qtdEstoque < 3 ? '#d9534f' : '#2e7d32'}; font-size: 11px; margin-bottom: 6px;">
+                Estoque: <b>${qtdEstoque} un.</b>
+              </small>
+              <span style="color: var(--primary); font-weight: bold; font-size: 14px; margin-bottom: 8px;">R$ ${preco.toFixed(2)}</span>
+              <button class="btn" style="padding: 8px; font-size: 12px; margin-top: auto;" onclick='adicionarAoCarrinhoVen("${p.id}", "${p.nome}", "${v.cor}", "${v.tamanho}", ${preco})'>
+                <i class="fa-solid fa-cart-plus"></i> Adicionar
+              </button>
+            </div>
+          `;
+        }
+      });
+    }
+  });
+}
+
+function filtrarCategoriaVen(categoria, btn) {
+  // Destacar botão selecionado
+  document.querySelectorAll('#ven-categorias-bar .btn-cat').forEach(b => {
+    b.style.background = '#f5f5f5';
+    b.style.color = '#333';
+    b.style.border = '1px solid #ddd';
+  });
+  btn.style.background = 'var(--primary)';
+  btn.style.color = 'white';
+  btn.style.border = '1px solid var(--primary)';
+
+  if (categoria === 'todas') {
+    renderizarCardsVendedora(todosProdutosVen);
+  } else {
+    const filtrados = todosProdutosVen.filter(p => p.categoria === categoria);
+    renderizarCardsVendedora(filtrados);
+  }
+}
 
  function adicionarAoCarrinhoVen(idProd, nome, cor, tamanho, preco) {
    venCarrinho.push({ idProd, nome, cor, tamanho, preco, quantidade: 1 });
