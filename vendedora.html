@@ -552,30 +552,46 @@
  }
 
  function enviarPedidoParaLojaPrincipal() {
-   if (!venCarrinho.length) return alert("Seu carrinho está vazio!");
-   const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
-   const comissao = totalPedido * 0.15;
+  if (!venCarrinho.length) return alert("Seu carrinho está vazio!");
+  
+  // Garantia de segurança para validar se o usuário está logado
+  if (!venDados) {
+    alert("Sua sessão expirou. Faça login novamente para enviar o pedido.");
+    return logoutVendedora();
+  }
 
-   db.collection("pedidos").add({
-     vendedora: venDados.nome,
-     telefone: venDados.telefone,
-     pix: venDados.pix,
-     codigoVendedora: venDados.codigo || '',
-     itens: venCarrinho,
-     total: totalPedido,
-     comissao: comissao,
-     data: new Date().toLocaleDateString('pt-BR'),
-     dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
-     status: 'Pendente',
-     formaPagamento: ''
-   }).then(() => {
-     alert("Pedido enviado com sucesso!");
-     venCarrinho = [];
-     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
-     atualizarBadgeCarrinho();
-     alternarAba('vendas', document.querySelectorAll('.tab-btn')[2]);
-   });
- }
+  const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
+  const comissao = totalPedido * 0.15;
+
+  // Ajuste do timestamp seguro para Firebase Web SDK Compat/v9
+  const timestampAtual = new Date();
+
+  db.collection("pedidos").add({
+    vendedora: venDados.nome || "Não informado",
+    telefone: venDados.telefone || "",
+    pix: venDados.pix || "",
+    codigoVendedora: venDados.codigo || "",
+    itens: venCarrinho,
+    total: totalPedido,
+    comissao: comissao,
+    data: timestampAtual.toLocaleDateString('pt-BR'),
+    dataCriacao: timestampAtual, // Correção do bug do FieldValue
+    status: 'Pendente',
+    formaPagamento: ''
+  }).then(() => {
+    alert("Pedido enviado com sucesso!");
+    venCarrinho = [];
+    localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+    atualizarBadgeCarrinho();
+    
+    // Atualiza as métricas e redireciona para a aba de vendas
+    carregarMetricasVendedora();
+    alternarAba('vendas', document.querySelectorAll('.tab-btn')[2]);
+  }).catch((error) => {
+    console.error("Erro ao enviar pedido:", error);
+    alert("Ocorreu um erro ao enviar o pedido: " + error.message);
+  });
+}
 
  function carregarMetricasVendedora() {
    db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
