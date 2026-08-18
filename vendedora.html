@@ -621,9 +621,7 @@
     return;
   }
 
-  // Busca prioritariamente pelo Código da Vendedora ou pelo Telefone como fallback
   let consulta = db.collection("pedidos");
-  
   if (venDados.codigo) {
     consulta = consulta.where("codigoVendedora", "==", venDados.codigo);
   } else {
@@ -655,20 +653,46 @@
         });
       }
 
+      // Limite de data: Hoje até no máximo 30 dias pra frente
+      const hoje = new Date().toISOString().split('T')[0];
+      const maxDataPrazo = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
       let htmlPosConfirmacao = '';
       if (isConfirmado) {
+        const isPrazo = d.formaPagamento === 'A prazo';
+
         htmlPosConfirmacao = `
           <div class="painel-pos-confirmacao">
+            <!-- Dados do Cliente -->
             <div class="form-group" style="margin-bottom: 8px;">
-              <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
-              <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+              <label style="font-size: 11px;">Nome do Cliente:</label>
+              <input type="text" id="cli-nome-${pedId}" value="${d.clienteNome || ''}" placeholder="Ex: Maria Silva" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="font-size: 11px;">WhatsApp/Telefone do Cliente:</label>
+              <input type="text" id="cli-tel-${pedId}" value="${d.clienteTelefone || ''}" placeholder="Ex: 11999999999" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+            </div>
+
+            <!-- Forma de Pagamento -->
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="font-size: 11px;">Forma de Pagamento:</label>
+              <select id="pagto-${pedId}" onchange="toggleOpcaoPrazo('${pedId}'); atualizarPagamentoPedido('${pedId}');" style="padding: 6px; font-size: 12px;">
                 <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
                 <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
                 <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
                 <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
                 <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+                <option value="A prazo" ${isPrazo ? 'selected' : ''}>A prazo (até 30 dias)</option>
               </select>
             </div>
+
+            <!-- Campo Data de Vencimento (visível apenas se for 'A prazo') -->
+            <div class="form-group" id="group-prazo-${pedId}" style="margin-bottom: 8px; display: ${isPrazo ? 'flex' : 'none'};">
+              <label style="font-size: 11px; color: #cc0000; font-weight: bold;">Data de Vencimento (Máx. 30 dias):</label>
+              <input type="date" id="venc-prazo-${pedId}" value="${d.dataVencimento || ''}" min="${hoje}" max="${maxDataPrazo}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px; border: 1px solid #cc0000;">
+            </div>
+
             <div style="display: flex; gap: 8px; margin-top: 10px;">
               <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
                 <i class="fa-brands fa-whatsapp"></i> Enviar Nota
@@ -697,103 +721,118 @@
     });
   }).catch(error => {
     console.error("Erro ao carregar histórico:", error);
-    container.innerHTML = `<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar histórico de vendas: ${error.message}</p>`;
+    container.innerHTML = `<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar vendas.</p>`;
   });
 }
 
-// Aproveite para atualizar também a função das métricas do topo:
-function carregarMetricasVendedora() {
-  if (!venDados) return;
-
-  let consulta = db.collection("pedidos");
-  if (venDados.codigo) {
-    consulta = consulta.where("codigoVendedora", "==", venDados.codigo);
+// Mostra ou esconde o campo de data limite de 30 dias
+function toggleOpcaoPrazo(pedId) {
+  const selectPagto = document.getElementById(`pagto-${pedId}`);
+  const groupPrazo = document.getElementById(`group-prazo-${pedId}`);
+  if (selectPagto.value === 'A prazo') {
+    groupPrazo.style.display = 'flex';
   } else {
-    consulta = consulta.where("telefone", "==", venDados.telefone);
+    groupPrazo.style.display = 'none';
   }
-
-  consulta.get().then(snapshot => {
-    let qtdVendas = 0;
-    let valVendas = 0;
-    let valComissao = 0;
-
-    snapshot.forEach(doc => {
-      const d = doc.data();
-      valVendas += Number(d.total) || 0;
-      valComissao += Number(d.comissao) || 0;
-      if (d.itens && Array.isArray(d.itens)) qtdVendas += d.itens.length;
-    });
-
-    document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
-    document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
-    document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
-  }).catch(err => console.log("Erro métricas:", err));
 }
 
- function atualizarPagamentoPedido(pedId) {
-   const val = document.getElementById(`pagto-${pedId}`).value;
-   db.collection("pedidos").doc(pedId).update({ formaPagamento: val }).then(() => {
-     pedidosCache[pedId].formaPagamento = val;
-   });
- }
+// Salva as informações do Cliente e a Condição no Firebase
+function atualizarPagamentoPedido(pedId) {
+  const formaPagto = document.getElementById(`pagto-${pedId}`).value;
+  const clienteNome = document.getElementById(`cli-nome-${pedId}`).value;
+  const clienteTelefone = document.getElementById(`cli-tel-${pedId}`).value;
+  const dataVencimento = document.getElementById(`venc-prazo-${pedId}`) ? document.getElementById(`venc-prazo-${pedId}`).value : '';
 
- function enviarNotaClienteWhatsapp(pedId) {
-   const ped = pedidosCache[pedId];
-   if (!ped) return;
+  const dadosAtualizados = {
+    formaPagamento: formaPagto,
+    clienteNome: clienteNome,
+    clienteTelefone: clienteTelefone,
+    dataVencimento: formaPagto === 'A prazo' ? dataVencimento : ''
+  };
 
-   const pagto = ped.formaPagamento || 'A combinar';
-   let textoItens = '';
-   if (ped.itens && Array.isArray(ped.itens)) {
-     ped.itens.forEach(i => {
-       textoItens += `• ${i.nome} (${i.cor}/${i.tamanho}) - R$ ${Number(i.preco).toFixed(2)}\n`;
-     });
-   }
+  db.collection("pedidos").doc(pedId).update(dadosAtualizados).then(() => {
+    // Atualiza o cache local
+    Object.assign(pedidosCache[pedId], dadosAtualizados);
+  });
+}
 
-   const mensagem = `*Toque Íntimo GS - Comprovante do Pedido*\n` +
-                    `Consultora: ${venDados.nome}\n` +
-                    `Data: ${ped.data}\n` +
-                    `Forma de Pagamento: ${pagto}\n\n` +
-                    `*Itens:*\n${textoItens}\n` +
-                    `*Total: R$ ${Number(ped.total).toFixed(2)}*\n\n` +
-                    `Obrigado pela preferência! ✨`;
+// Envia a Nota formatada diretamente para o WhatsApp do Cliente
+function enviarNotaClienteWhatsapp(pedId) {
+  const ped = pedidosCache[pedId];
+  if (!ped) return;
 
-   window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
- }
+  const cliNome = ped.clienteNome ? `\nCliente: ${ped.clienteNome}` : '';
+  let pagtoText = ped.formaPagamento || 'A combinar';
+  
+  if (ped.formaPagamento === 'A prazo' && ped.dataVencimento) {
+    const [ano, mes, dia] = ped.dataVencimento.split('-');
+    pagtoText += ` (Vencimento em ${dia}/${mes}/${ano})`;
+  }
 
- function gerarPDFNota(pedId) {
-   const ped = pedidosCache[pedId];
-   if (!ped) return;
+  let textoItens = '';
+  if (ped.itens && Array.isArray(ped.itens)) {
+    ped.itens.forEach(i => {
+      textoItens += `• ${i.nome} (${i.cor}/${i.tamanho}) - R$ ${Number(i.preco).toFixed(2)}\n`;
+    });
+  }
 
-   document.getElementById('pdf-vendedora').innerText = venDados.nome;
-   document.getElementById('pdf-data').innerText = ped.data || '';
-   document.getElementById('pdf-pagamento').innerText = ped.formaPagamento || 'Não especificado';
-   document.getElementById('pdf-total').innerText = `R$ ${Number(ped.total || 0).toFixed(2)}`;
+  const mensagem = `*Toque Íntimo GS - Comprovante do Pedido*` +
+                   `${cliNome}\n` +
+                   `Consultora: ${venDados.nome}\n` +
+                   `Data do Pedido: ${ped.data}\n` +
+                   `Pagamento: ${pagtoText}\n\n` +
+                   `*Itens:*\n${textoItens}\n` +
+                   `*Total: R$ ${Number(ped.total).toFixed(2)}*\n\n` +
+                   `Obrigado pela preferência! ✨`;
 
-   const tbody = document.getElementById('pdf-itens-body');
-   tbody.innerHTML = '';
-   if (ped.itens && Array.isArray(ped.itens)) {
-     ped.itens.forEach(i => {
-       tbody.innerHTML += `
-         <tr style="border-bottom: 1px solid #eee;">
-           <td style="padding: 8px;">${i.nome}</td>
-           <td style="padding: 8px;">${i.cor} / ${i.tamanho}</td>
-           <td style="padding: 8px; text-align: right;">R$ ${Number(i.preco).toFixed(2)}</td>
-         </tr>
-       `;
-     });
-   }
+  // Se tiver o número do cliente cadastrado, abre a conversa diretamente com ele
+  const telLimpo = (ped.clienteTelefone || '').replace(/\D/g, '');
+  const targetUrl = telLimpo ? `https://wa.me/55${telLimpo}?text=` : `https://wa.me/?text=`;
 
-   const element = document.getElementById('nota-pdf-content');
-   const opt = {
-     margin:       10,
-     filename:     `Nota_ToqueIntimoGS_${ped.data.replace(/\//g, '-')}.pdf`,
-     image:        { type: 'jpeg', quality: 0.98 },
-     html2canvas:  { scale: 2 },
-     jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
-   };
+  window.open(targetUrl + encodeURIComponent(mensagem), '_blank');
+}
 
-   html2pdf().set(opt).from(element).save();
- }
+// Atualização do PDF incluindo Cliente e Vencimento do Prazo
+function gerarPDFNota(pedId) {
+  const ped = pedidosCache[pedId];
+  if (!ped) return;
+
+  let pagtoText = ped.formaPagamento || 'Não especificado';
+  if (ped.formaPagamento === 'A prazo' && ped.dataVencimento) {
+    const [ano, mes, dia] = ped.dataVencimento.split('-');
+    pagtoText += ` - Vencimento: ${dia}/${mes}/${ano}`;
+  }
+
+  document.getElementById('pdf-vendedora').innerText = `${venDados.nome} | Cliente: ${ped.clienteNome || 'Não informado'}`;
+  document.getElementById('pdf-data').innerText = ped.data || '';
+  document.getElementById('pdf-pagamento').innerText = pagtoText;
+  document.getElementById('pdf-total').innerText = `R$ ${Number(ped.total || 0).toFixed(2)}`;
+
+  const tbody = document.getElementById('pdf-itens-body');
+  tbody.innerHTML = '';
+  if (ped.itens && Array.isArray(ped.itens)) {
+    ped.itens.forEach(i => {
+      tbody.innerHTML += `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 8px;">${i.nome}</td>
+          <td style="padding: 8px;">${i.cor} / ${i.tamanho}</td>
+          <td style="padding: 8px; text-align: right;">R$ ${Number(i.preco).toFixed(2)}</td>
+        </tr>
+      `;
+    });
+  }
+
+  const element = document.getElementById('nota-pdf-content');
+  const opt = {
+    margin:       10,
+    filename:     `Nota_ToqueIntimoGS_${(ped.clienteNome || 'Cliente').replace(/\s+/g, '_')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save();
+}
 
  function carregarFinanceiroVendedora() {
    const container = document.getElementById('ven-dados-financeiros');
