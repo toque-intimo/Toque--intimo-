@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Painel da Vendedora - Toque Íntimo GS</title>
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+ <style> 
+ :root {
+   --primary: #70293b;
+   --primary-light: #f9f0f2;
+   --bg: #f8f9fa;
+   --text-dark: #2d2d2d;
+   --text-muted: #6c757d;
+   --card-border: #f1f3f5;
+ }
+ * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+ body { background-color: var(--bg); color: var(--text-dark); padding-bottom: 80px; }
+ .container { max-width: 500px; margin: 0 auto; padding: 20px; }
+ .brand-title { font-size: 24px; font-weight: bold; color: #501926; margin: 15px 0 25px 0; text-align: center; }
+ 
+ /* TELAS */
+ .app-section { display: none; background: white; padding: 20px; border-radius: 18px; border: 1px solid var(--card-border); margin-top: 10px; }
+ .app-section.active { display: block; }
+
+ /* FORMULÁRIO */
+ .grid-form { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+ .form-group { display: flex; flex-direction: column; gap: 5px; }
+ .form-group label { font-size: 12px; font-weight: 600; color: #555; }
+ .form-group input { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: #fafafa; outline: none; width: 100%; }
+ .btn { background-color: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; margin-top: 10px; }
+
+ /* PAINEL DA VENDEDORA */
+ .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+ .summary-card { background: white; padding: 20px; border-radius: 18px; border: 1px solid var(--card-border); box-shadow: 0 4px 12px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 8px; }
+ .summary-value { font-size: 20px; font-weight: bold; color: #1a1a1a; margin-top: 5px; }
+ .summary-label { font-size: 12px; color: var(--text-muted); }
+
+ .section-title { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 15px; margin-top: 15px; }
+ .acesso-rapido-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
+ .menu-btn { background: white; border: 1px solid var(--card-border); border-radius: 16px; padding: 15px 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+ .icon-wrapper { width: 42px; height: 42px; background-color: var(--primary-light); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+ .menu-btn span { font-size: 11px; font-weight: 500; color: var(--text-muted); text-align: center; }
+
+ .prod-list-card { background: #fdfdfd; border: 1px solid #f0f0f0; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+ </style>
+</head>
+<body>
+
+<div class="container">
+ <div class="brand-title">Toque Íntimo GS <br><span style="font-size: 14px; color: var(--text-muted);">Portal da Vendedora</span></div>
+
+ <!-- TELA DE CADASTRO DA VENDEDORA -->
+ <section id="tela-cadastro-vendedora" class="app-section active">
+   <div class="section-title" style="font-size: 18px; color: #501926;">Cadastre-se para Começar</div>
+   <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Preencha seus dados para acessar o painel de vendas e receber suas comissões.</p>
+   
+   <form id="formVendedora" class="grid-form">
+     <div class="form-group"><label>Nome Completo</label><input type="text" id="ven-nome" required></div>
+     <div class="form-group"><label>Número de Telefone (WhatsApp)</label><input type="text" id="ven-tel" placeholder="11999999999" required></div>
+     <div class="form-group"><label>Endereço de E-mail</label><input type="email" id="ven-email" required></div>
+     <div class="form-group"><label>Endereço (Rua, Bairro, Cidade)</label><input type="text" id="ven-endereco" required></div>
+     <div class="form-group"><label>Número da Residência</label><input type="text" id="ven-num" required></div>
+     <div class="form-group"><label>Chave Pix (Para recebimento das comissões)</label><input type="text" id="ven-pix" placeholder="CPF, E-mail ou Telefone" required></div>
+     <button type="submit" class="btn">Finalizar Cadastro</button>
+   </form>
+ </section>
+
+ <!-- PAINEL PRINCIPAL DA VENDEDORA -->
+ <section id="tela-painel-vendedora" class="app-section">
+   <div style="text-align: center; margin-bottom: 20px;">
+     <h2 id="painel-nome-vendedora" style="color: var(--primary);">Olá, Vendedora</h2>
+     <p style="font-size: 12px; color: var(--text-muted);">Comissão Ativa: <b>15% sobre as vendas</b></p>
+   </div>
+
+   <!-- MÉTRICAS -->
+   <div class="summary-grid">
+     <div class="summary-card">
+       <div class="summary-value" id="ven-qtd-vendas">0</div>
+       <div class="summary-label">Qtd Vendas do Mês</div>
+     </div>
+     <div class="summary-card">
+       <div class="summary-value" id="ven-val-vendas">R$ 0,00</div>
+       <div class="summary-label">Vendas do Mês</div>
+     </div>
+     <div class="summary-card" style="grid-column: span 2; background: #fdf2f4;">
+       <div class="summary-value" id="ven-val-comissao" style="color: var(--primary);">R$ 0,00</div>
+       <div class="summary-label">Comissão Mensal (15%)</div>
+     </div>
+   </div>
+
+   <!-- ACESSO RÁPIDO -->
+   <div class="section-title">Acesso Rápido</div>
+   <div class="acesso-rapido-grid">
+     <div class="menu-btn" onclick="mudarPainelVen( 'produtos' )">
+       <div class="icon-wrapper"><i class="fa-solid fa-box"></i></div>
+       <span>Produtos</span>
+     </div>
+     <div class="menu-btn" onclick="mudarPainelVen( 'carrinho' )">
+       <div class="icon-wrapper"><i class="fa-solid fa-cart-shopping"></i></div>
+       <span>Carrinho</span>
+     </div>
+     <div class="menu-btn" onclick="mudarPainelVen( 'vendas' )">
+       <div class="icon-wrapper"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+       <span>Minhas Vendas</span>
+     </div>
+     <div class="menu-btn" onclick="mudarPainelVen( 'financeiro' )">
+       <div class="icon-wrapper"><i class="fa-solid fa-wallet"></i></div>
+       <span>Financeiro</span>
+     </div>
+   </div>
+
+   <button class="btn" style="background-color: #25D366; margin-top: 10px;" onclick="enviarCatalogoClienteWhatsapp()">
+     <i class="fa-brands fa-whatsapp"></i> Enviar Catálogo para Cliente
+   </button>
+ </section>
+
+<!-- SUB-TELA PRODUTOS / CATÁLOGO -->
+<section id="ven-sub-produtos" class="app-section">
+  <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+    <span>Catálogo Disponível</span>
+    <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <!-- Filtro de Categorias -->
+  <div id="ven-categorias-bar" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none;">
+    <button class="btn-cat active" onclick="filtrarCategoriaVen('todas', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--primary); background: var(--primary); color: white; font-size: 12px; white-space: nowrap; cursor: pointer;">Todas</button>
+  </div>
+
+  <!-- Grade de Produtos -->
+  <div id="ven-grade-produtos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;"></div>
+</section>
+
+ <!-- SUB-TELA CARRINHO / PEDIDOS -->
+ <section id="ven-sub-carrinho" class="app-section">
+   <div class="section-title" style="display: flex; justify-content: space-between;">
+     <span>Carrinho / Pedidos</span>
+     <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+   </div>
+   <div id="ven-itens-carrinho" style="margin-top: 10px;"></div>
+   <button class="btn" style="background: #1e7e48; margin-top: 15px;" onclick="enviarPedidoParaLojaPrincipal()">Enviar Pedido para Toque Íntimo GS</button>
+ </section>
+
+ <!-- SUB-TELA MINHAS VENDAS / FINANCEIRO -->
+ <section id="ven-sub-vendas" class="app-section">
+   <div class="section-title" style="display: flex; justify-content: space-between;">
+     <span>Minhas Vendas & Financeiro</span>
+     <button onclick="mudarPainelVen('painel')" style="background:none; border:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+   </div>
+   <div id="ven-historico-vendas" style="margin-top: 10px;"></div>
+ </section>
+</div>
+
+<!-- MODAL GALERIA COM NAVEGAÇÃO -->
+<div id="ven-modal-foto" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 99999; justify-content: center; align-items: center; flex-direction: column; padding: 10px;">
+  <span style="position: absolute; top: 15px; right: 20px; color: white; font-size: 32px; font-weight: bold; cursor: pointer; z-index: 100000;" onclick="fecharFotoExpandidaVen()">&times;</span>
+
+  <div style="position: relative; max-width: 90%; max-height: 80vh; display: flex; align-items: center; justify-content: center;">
+    <button id="btn-foto-prev" onclick="mudarFotoModal(-1)" style="position: absolute; left: -15px; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 20px; padding: 12px 10px; border-radius: 50%; cursor: pointer; z-index: 100001; backdrop-filter: blur(4px);">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+
+    <img id="ven-img-expandida" src="" style="max-width: 100%; max-height: 75vh; border-radius: 12px; object-fit: contain; box-shadow: 0 5px 25px rgba(0,0,0,0.5);">
+
+    <button id="btn-foto-next" onclick="mudarFotoModal(1)" style="position: absolute; right: -15px; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 20px; padding: 12px 10px; border-radius: 50%; cursor: pointer; z-index: 100001; backdrop-filter: blur(4px);">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>
+  <div id="ven-foto-contador" style="color: white; margin-top: 10px; font-size: 13px; font-weight: 500;"></div>
+</div>
+
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+ const firebaseConfig = {
+   apiKey: "AIzaSyD6QAOn1t-W6E4465u3ACZ2bB25RIAkpbo",
+   authDomain: "meucatalogoapp-c7e39.firebaseapp.com",
+   projectId: "meucatalogoapp-c7e39",
+   storageBucket: "meucatalogoapp-c7e39.appspot.com",
+   messagingSenderId: "311764083576",
+   appId: "1:311764083576:web:2630353079ec5294031e8d"
+ };
+ firebase.initializeApp(firebaseConfig);
+ const db = firebase.firestore();
+
+ let venCarrinho = JSON.parse(localStorage.getItem('ven_carrinho')) || [];
+ let venDados = JSON.parse(localStorage.getItem('ven_dados')) || null;
+ 
+ // Variáveis Globais da Galeria e Produtos
+ let fotosModalAtual = [];
+ let fotoIndexAtual = 0;
+ let mapaProdutosVen = {};
+ let todosProdutosVen = [];
+
+ window.addEventListener('DOMContentLoaded', () => {
+   if (venDados) {
+     mostrarPainelPrincipal();
+   }
+ });
+
+ document.getElementById('formVendedora').addEventListener('submit', (e) => {
+   e.preventDefault();
+   venDados = {
+     nome: document.getElementById('ven-nome').value,
+     telefone: document.getElementById('ven-tel').value,
+     email: document.getElementById('ven-email').value,
+     endereco: document.getElementById('ven-endereco').value,
+     numero: document.getElementById('ven-num').value,
+     pix: document.getElementById('ven-pix').value,
+     dataCadastro: new Date().toLocaleDateString('pt-BR')
+   };
+
+   localStorage.setItem('ven_dados', JSON.stringify(venDados));
+   db.collection("vendedoras").add(venDados).catch(err => console.log(err));
+
+   alert(`Boas-vindas à Toque Íntimo GS, ${venDados.nome}! Seu cadastro foi concluído com sucesso.`);
+   mostrarPainelPrincipal();
+ });
+
+ function mostrarPainelPrincipal() {
+   document.getElementById('tela-cadastro-vendedora').classList.remove('active');
+   document.getElementById('tela-painel-vendedora').classList.add('active');
+   document.getElementById('painel-nome-vendedora').innerText = `Olá, ${venDados.nome}`;
+   carregarMetricasVendedora();
+ }
+
+ function mudarPainelVen(tela) {
+   document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
+   if (tela === 'painel') {
+     document.getElementById('tela-painel-vendedora').classList.add('active');
+     carregarMetricasVendedora();
+   } else if (tela === 'produtos') {
+     document.getElementById('ven-sub-produtos').classList.add('active');
+     carregarCatalogoVendedora();
+   } else if (tela === 'carrinho') {
+     document.getElementById('ven-sub-carrinho').classList.add('active');
+     carregarCarrinhoVendedora();
+   } else if (tela === 'vendas' || tela === 'financeiro') {
+     document.getElementById('ven-sub-vendas').classList.add('active');
+     carregarHistoricoVendedora();
+   }
+ }
+
+ function carregarCatalogoVendedora() {
+   const container = document.getElementById('ven-grade-produtos');
+   const catBar = document.getElementById('ven-categorias-bar');
+   container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Carregando produtos...</p>';
+
+   db.collection("produtos").get().then(snapshot => {
+     todosProdutosVen = [];
+     const categorias = new Set();
+
+     if (snapshot.empty) {
+       container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Nenhum produto disponível.</p>';
+       return;
+     }
+
+     snapshot.forEach(doc => {
+       const p = doc.data();
+       p.id = doc.id;
+       todosProdutosVen.push(p);
+       if (p.categoria) categorias.add(p.categoria);
+     });
+
+     catBar.innerHTML = `<button class="btn-cat active" onclick="filtrarCategoriaVen('todas', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--primary); background: var(--primary); color: white; font-size: 12px; white-space: nowrap; cursor: pointer;">Todas</button>`;
+     categorias.forEach(cat => {
+       catBar.innerHTML += `<button class="btn-cat" onclick="filtrarCategoriaVen('${cat}', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #f5f5f5; color: #333; font-size: 12px; white-space: nowrap; cursor: pointer;">${cat}</button>`;
+     });
+
+     renderizarCardsVendedora(todosProdutosVen);
+   }).catch(err => {
+     console.error(err);
+     container.innerHTML = '<p style="grid-column: span 2; text-align: center; color: red;">Erro ao carregar catálogo.</p>';
+   });
+ }
+
+ function filtrarCategoriaVen(categoria, btn) {
+   document.querySelectorAll('.btn-cat').forEach(b => {
+     b.style.background = '#f5f5f5';
+     b.style.color = '#333';
+     b.style.borderColor = '#ddd';
+   });
+   btn.style.background = 'var(--primary)';
+   btn.style.color = 'white';
+   btn.style.borderColor = 'var(--primary)';
+
+   if (categoria === 'todas') {
+     renderizarCardsVendedora(todosProdutosVen);
+   } else {
+     const filtrados = todosProdutosVen.filter(p => p.categoria === categoria);
+     renderizarCardsVendedora(filtrados);
+   }
+ }
+
+ function renderizarCardsVendedora(lista) {
+   const container = document.getElementById('ven-grade-produtos');
+   container.innerHTML = '';
+   mapaProdutosVen = {};
+
+   if (!lista.length) {
+     container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Nenhum produto nesta categoria.</p>';
+     return;
+   }
+
+   lista.forEach(p => {
+     if (!p.variacoes || !Array.isArray(p.variacoes)) return;
+
+     const variacoesDisponiveis = p.variacoes.filter(v => (Number(v.quantidade) || 0) > 0);
+     if (variacoesDisponiveis.length === 0) return;
+
+     mapaProdutosVen[p.id] = {
+       nome: p.nome,
+       variacoes: variacoesDisponiveis,
+       fotos: []
+     };
+
+     let listaFotos = [];
+     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
+     variacoesDisponiveis.forEach(v => {
+       const f = v.foto || v.imagem || v.fotoUrl;
+       if (f && !listaFotos.includes(f)) listaFotos.push(f);
+     });
+
+     if (listaFotos.length === 0) {
+       listaFotos.push('https://via.placeholder.com/150?text=Sem+Foto');
+     }
+
+     mapaProdutosVen[p.id].fotos = listaFotos;
+
+     const fotoCapa = listaFotos[0];
+     const totalEstoque = variacoesDisponiveis.reduce((acc, v) => acc + (Number(v.quantidade) || 0), 0);
+
+     let opcoesSelect = '';
+     variacoesDisponiveis.forEach((v, idx) => {
+       opcoesSelect += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)} (Qtd: ${v.quantidade})</option>`;
+     });
+
+     container.innerHTML += `
+       <div class="prod-list-card" style="padding: 10px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+         <div style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaPorId('${p.id}')">
+           <img src="${fotoCapa}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150?text=Sem+Foto';">
+           ${listaFotos.length > 1 ? `<span style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;"><i class="fa-solid fa-images"></i> ${listaFotos.length} fotos</span>` : ''}
+         </div>
+
+         <b style="font-size: 13px; color: #333; line-height: 1.2; margin-bottom: 4px;">${p.nome}</b>
+         
+         <div style="margin-bottom: 6px;">
+           <label style="font-size: 10px; color: #666; font-weight: bold;">Opções:</label>
+           <select id="select-var-${p.id}" style="width: 100%; padding: 4px; font-size: 11px; border-radius: 6px; border: 1px solid #ddd; background: #fff;">
+             ${opcoesSelect}
+           </select>
+         </div>
+
+         <small style="color: ${totalEstoque < 3 ? '#d9534f' : '#2e7d32'}; font-size: 10px; margin-bottom: 6px;">
+           Estoque Total: <b>${totalEstoque} un.</b>
+         </small>
+
+         <button class="btn" style="padding: 8px; font-size: 12px; margin-top: auto;" onclick="adicionarVariacaoPorId('${p.id}')">
+           <i class="fa-solid fa-cart-plus"></i> Adicionar
+         </button>
+       </div>
+     `;
+   });
+ }
+
+ function abrirGaleriaPorId(pId) {
+   const prod = mapaProdutosVen[pId];
+   if (prod && prod.fotos && prod.fotos.length > 0) {
+     fotosModalAtual = prod.fotos;
+     fotoIndexAtual = 0;
+     atualizarFotoModal();
+     document.getElementById('ven-modal-foto').style.display = 'flex';
+   }
+ }
+
+ function mudarFotoModal(direcao) {
+   fotoIndexAtual += direcao;
+   if (fotoIndexAtual < 0) fotoIndexAtual = fotosModalAtual.length - 1;
+   if (fotoIndexAtual >= fotosModalAtual.length) fotoIndexAtual = 0;
+   
+   atualizarFotoModal();
+ }
+
+ function atualizarFotoModal() {
+   const img = document.getElementById('ven-img-expandida');
+   const contador = document.getElementById('ven-foto-contador');
+   const btnPrev = document.getElementById('btn-foto-prev');
+   const btnNext = document.getElementById('btn-foto-next');
+
+   img.src = fotosModalAtual[fotoIndexAtual];
+   contador.innerText = `Foto ${fotoIndexAtual + 1} de ${fotosModalAtual.length}`;
+
+   if (fotosModalAtual.length <= 1) {
+     btnPrev.style.display = 'none';
+     btnNext.style.display = 'none';
+   } else {
+     btnPrev.style.display = 'block';
+     btnNext.style.display = 'block';
+   }
+ }
+
+ function fecharFotoExpandidaVen() {
+   document.getElementById('ven-modal-foto').style.display = 'none';
+ }
+
+ function adicionarVariacaoPorId(pId) {
+   const prod = mapaProdutosVen[pId];
+   const select = document.getElementById(`select-var-${pId}`);
+   if (!prod || !select) return;
+
+   const vEscolhida = prod.variacoes[select.value];
+   if (vEscolhida) {
+     const preco = Number(vEscolhida.preco) || 0;
+     adicionarAoCarrinhoVen(pId, prod.nome, vEscolhida.cor, vEscolhida.tamanho, preco);
+   }
+ }
+
+ function adicionarAoCarrinhoVen(idProd, nome, cor, tamanho, preco) {
+   venCarrinho.push({ idProd, nome, cor, tamanho, preco, quantidade: 1 });
+   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+   alert("Produto adicionado ao carrinho!");
+ }
+
+ function carregarCarrinhoVendedora() {
+   const container = document.getElementById('ven-itens-carrinho');
+   if (!venCarrinho.length) {
+     container.innerHTML = '<p>Carrinho vazio.</p>';
+     return;
+   }
+   container.innerHTML = '';
+   venCarrinho.forEach((item, index) => {
+     const preco = Number(item.preco) || 0;
+     container.innerHTML += `
+       <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center;">
+         <div><b>${item.nome}</b> (${item.cor}/${item.tamanho})<br>R$ ${preco.toFixed(2)}</div>
+         <button style="background:red; color:white; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="removerCarrinhoVen(${index})">X</button>
+       </div>
+     `;
+   });
+ }
+
+ function removerCarrinhoVen(index) {
+   venCarrinho.splice(index, 1);
+   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+   carregarCarrinhoVendedora();
+ }
+
+ function enviarPedidoParaLojaPrincipal() {
+   if (!venCarrinho.length) {
+     alert("Seu carrinho está vazio!");
+     return;
+   }
+   const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
+   const comissao = totalPedido * 0.15;
+
+   const pedidoData = {
+     vendedora: venDados.nome,
+     vendedoraNome: venDados.nome,
+     telefone: venDados.telefone,
+     pix: venDados.pix,
+     itens: venCarrinho,
+     total: totalPedido,
+     comissao: comissao,
+     data: new Date().toLocaleDateString('pt-BR'),
+     dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
+     status: 'Pendente na Matriz'
+   };
+
+   db.collection("pedidos").add(pedidoData)
+     .then(() => {
+       alert("Pedido enviado com sucesso para confirmação e separação na Toque Íntimo GS!");
+       venCarrinho = [];
+       localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+       mudarPainelVen('painel');
+     })
+     .catch(err => alert("Erro ao enviar: " + err));
+ }
+
+ function enviarCatalogoClienteWhatsapp() {
+   const urlCatalogo = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
+   const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlCatalogo}`);
+   window.open(`https://wa.me/?text=${msg}`, '_blank');
+ }
+
+ function carregarMetricasVendedora() {
+   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
+     let qtdVendas = snapshot.size;
+     let valVendas = 0;
+     let valComissao = 0;
+     snapshot.forEach(doc => {
+       const d = doc.data();
+       valVendas += Number(d.total) || 0;
+       valComissao += Number(d.comissao) || 0;
+     });
+     document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
+     document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
+     document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
+   });
+ }
+
+ function carregarHistoricoVendedora() {
+   const container = document.getElementById('ven-historico-vendas');
+   container.innerHTML = 'Carregando...';
+   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
+     container.innerHTML = '';
+     if (snapshot.empty) {
+       container.innerHTML = '<p>Nenhuma venda registrada ainda.</p>';
+       return;
+     }
+     snapshot.forEach(doc => {
+       const d = doc.data();
+       const total = Number(d.total) || 0;
+       const comissao = Number(d.comissao) || 0;
+       container.innerHTML += `
+         <div class="prod-list-card">
+           <b>Data: ${d.data || ''}</b><br>
+           Total Venda: R$ ${total.toFixed(2)}<br>
+           <b>Sua Comissão (15%): R$ ${comissao.toFixed(2)}</b><br>
+           <span style="color:green; font-size:11px;">Status: ${d.status || 'Processando'}</span>
+         </div>
+       `;
+     });
+   });
+ }
+</script>
+</body>
+</html>
