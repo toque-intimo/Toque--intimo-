@@ -150,9 +150,30 @@
    <div id="ven-historico-vendas" style="margin-top: 10px;"></div>
  </section>
 </div>
-<div id="ven-modal-foto" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; padding: 20px;" onclick="fecharFotoExpandidaVen()">
-  <span style="position: absolute; top: 15px; right: 20px; color: white; font-size: 30px; font-weight: bold; cursor: pointer;">&times;</span>
-  <img id="ven-img-expandida" src="" style="max-width: 90%; max-height: 80vh; border-radius: 12px; object-fit: contain; box-shadow: 0 5px 25px rgba(0,0,0,0.5);">
+<!-- MODAL GALERIA COM NAVEGAÇÃO -->
+<div id="ven-modal-foto" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 99999; justify-content: center; align-items: center; flex-direction: column; padding: 10px;">
+  
+  <!-- Botão Fechar -->
+  <span style="position: absolute; top: 15px; right: 20px; color: white; font-size: 32px; font-weight: bold; cursor: pointer; z-index: 100000;" onclick="fecharFotoExpandidaVen()">&times;</span>
+
+  <!-- Container da Imagem com Setas -->
+  <div style="position: relative; max-width: 90%; max-height: 80vh; display: flex; align-items: center; justify-content: center;">
+    
+    <!-- Seta Esquerda -->
+    <button id="btn-foto-prev" onclick="mudarFotoModal(-1)" style="position: absolute; left: -15px; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 20px; padding: 12px 10px; border-radius: 50%; cursor: pointer; z-index: 100001; backdrop-filter: blur(4px);">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+
+    <!-- Imagem em Destaque -->
+    <img id="ven-img-expandida" src="" style="max-width: 100%; max-height: 75vh; border-radius: 12px; object-fit: contain; box-shadow: 0 5px 25px rgba(0,0,0,0.5);">
+
+    <!-- Seta Direita -->
+    <button id="btn-foto-next" onclick="mudarFotoModal(1)" style="position: absolute; right: -15px; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 20px; padding: 12px 10px; border-radius: 50%; cursor: pointer; z-index: 100001; backdrop-filter: blur(4px);">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>
+  <!-- Indicador Ex: (1 / 3 fotos) -->
+  <div id="ven-foto-contador" style="color: white; margin-top: 10px; font-size: 13px; font-weight: 500;"></div>
 </div>
 <!-- Firebase Scripts -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -245,7 +266,46 @@ function carregarCatalogoVendedora() {
       todosProdutosVen.push(p);
       if (p.categoria) categorias.add(p.categoria);
     });
+   
+function abrirGaleriaVen(listaFotos) {
+  if (!listaFotos || !listaFotos.length) return;
+  fotosModalAtual = listaFotos;
+  fotoIndexAtual = 0;
+  
+  atualizarFotoModal();
+  document.getElementById('ven-modal-foto').style.display = 'flex';
+}
 
+function mudarFotoModal(direcao) {
+  fotoIndexAtual += direcao;
+  if (fotoIndexAtual < 0) fotoIndexAtual = fotosModalAtual.length - 1;
+  if (fotoIndexAtual >= fotosModalAtual.length) fotoIndexAtual = 0;
+  
+  atualizarFotoModal();
+}
+
+function atualizarFotoModal() {
+  const img = document.getElementById('ven-img-expandida');
+  const contador = document.getElementById('ven-foto-contador');
+  const btnPrev = document.getElementById('btn-foto-prev');
+  const btnNext = document.getElementById('btn-foto-next');
+
+  img.src = fotosModalAtual[fotoIndexAtual];
+  contador.innerText = `Foto ${fotoIndexAtual + 1} de ${fotosModalAtual.length}`;
+
+  // Se só existir 1 foto, esconde as setas de navegação
+  if (fotosModalAtual.length <= 1) {
+    btnPrev.style.display = 'none';
+    btnNext.style.display = 'none';
+  } else {
+    btnPrev.style.display = 'block';
+    btnNext.style.display = 'block';
+  }
+}
+
+function fecharFotoExpandidaVen() {
+  document.getElementById('ven-modal-foto').style.display = 'none';
+}
     // Renderizar Botões de Categoria
     catBar.innerHTML = `<button class="btn-cat active" onclick="filtrarCategoriaVen('todas', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--primary); background: var(--primary); color: white; font-size: 12px; white-space: nowrap; cursor: pointer;">Todas</button>`;
     categorias.forEach(cat => {
@@ -259,6 +319,10 @@ function carregarCatalogoVendedora() {
   });
 }
 
+// Variáveis para controlar a galeria/modal de fotos
+let fotosModalAtual = [];
+let fotoIndexAtual = 0;
+
 function renderizarCardsVendedora(lista) {
   const container = document.getElementById('ven-grade-produtos');
   container.innerHTML = '';
@@ -269,54 +333,77 @@ function renderizarCardsVendedora(lista) {
   }
 
   lista.forEach(p => {
-    let fotoUrl = p.foto || p.imagem || p.fotoUrl || p.img || '';
+    if (!p.variacoes || !Array.isArray(p.variacoes)) return;
 
-    if (p.variacoes && Array.isArray(p.variacoes)) {
-      p.variacoes.forEach(v => {
-        const qtdEstoque = Number(v.quantidade) || 0;
-        
-        if (qtdEstoque > 0) {
-          const preco = Number(v.preco) || 0;
-          const fotoFinal = v.foto || v.imagem || v.fotoUrl || fotoUrl || 'https://via.placeholder.com/150?text=Sem+Foto';
+    // 1. Filtrar variações com estoque disponível
+    const variacoesDisponiveis = p.variacoes.filter(v => (Number(v.quantidade) || 0) > 0);
+    if (variacoesDisponiveis.length === 0) return; // Se não tem estoque, não mostra o card
 
-          container.innerHTML += `
-            <div class="prod-list-card" style="padding: 10px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
-              <div style="width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="expandirFotoVen('${fotoFinal}')">
-                <img src="${fotoFinal}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150?text=Sem+Foto';">
-              </div>
-              <b style="font-size: 13px; color: #333; line-height: 1.2; margin-bottom: 4px;">${p.nome}</b>
-              <small style="color: #666; font-size: 11px;">Cor/Tam: <b>${v.cor || '-'} / ${v.tamanho || '-'}</b></small>
-              <small style="color: ${qtdEstoque < 3 ? '#d9534f' : '#2e7d32'}; font-size: 11px; margin-bottom: 6px;">
-                Estoque: <b>${qtdEstoque} un.</b>
-              </small>
-              <span style="color: var(--primary); font-weight: bold; font-size: 14px; margin-bottom: 8px;">R$ ${preco.toFixed(2)}</span>
-              <button class="btn" style="padding: 8px; font-size: 12px; margin-top: auto;" onclick='adicionarAoCarrinhoVen("${p.id}", "${p.nome}", "${v.cor}", "${v.tamanho}", ${preco})'>
-                <i class="fa-solid fa-cart-plus"></i> Adicionar
-              </button>
-            </div>
-          `;
-        }
-      });
+    // 2. Coletar TODAS as fotos do produto (do produto principal + de cada variação)
+    let listaFotos = [];
+    if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
+    variacoesDisponiveis.forEach(v => {
+      const f = v.foto || v.imagem || v.fotoUrl;
+      if (f && !listaFotos.includes(f)) listaFotos.push(f);
+    });
+
+    if (listaFotos.length === 0) {
+      listaFotos.push('https://via.placeholder.com/150?text=Sem+Foto');
     }
+
+    const fotoCapa = listaFotos[0];
+    const precoExibicao = Number(variacoesDisponiveis[0].preco) || 0;
+    const totalEstoque = variacoesDisponiveis.reduce((acc, v) => acc + (Number(v.quantidade) || 0), 0);
+
+    // Converte a lista de fotos em string segura para passar no HTML
+    const fotosJson = JSON.stringify(listaFotos).replace(/"/g, '&quot;');
+
+    // 3. Montar as opções de Seleção de Cor e Tamanho no mesmo card
+    let opcoesSelect = '';
+    variacoesDisponiveis.forEach((v, idx) => {
+      opcoesSelect += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)} (Qtd: ${v.quantidade})</option>`;
+    });
+
+    container.innerHTML += `
+      <div class="prod-list-card" style="padding: 10px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+        
+        <!-- FOTO PRINCIPAL (Clique para expandir galeria) -->
+        <div style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaVen(${fotosJson})">
+          <img src="${fotoCapa}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150?text=Sem+Foto';">
+          ${listaFotos.length > 1 ? `<span style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;"><i class="fa-solid fa-images"></i> ${listaFotos.length} fotos</span>` : ''}
+        </div>
+
+        <b style="font-size: 13px; color: #333; line-height: 1.2; margin-bottom: 4px;">${p.nome}</b>
+        
+        <!-- Seleção de Variação (Cor / Tam) -->
+        <div style="margin-bottom: 6px;">
+          <label style="font-size: 10px; color: #666; font-weight: bold;">Opções:</label>
+          <select id="select-var-${p.id}" style="width: 100%; padding: 4px; font-size: 11px; border-radius: 6px; border: 1px solid #ddd; background: #fff;">
+            ${opcoesSelect}
+          </select>
+        </div>
+
+        <small style="color: ${totalEstoque < 3 ? '#d9534f' : '#2e7d32'}; font-size: 10px; margin-bottom: 6px;">
+          Estoque Total: <b>${totalEstoque} un.</b>
+        </small>
+
+        <button class="btn" style="padding: 8px; font-size: 12px; margin-top: auto;" onclick='adicionarVariacaoSelecionadaVen("${p.id}", "${p.nome}", ${JSON.stringify(variacoesDisponiveis).replace(/"/g, '&quot;')})'>
+          <i class="fa-solid fa-cart-plus"></i> Adicionar
+        </button>
+      </div>
+    `;
   });
 }
 
-function filtrarCategoriaVen(categoria, btn) {
-  // Destacar botão selecionado
-  document.querySelectorAll('#ven-categorias-bar .btn-cat').forEach(b => {
-    b.style.background = '#f5f5f5';
-    b.style.color = '#333';
-    b.style.border = '1px solid #ddd';
-  });
-  btn.style.background = 'var(--primary)';
-  btn.style.color = 'white';
-  btn.style.border = '1px solid var(--primary)';
+// Função para adicionar a variação escolhida no select ao carrinho
+function adicionarVariacaoSelecionadaVen(pId, nomeProd, variacoes) {
+  const select = document.getElementById(`select-var-${pId}`);
+  if (!select) return;
 
-  if (categoria === 'todas') {
-    renderizarCardsVendedora(todosProdutosVen);
-  } else {
-    const filtrados = todosProdutosVen.filter(p => p.categoria === categoria);
-    renderizarCardsVendedora(filtrados);
+  const vEscolhida = variacoes[select.value];
+  if (vEscolhida) {
+    const preco = Number(vEscolhida.preco) || 0;
+    adicionarAoCarrinhoVen(pId, nomeProd, vEscolhida.cor, vEscolhida.tamanho, preco);
   }
 }
 
