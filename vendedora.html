@@ -318,14 +318,14 @@ function fecharFotoExpandidaVen() {
     container.innerHTML = '<p style="grid-column: span 2; text-align: center; color: red;">Erro ao carregar catálogo.</p>';
   });
 }
-
-// Variáveis para controlar a galeria/modal de fotos
-let fotosModalAtual = [];
-let fotoIndexAtual = 0;
+ 
+// Variável global para guardar os produtos e evitar erros de texto no HTML
+let mapaProdutosVen = {};
 
 function renderizarCardsVendedora(lista) {
   const container = document.getElementById('ven-grade-produtos');
   container.innerHTML = '';
+  mapaProdutosVen = {}; // Limpa o mapa a cada renderização
 
   if (!lista.length) {
     container.innerHTML = '<p style="grid-column: span 2; text-align: center;">Nenhum produto nesta categoria.</p>';
@@ -335,11 +335,18 @@ function renderizarCardsVendedora(lista) {
   lista.forEach(p => {
     if (!p.variacoes || !Array.isArray(p.variacoes)) return;
 
-    // 1. Filtrar variações com estoque disponível
+    // 1. Filtrar variações com estoque
     const variacoesDisponiveis = p.variacoes.filter(v => (Number(v.quantidade) || 0) > 0);
-    if (variacoesDisponiveis.length === 0) return; // Se não tem estoque, não mostra o card
+    if (variacoesDisponiveis.length === 0) return;
 
-    // 2. Coletar TODAS as fotos do produto (do produto principal + de cada variação)
+    // Guardar referência do produto no objeto global usando o ID
+    mapaProdutosVen[p.id] = {
+      nome: p.nome,
+      variacoes: variacoesDisponiveis,
+      fotos: []
+    };
+
+    // 2. Coletar Fotos sem duplicar
     let listaFotos = [];
     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
     variacoesDisponiveis.forEach(v => {
@@ -351,14 +358,12 @@ function renderizarCardsVendedora(lista) {
       listaFotos.push('https://via.placeholder.com/150?text=Sem+Foto');
     }
 
+    mapaProdutosVen[p.id].fotos = listaFotos;
+
     const fotoCapa = listaFotos[0];
-    const precoExibicao = Number(variacoesDisponiveis[0].preco) || 0;
     const totalEstoque = variacoesDisponiveis.reduce((acc, v) => acc + (Number(v.quantidade) || 0), 0);
 
-    // Converte a lista de fotos em string segura para passar no HTML
-    const fotosJson = JSON.stringify(listaFotos).replace(/"/g, '&quot;');
-
-    // 3. Montar as opções de Seleção de Cor e Tamanho no mesmo card
+    // 3. Montar Opções do Select
     let opcoesSelect = '';
     variacoesDisponiveis.forEach((v, idx) => {
       opcoesSelect += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)} (Qtd: ${v.quantidade})</option>`;
@@ -367,15 +372,15 @@ function renderizarCardsVendedora(lista) {
     container.innerHTML += `
       <div class="prod-list-card" style="padding: 10px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
         
-        <!-- FOTO PRINCIPAL (Clique para expandir galeria) -->
-        <div style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaVen(${fotosJson})">
+        <!-- CAPA / FOTO (Abre a Galeria usando o ID do Produto) -->
+        <div style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaPorId('${p.id}')">
           <img src="${fotoCapa}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150?text=Sem+Foto';">
           ${listaFotos.length > 1 ? `<span style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;"><i class="fa-solid fa-images"></i> ${listaFotos.length} fotos</span>` : ''}
         </div>
 
         <b style="font-size: 13px; color: #333; line-height: 1.2; margin-bottom: 4px;">${p.nome}</b>
         
-        <!-- Seleção de Variação (Cor / Tam) -->
+        <!-- Seleção de Variação -->
         <div style="margin-bottom: 6px;">
           <label style="font-size: 10px; color: #666; font-weight: bold;">Opções:</label>
           <select id="select-var-${p.id}" style="width: 100%; padding: 4px; font-size: 11px; border-radius: 6px; border: 1px solid #ddd; background: #fff;">
@@ -387,7 +392,7 @@ function renderizarCardsVendedora(lista) {
           Estoque Total: <b>${totalEstoque} un.</b>
         </small>
 
-        <button class="btn" style="padding: 8px; font-size: 12px; margin-top: auto;" onclick='adicionarVariacaoSelecionadaVen("${p.id}", "${p.nome}", ${JSON.stringify(variacoesDisponiveis).replace(/"/g, '&quot;')})'>
+        <button class="btn" style="padding: 8px; font-size: 12px; margin-top: auto;" onclick="adicionarVariacaoPorId('${p.id}')">
           <i class="fa-solid fa-cart-plus"></i> Adicionar
         </button>
       </div>
@@ -395,15 +400,27 @@ function renderizarCardsVendedora(lista) {
   });
 }
 
-// Função para adicionar a variação escolhida no select ao carrinho
-function adicionarVariacaoSelecionadaVen(pId, nomeProd, variacoes) {
-  const select = document.getElementById(`select-var-${pId}`);
-  if (!select) return;
+// Função para abrir a Galeria sem travar
+function abrirGaleriaPorId(pId) {
+  const prod = mapaProdutosVen[pId];
+  if (prod && prod.fotos && prod.fotos.length > 0) {
+    fotosModalAtual = prod.fotos;
+    fotoIndexAtual = 0;
+    atualizarFotoModal();
+    document.getElementById('ven-modal-foto').style.display = 'flex';
+  }
+}
 
-  const vEscolhida = variacoes[select.value];
+// Função para Adicionar ao Carrinho sem travar
+function adicionarVariacaoPorId(pId) {
+  const prod = mapaProdutosVen[pId];
+  const select = document.getElementById(`select-var-${pId}`);
+  if (!prod || !select) return;
+
+  const vEscolhida = prod.variacoes[select.value];
   if (vEscolhida) {
     const preco = Number(vEscolhida.preco) || 0;
-    adicionarAoCarrinhoVen(pId, nomeProd, vEscolhida.cor, vEscolhida.tamanho, preco);
+    adicionarAoCarrinhoVen(pId, prod.nome, vEscolhida.cor, vEscolhida.tamanho, preco);
   }
 }
 
