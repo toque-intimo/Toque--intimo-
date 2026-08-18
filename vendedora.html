@@ -266,20 +266,26 @@ function renderizarCardsVendedora(lista) {
   }
 
   lista.forEach(p => {
-    const fotoUrl = p.foto || p.imagem || 'https://via.placeholder.com/150?text=Sem+Foto';
-    
+    // Procura a foto do produto na raiz OU dentro da primeira variação com foto
+    let fotoUrl = p.foto || p.imagem || p.fotoUrl || p.img || '';
+
     if (p.variacoes && Array.isArray(p.variacoes)) {
       p.variacoes.forEach(v => {
         const qtdEstoque = Number(v.quantidade) || 0;
+        
         if (qtdEstoque > 0) {
           const preco = Number(v.preco) || 0;
+          
+          // Se a variação tiver foto própria, usa ela; senão usa a foto do produto raiz
+          const fotoFinal = v.foto || v.imagem || v.fotoUrl || fotoUrl || 'https://via.placeholder.com/150?text=Sem+Foto';
+
           container.innerHTML += `
             <div class="prod-list-card" style="padding: 10px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
               <div style="width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px;">
-                <img src="${fotoUrl}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;">
+                <img src="${fotoFinal}" alt="${p.nome}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150?text=Sem+Foto';">
               </div>
               <b style="font-size: 13px; color: #333; line-height: 1.2; margin-bottom: 4px;">${p.nome}</b>
-              <small style="color: #666; font-size: 11px;">Cor/Tam: <b>${v.cor} / ${v.tamanho}</b></small>
+              <small style="color: #666; font-size: 11px;">Cor/Tam: <b>${v.cor || '-'} / ${v.tamanho || '-'}</b></small>
               <small style="color: ${qtdEstoque < 3 ? '#d9534f' : '#2e7d32'}; font-size: 11px; margin-bottom: 6px;">
                 Estoque: <b>${qtdEstoque} un.</b>
               </small>
