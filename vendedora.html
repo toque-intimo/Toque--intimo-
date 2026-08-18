@@ -613,76 +613,122 @@
  }
 
  function carregarHistoricoVendedora() {
-   const container = document.getElementById('ven-historico-vendas');
-   container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
-   
-   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
-     container.innerHTML = '';
-     pedidosCache = {};
+  const container = document.getElementById('ven-historico-vendas');
+  container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
+  
+  if (!venDados) {
+    container.innerHTML = '<p style="text-align: center; color: red;">Sessão inválida. Faça login novamente.</p>';
+    return;
+  }
 
-     if (snapshot.empty) {
-       container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma venda registrada.</p>';
-       return;
-     }
+  // Busca prioritariamente pelo Código da Vendedora ou pelo Telefone como fallback
+  let consulta = db.collection("pedidos");
+  
+  if (venDados.codigo) {
+    consulta = consulta.where("codigoVendedora", "==", venDados.codigo);
+  } else {
+    consulta = consulta.where("telefone", "==", venDados.telefone);
+  }
 
-     snapshot.forEach(doc => {
-       const d = doc.data();
-       const pedId = doc.id;
-       pedidosCache[pedId] = d;
+  consulta.get().then(snapshot => {
+    container.innerHTML = '';
+    pedidosCache = {};
 
-       const statusText = d.status || 'Pendente';
-       const isConfirmado = statusText.toLowerCase() !== 'pendente';
-       const statusClass = isConfirmado ? 'status-confirmado' : 'status-pendente';
+    if (snapshot.empty) {
+      container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma venda registrada até o momento.</p>';
+      return;
+    }
 
-       let itensHtml = '';
-       if (d.itens && Array.isArray(d.itens)) {
-         d.itens.forEach(i => {
-           itensHtml += `<li style="font-size: 12px; color: #555;">${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(Number(i.preco)||0).toFixed(2)}</li>`;
-         });
-       }
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      const pedId = doc.id;
+      pedidosCache[pedId] = d;
 
-       let htmlPosConfirmacao = '';
-       if (isConfirmado) {
-         htmlPosConfirmacao = `
-           <div class="painel-pos-confirmacao">
-             <div class="form-group" style="margin-bottom: 8px;">
-               <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
-               <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
-                 <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
-                 <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
-                 <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
-                 <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
-                 <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
-               </select>
-             </div>
-             <div style="display: flex; gap: 8px; margin-top: 10px;">
-               <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
-                 <i class="fa-brands fa-whatsapp"></i> Enviar Nota
-               </button>
-               <button class="btn-sm-pdf" onclick="gerarPDFNota('${pedId}')">
-                 <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-               </button>
-             </div>
-           </div>
-         `;
-       }
+      const statusText = d.status || 'Pendente';
+      const isConfirmado = statusText.toLowerCase() !== 'pendente';
+      const statusClass = isConfirmado ? 'status-confirmado' : 'status-pendente';
 
-       container.innerHTML += `
-         <div class="card-venda">
-           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-             <span style="font-size: 12px; font-weight: bold; color: #333;">Data: ${d.data || ''}</span>
-             <span class="badge-status ${statusClass}">${statusText}</span>
-           </div>
-           <ul style="padding-left: 18px; margin-bottom: 8px;">${itensHtml}</ul>
-           <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
-             Total: R$ ${(Number(d.total)||0).toFixed(2)} | Comissão: R$ ${(Number(d.comissao)||0).toFixed(2)}
-           </div>
-           ${htmlPosConfirmacao}
-         </div>
-       `;
-     });
-   });
- }
+      let itensHtml = '';
+      if (d.itens && Array.isArray(d.itens)) {
+        d.itens.forEach(i => {
+          itensHtml += `<li style="font-size: 12px; color: #555;">${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(Number(i.preco)||0).toFixed(2)}</li>`;
+        });
+      }
+
+      let htmlPosConfirmacao = '';
+      if (isConfirmado) {
+        htmlPosConfirmacao = `
+          <div class="painel-pos-confirmacao">
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
+              <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+                <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
+                <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
+                <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
+                <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
+                <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
+                <i class="fa-brands fa-whatsapp"></i> Enviar Nota
+              </button>
+              <button class="btn-sm-pdf" onclick="gerarPDFNota('${pedId}')">
+                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML += `
+        <div class="card-venda">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 12px; font-weight: bold; color: #333;">Data: ${d.data || ''}</span>
+            <span class="badge-status ${statusClass}">${statusText}</span>
+          </div>
+          <ul style="padding-left: 18px; margin-bottom: 8px;">${itensHtml}</ul>
+          <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
+            Total: R$ ${(Number(d.total)||0).toFixed(2)} | Comissão: R$ ${(Number(d.comissao)||0).toFixed(2)}
+          </div>
+          ${htmlPosConfirmacao}
+        </div>
+      `;
+    });
+  }).catch(error => {
+    console.error("Erro ao carregar histórico:", error);
+    container.innerHTML = `<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar histórico de vendas: ${error.message}</p>`;
+  });
+}
+
+// Aproveite para atualizar também a função das métricas do topo:
+function carregarMetricasVendedora() {
+  if (!venDados) return;
+
+  let consulta = db.collection("pedidos");
+  if (venDados.codigo) {
+    consulta = consulta.where("codigoVendedora", "==", venDados.codigo);
+  } else {
+    consulta = consulta.where("telefone", "==", venDados.telefone);
+  }
+
+  consulta.get().then(snapshot => {
+    let qtdVendas = 0;
+    let valVendas = 0;
+    let valComissao = 0;
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      valVendas += Number(d.total) || 0;
+      valComissao += Number(d.comissao) || 0;
+      if (d.itens && Array.isArray(d.itens)) qtdVendas += d.itens.length;
+    });
+
+    document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
+    document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
+    document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
+  }).catch(err => console.log("Erro métricas:", err));
+}
 
  function atualizarPagamentoPedido(pedId) {
    const val = document.getElementById(`pagto-${pedId}`).value;
