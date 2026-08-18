@@ -214,8 +214,9 @@
     </div>
 
     <div style="margin-bottom: 15px; font-size: 13px; line-height: 1.6;">
-      <p><b>Consultora:</b> <span id="pdf-vendedora"></span></p>
-      <p><b>Data:</b> <span id="pdf-data"></span></p>
+      <p><b>Consultora:</b> <span id="pdf-vendedora"></span> | <b>Tel:</b> <span id="pdf-vendedora-tel"></span></p>
+      <p><b>Cliente:</b> <span id="pdf-cliente"></span> | <b>Tel:</b> <span id="pdf-cliente-tel"></span></p>
+      <p><b>Data do Pedido:</b> <span id="pdf-data"></span></p>
       <p><b>Forma de Pagamento:</b> <span id="pdf-pagamento"></span></p>
     </div>
 
@@ -776,14 +777,17 @@ function atualizarPagamentoPedido(pedId) {
   });
 }
 
-// Envia a Nota formatada diretamente para o WhatsApp do Cliente
+// Envia a Nota formatada diretamente para o WhatsApp
 function enviarNotaClienteWhatsapp(pedId) {
   const ped = pedidosCache[pedId];
   if (!ped) return;
 
-  const cliNome = ped.clienteNome ? `\nCliente: ${ped.clienteNome}` : '';
+  const venNome = venDados.nome || 'Não informado';
+  const venTel = venDados.telefone || 'Não informado';
+  const cliNome = ped.clienteNome || 'Não informado';
+  const cliTel = ped.clienteTelefone || 'Não informado';
+
   let pagtoText = ped.formaPagamento || 'A combinar';
-  
   if (ped.formaPagamento === 'A prazo' && ped.dataVencimento) {
     const [ano, mes, dia] = ped.dataVencimento.split('-');
     pagtoText += ` (Vencimento em ${dia}/${mes}/${ano})`;
@@ -796,23 +800,22 @@ function enviarNotaClienteWhatsapp(pedId) {
     });
   }
 
-  const mensagem = `*Toque Íntimo GS - Comprovante do Pedido*` +
-                   `${cliNome}\n` +
-                   `Consultora: ${venDados.nome}\n` +
-                   `Data do Pedido: ${ped.data}\n` +
-                   `Pagamento: ${pagtoText}\n\n` +
+  const mensagem = `*Toque Íntimo GS - Comprovante do Pedido*\n\n` +
+                   `*Consultora:* ${venNome} (${venTel})\n` +
+                   `*Cliente:* ${cliNome} (${cliTel})\n` +
+                   `*Data:* ${ped.data}\n` +
+                   `*Pagamento:* ${pagtoText}\n\n` +
                    `*Itens:*\n${textoItens}\n` +
                    `*Total: R$ ${Number(ped.total).toFixed(2)}*\n\n` +
                    `Obrigado pela preferência! ✨`;
 
-  // Se tiver o número do cliente cadastrado, abre a conversa diretamente com ele
-  const telLimpo = (ped.clienteTelefone || '').replace(/\D/g, '');
+  const telLimpo = cliTel.replace(/\D/g, '');
   const targetUrl = telLimpo ? `https://wa.me/55${telLimpo}?text=` : `https://wa.me/?text=`;
 
   window.open(targetUrl + encodeURIComponent(mensagem), '_blank');
 }
 
-// Atualização do PDF incluindo Cliente e Vencimento do Prazo
+// Gera o PDF detalhado com Nome e Telefone de ambos
 function gerarPDFNota(pedId) {
   const ped = pedidosCache[pedId];
   if (!ped) return;
@@ -823,7 +826,12 @@ function gerarPDFNota(pedId) {
     pagtoText += ` - Vencimento: ${dia}/${mes}/${ano}`;
   }
 
-  document.getElementById('pdf-vendedora').innerText = `${venDados.nome} | Cliente: ${ped.clienteNome || 'Não informado'}`;
+  // Preenche os dados da Vendedora e Cliente na nota PDF
+  document.getElementById('pdf-vendedora').innerText = venDados.nome || 'Não informado';
+  document.getElementById('pdf-vendedora-tel').innerText = venDados.telefone || 'Não informado';
+  document.getElementById('pdf-cliente').innerText = ped.clienteNome || 'Não informado';
+  document.getElementById('pdf-cliente-tel').innerText = ped.clienteTelefone || 'Não informado';
+
   document.getElementById('pdf-data').innerText = ped.data || '';
   document.getElementById('pdf-pagamento').innerText = pagtoText;
   document.getElementById('pdf-total').innerText = `R$ ${Number(ped.total || 0).toFixed(2)}`;
