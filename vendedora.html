@@ -395,11 +395,27 @@
    document.getElementById('qtd-carrinho-badge').innerText = venCarrinho.length;
  }
 
- function enviarCatalogoClienteWhatsapp() {
-   const urlCatalogo = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
-   const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlCatalogo}`);
-   window.open(`https://wa.me/?text=${msg}`, '_blank');
- }
+ function enviarCatalogoCliente() {
+  if (!venDados || !venDados.telefone) {
+    alert("Telefone da vendedora não identificado. Faça login novamente.");
+    return;
+  }
+
+  // Limpa caracteres especiais do telefone da vendedora (deixa só números)
+  const telVendedora = venDados.telefone.replace(/\D/g, '');
+
+  // Pega o link base do seu site (funciona local ou no GitHub Pages)
+  const baseUrl = window.location.href.split('?')[0].replace('index.html', 'catalogo.html');
+  
+  // Link personalizado da vendedora
+  const linkCatalogo = `${baseUrl}?ref=${telVendedora}`;
+
+  // Mensagem pronta para o cliente
+  const mensagem = `Olá! Confira o nosso catálogo de produtos e faça o seu pedido diretamente por aqui: ${linkCatalogo}`;
+
+  // Abre o WhatsApp para a vendedora compartilhar com quem quiser
+  window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
+}
 
  function carregarCatalogoVendedora() {
    const container = document.getElementById('ven-grade-produtos');
