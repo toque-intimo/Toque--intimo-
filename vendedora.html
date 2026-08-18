@@ -554,16 +554,13 @@
  function enviarPedidoParaLojaPrincipal() {
   if (!venCarrinho.length) return alert("Seu carrinho está vazio!");
   
-  // Garantia de segurança para validar se o usuário está logado
   if (!venDados) {
-    alert("Sua sessão expirou. Faça login novamente para enviar o pedido.");
+    alert("Sua sessão expirou. Faça login novamente.");
     return logoutVendedora();
   }
 
   const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
   const comissao = totalPedido * 0.15;
-
-  // Ajuste do timestamp seguro para Firebase Web SDK Compat/v9
   const timestampAtual = new Date();
 
   db.collection("pedidos").add({
@@ -575,7 +572,7 @@
     total: totalPedido,
     comissao: comissao,
     data: timestampAtual.toLocaleDateString('pt-BR'),
-    dataCriacao: timestampAtual, // Correção do bug do FieldValue
+    dataCriacao: timestampAtual,
     status: 'Pendente',
     formaPagamento: ''
   }).then(() => {
@@ -584,33 +581,56 @@
     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
     atualizarBadgeCarrinho();
     
-    // Atualiza as métricas e redireciona para a aba de vendas
+    // Atualiza as métricas com segurança
     carregarMetricasVendedora();
-    alternarAba('vendas', document.querySelectorAll('.tab-btn')[2]);
+    
+    // Redireciona para a aba Minhas Vendas
+    const abas = document.querySelectorAll('.tab-btn');
+    if (abas[2]) alternarAba('vendas', abas[2]);
   }).catch((error) => {
     console.error("Erro ao enviar pedido:", error);
     alert("Ocorreu um erro ao enviar o pedido: " + error.message);
   });
 }
 
- function carregarMetricasVendedora() {
-   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
-     let qtdVendas = 0;
-     let valVendas = 0;
-     let valComissao = 0;
+function carregarMetricasVendedora() {
+  if (!venDados) return;
 
-     snapshot.forEach(doc => {
-       const d = doc.data();
-       valVendas += Number(d.total) || 0;
-       valComissao += Number(d.comissao) || 0;
-       if (d.itens && Array.isArray(d.itens)) qtdVendas += d.itens.length;
-     });
+  const codigo = venDados.codigo || "";
+  const telefone = venDados.telefone || "";
 
-     document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
-     document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
-     document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
-   });
- }
+  // Se ambos estiverem vazios, não faz a consulta para evitar erro no Firestore
+  if (!codigo && !telefone) {
+    document.getElementById('ven-qtd-vendas').innerText = '0';
+    document.getElementById('ven-val-vendas').innerText = 'R$ 0,00';
+    document.getElementById('ven-val-comissao').innerText = 'R$ 0,00';
+    return;
+  }
+
+  let consulta = db.collection("pedidos");
+  if (codigo) {
+    consulta = consulta.where("codigoVendedora", "==", codigo);
+  } else {
+    consulta = consulta.where("telefone", "==", telefone);
+  }
+
+  consulta.get().then(snapshot => {
+    let qtdVendas = 0;
+    let valVendas = 0;
+    let valComissao = 0;
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      valVendas += Number(d.total) || 0;
+      valComissao += Number(d.comissao) || 0;
+      if (d.itens && Array.isArray(d.itens)) qtdVendas += d.itens.length;
+    });
+
+    document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
+    document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
+    document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
+  }).catch(err => console.error("Erro ao carregar métricas:", err));
+}
 
  function carregarHistoricoVendedora() {
   const container = document.getElementById('ven-historico-vendas');
