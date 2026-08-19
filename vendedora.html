@@ -395,7 +395,8 @@
  }
 
  function enviarCatalogoClienteWhatsapp() {
-   const urlCatalogo = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
+   const urlBase = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
+  const urlComVendedora = `${urlBase}?ven=${encodeURIComponent(venDados.telefone)}`;
    const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlCatalogo}`);
    window.open(`https://wa.me/?text=${msg}`, '_blank');
  }
