@@ -378,7 +378,9 @@
 
    mensagem += `\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nAguardo a confirmação do pedido e dados para pagamento!`;
 
-   const numeroAtendimento = "5511951190804"; 
+   const urlParams = new URLSearchParams(window.location.search);
+const numeroVendedora = urlParams.get('ven');
+const numeroAtendimento = numeroVendedora ? numeroVendedora : "5511951190804"; 
    window.open(`https://wa.me/${numeroAtendimento}?text=${encodeURIComponent(mensagem)}`, '_blank');
  }
 
