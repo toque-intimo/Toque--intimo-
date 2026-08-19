@@ -401,19 +401,16 @@
     return;
   }
 
-  // Limpa caracteres especiais do telefone da vendedora (deixa só números)
-  const telVendedora = venDados.telefone.replace(/\D/g, '');
+  // Limpa o telefone para conter apenas números
+  const telLimpo = venDados.telefone.replace(/\D/g, '');
 
-  // Pega o link base do seu site (funciona local ou no GitHub Pages)
-  const baseUrl = window.location.href.split('?')[0].replace('index.html', 'catalogo.html');
-  
-  // Link personalizado da vendedora
-  const linkCatalogo = `${baseUrl}?ref=${telVendedora}`;
+  // Pega o link atual do seu site e adiciona o parâmetro com o telefone da vendedora
+  const urlAtual = window.location.href.split('?')[0];
+  const linkPersonalizado = `${urlAtual}?ref=${telLimpo}`;
 
-  // Mensagem pronta para o cliente
-  const mensagem = `Olá! Confira o nosso catálogo de produtos e faça o seu pedido diretamente por aqui: ${linkCatalogo}`;
+  const mensagem = `Olá! Acesse nosso catálogo através do link abaixo e faça seu pedido diretamente comigo:\n\n${linkPersonalizado}`;
 
-  // Abre o WhatsApp para a vendedora compartilhar com quem quiser
+  // Abre o WhatsApp para a vendedora compartilhar o link
   window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
 }
 
@@ -985,6 +982,18 @@ function gerarPDFNota(pedId) {
      </div>
    `;
  }
+ <!-- Cole antes da tag </body> no final de vendedora.html -->
+<script>
+  (function verificarModoCliente() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refVendedora = urlParams.get('ref');
+
+    if (refVendedora) {
+      // Salva o telefone da vendedora no navegador de quem abriu o link
+      localStorage.setItem('vendedora_whatsapp_ref', refVendedora);
+    }
+  })();
+
 </script>
 </body>
 </html>
