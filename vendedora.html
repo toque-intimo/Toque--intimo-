@@ -276,12 +276,25 @@
  let todosProdutosVen = [];
  let pedidosCache = {};
 
- window.addEventListener('DOMContentLoaded', () => {
-   if (venDados) {
-     mostrarPainelPrincipal();
-   }
- });
-
+window.addEventListener('DOMContentLoaded', () => {
+  // Verifica se existem dados de acesso armazenados
+  if (venDados && venDados.codigo) {
+    // Confirma no banco de dados se a vendedora continua válida
+    db.collection("vendedoras").where("codigo", "==", venDados.codigo).get().then(snapshot => {
+      if (!snapshot.empty) {
+        mostrarPainelPrincipal();
+      } else {
+        logoutVendedora(); // Se não encontrar no banco, força o cadastro/login
+      }
+    }).catch(() => {
+      logoutVendedora();
+    });
+  } else {
+    // Se não houver dados, mostra a tela de cadastro/login
+    logoutVendedora();
+  }
+});
+ 
  function alternarFormAuth(tipo) {
    const formLogin = document.getElementById('formLoginVendedora');
    const formCadastro = document.getElementById('formVendedora');
