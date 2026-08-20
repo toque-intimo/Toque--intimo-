@@ -428,88 +428,100 @@
  }
 
  function carregarCatalogoVendedora() {
-   const container = document.getElementById('ven-grade-produtos');
-   container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Carregando produtos...</p>';
+  const container = document.getElementById('ven-grade-produtos');
+  container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Carregando produtos...</p>';
 
-   db.collection("produtos").get().then(snapshot => {
-     todosProdutosVen = [];
-     if (snapshot.empty) {
-       container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto disponível.</p>';
-       return;
-     }
+  db.collection("produtos").get().then(snapshot => {
+    todosProdutosVen = [];
+    const categoriasEncontradas = new Set();
 
-     snapshot.forEach(doc => {
-       const p = doc.data();
-       p.id = doc.id;
-       todosProdutosVen.push(p);
-     });
+    if (snapshot.empty) {
+      container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto disponível.</p>';
+      return;
+    }
 
-     renderizarCardsVendedora(todosProdutosVen);
-   }).catch(err => {
-     container.innerHTML = '<p style="grid-column: span 2; text-align: center; color: red; padding: 20px;">Erro ao carregar catálogo.</p>';
-   });
- }
+    snapshot.forEach(doc => {
+      const p = doc.data();
+      p.id = doc.id;
+      todosProdutosVen.push(p);
 
- function filtrarCategoriaVen(categoria, btn) {
-   document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('active'));
-   btn.classList.add('active');
+      // Coleta todas as categorias existentes nos produtos cadastrados
+      if (p.categoria) {
+        categoriasEncontradas.add(p.categoria);
+      }
+    });
 
-   if (categoria === 'todas') {
-     renderizarCardsVendedora(todosProdutosVen);
-   } else {
-     const filtrados = todosProdutosVen.filter(p => p.categoria && p.categoria.toLowerCase() === categoria.toLowerCase());
-     renderizarCardsVendedora(filtrados);
-   }
- }
+    // Renderiza os botões de categorias dinamicamente
+    renderizarBotoesCategorias(Array.from(categoriasEncontradas));
+
+    renderizarCardsVendedora(todosProdutosVen);
+  }).catch(err => {
+    console.error(err);
+    container.innerHTML = '<p style="grid-column: span 2; text-align: center; color: red; padding: 20px;">Erro ao carregar catálogo.</p>';
+  });
+}
+
+function renderizarBotoesCategorias(categorias) {
+  const catBar = document.getElementById('ven-categorias-bar');
+  if (!catBar) return;
+
+  let html = `<button class="btn-cat active" onclick="filtrarCategoriaVen('todas', this)">Todas</button>`;
+  categorias.forEach(cat => {
+    html += `<button class="btn-cat" onclick="filtrarCategoriaVen('${cat}', this)">${cat}</button>`;
+  });
+
+  catBar.innerHTML = html;
+}
 
  function renderizarCardsVendedora(lista) {
-   const container = document.getElementById('ven-grade-produtos');
-   container.innerHTML = '';
-   mapaProdutosVen = {};
+  const container = document.getElementById('ven-grade-produtos');
+  container.innerHTML = '';
+  mapaProdutosVen = {};
 
-   if (!lista.length) {
-     container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto nesta categoria.</p>';
-     return;
-   }
+  if (!lista.length) {
+    container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto nesta categoria.</p>';
+    return;
+  }
 
-   lista.forEach(p => {
-     if (!p.variacoes || !Array.isArray(p.variacoes)) return;
+  lista.forEach(p => {
+    if (!p.variacoes || !Array.isArray(p.variacoes)) return;
 
-     const variacoesDisponiveis = p.variacoes.filter(v => (Number(v.quantidade) || 0) > 0);
-     if (variacoesDisponiveis.length === 0) return;
+    // Ajustado para aceitar variações mesmo se o campo quantidade não estiver preenchido
+    const variacoesDisponiveis = p.variacoes.filter(v => v.quantidade === undefined || Number(v.quantidade) > 0);
+    if (variacoesDisponiveis.length === 0) return;
 
-     mapaProdutosVen[p.id] = { nome: p.nome, variacoes: variacoesDisponiveis, fotos: [] };
+    mapaProdutosVen[p.id] = { nome: p.nome, variacoes: variacoesDisponiveis, fotos: [] };
 
-     let listaFotos = [];
-     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
-     variacoesDisponiveis.forEach(v => {
-       const f = v.foto || v.imagem || v.fotoUrl;
-       if (f && !listaFotos.includes(f)) listaFotos.push(f);
-     });
-     if (listaFotos.length === 0) listaFotos.push('https://via.placeholder.com/150?text=Sem+Foto');
+    let listaFotos = [];
+    if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
+    variacoesDisponiveis.forEach(v => {
+      const f = v.foto || v.imagem || v.fotoUrl;
+      if (f && !listaFotos.includes(f)) listaFotos.push(f);
+    });
+    if (listaFotos.length === 0) listaFotos.push('https://via.placeholder.com/150?text=Sem+Foto');
 
-     mapaProdutosVen[p.id].fotos = listaFotos;
-     const fotoCapa = listaFotos[0];
+    mapaProdutosVen[p.id].fotos = listaFotos;
+    const fotoCapa = listaFotos[0];
 
-     let opcoesSelect = '';
-     variacoesDisponiveis.forEach((v, idx) => {
-       opcoesSelect += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)}</option>`;
-     });
+    let opcoesSelect = '';
+    variacoesDisponiveis.forEach((v, idx) => {
+      opcoesSelect += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)}</option>`;
+    });
 
-     container.innerHTML += `
-       <div class="prod-card">
-         <div style="height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaPorId('${p.id}')">
-           <img src="${fotoCapa}" style="width: 100%; height: 100%; object-fit: cover;">
-         </div>
-         <b style="font-size: 13px; color: #333; margin-bottom: 4px;">${p.nome}</b>
-         <select id="select-var-${p.id}" style="width: 100%; padding: 4px; font-size: 11px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 6px;">
-           ${opcoesSelect}
-         </select>
-         <button class="btn-action" onclick="adicionarVariacaoPorId('${p.id}')">Adicionar</button>
-       </div>
-     `;
-   });
- }
+    container.innerHTML += `
+      <div class="prod-card">
+        <div style="height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaPorId('${p.id}')">
+          <img src="${fotoCapa}" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <b style="font-size: 13px; color: #333; margin-bottom: 4px;">${p.nome}</b>
+        <select id="select-var-${p.id}" style="width: 100%; padding: 4px; font-size: 11px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 6px;">
+          ${opcoesSelect}
+        </select>
+        <button class="btn-action" onclick="adicionarVariacaoPorId('${p.id}')">Adicionar</button>
+      </div>
+    `;
+  });
+}
 
  function abrirGaleriaPorId(pId) {
    const prod = mapaProdutosVen[pId];
