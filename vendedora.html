@@ -611,31 +611,52 @@ function filtrarCategoriaVen(categoria, btn) {
    carregarCarrinhoVendedora();
  }
 
- function enviarPedidoParaLojaPrincipal() {
-   if (!venCarrinho.length) return alert("Seu carrinho está vazio!");
-   const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
-   const comissao = totalPedido * 0.15;
+function enviarPedidoParaLojaPrincipal() {
+  if (!venCarrinho.length) return alert("Seu carrinho está vazio!");
 
-   db.collection("pedidos").add({
-     vendedora: venDados.nome,
-     telefone: venDados.telefone,
-     pix: venDados.pix,
-     codigoVendedora: venDados.codigo || '',
-     itens: venCarrinho,
-     total: totalPedido,
-     comissao: comissao,
-     data: new Date().toLocaleDateString('pt-BR'),
-     dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
-     status: 'Pendente',
-     formaPagamento: ''
-   }).then(() => {
-     alert("Pedido enviado com sucesso!");
-     venCarrinho = [];
-     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
-     atualizarBadgeCarrinho();
-     alternarAba('vendas', document.querySelectorAll('.tab-btn')[2]);
-   });
- }
+  // Garante que os dados da vendedora existem antes de tentar salvar
+  if (!venDados) {
+    alert("Sessão não encontrada. Por favor, faça login novamente.");
+    return;
+  }
+
+  const totalPedido = venCarrinho.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
+  const comissao = totalPedido * 0.15;
+
+  // Desabilita o botão temporariamente para evitar envios duplicados
+  const btnEnviar = event ? event.target : null;
+  if (btnEnviar) btnEnviar.disabled = true;
+
+  db.collection("pedidos").add({
+    vendedora: venDados.nome || 'Vendedora',
+    telefone: venDados.telefone || '',
+    pix: venDados.pix || '',
+    codigoVendedora: venDados.codigo || '',
+    itens: venCarrinho,
+    total: totalPedido,
+    comissao: comissao,
+    data: new Date().toLocaleDateString('pt-BR'),
+    dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'Pendente',
+    formaPagamento: ''
+  }).then(() => {
+    alert("Pedido enviado com sucesso para a loja!");
+    venCarrinho = [];
+    localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+    atualizarBadgeCarrinho();
+    
+    // Redireciona para a aba de Vendas
+    const btnAbaVendas = document.querySelectorAll('.tab-btn')[2];
+    if (btnAbaVendas) {
+      alternarAba('vendas', btnAbaVendas);
+    }
+  }).catch((err) => {
+    console.error("Erro ao enviar pedido:", err);
+    alert("Ocorreu um erro ao enviar o pedido. Verifique sua conexão e tente novamente.");
+  }).finally(() => {
+    if (btnEnviar) btnEnviar.disabled = false;
+  });
+}
 
  function carregarMetricasVendedora() {
    db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
