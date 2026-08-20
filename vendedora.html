@@ -410,12 +410,30 @@ window.addEventListener('DOMContentLoaded', () => {
    document.getElementById('qtd-carrinho-badge').innerText = venCarrinho.length;
  }
 
- function enviarCatalogoClienteWhatsapp() {
-   const urlBase = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
-  const urlComVendedora = `${urlBase}?ven=${encodeURIComponent(venDados.telefone)}`;
-   const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlCatalogo}`);
-   window.open(`https://wa.me/?text=${msg}`, '_blank');
- }
+function enviarCatalogoClienteWhatsapp() {
+  // 1. Evita o congelamento caso os dados não estejam prontos na memória
+  if (!venDados || !venDados.nome) {
+    alert("Sessão não encontrada. Por favor, recarregue a página ou faça login novamente.");
+    return;
+  }
+
+  // 2. Trata o número da vendedora se disponível para incluir no link
+  let paramVendedora = '';
+  if (venDados.telefone) {
+    let telLimpo = venDados.telefone.replace(/\D/g, '');
+    if (telLimpo.length <= 11) telLimpo = '55' + telLimpo;
+    paramVendedora = `?ven=${telLimpo}`;
+  }
+
+  // 3. Monta o link apontando para o catálogo
+  const urlBase = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
+  const urlFinal = `${urlBase}${paramVendedora}`;
+
+  const mensagem = `Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlFinal}`;
+  
+  // 4. Utiliza a API oficial do WhatsApp para evitar bloqueio do navegador
+  window.location.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
+}
 
  function carregarCatalogoVendedora() {
    const container = document.getElementById('ven-grade-produtos');
