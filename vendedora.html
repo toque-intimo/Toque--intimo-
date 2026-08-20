@@ -394,11 +394,13 @@
    document.getElementById('qtd-carrinho-badge').innerText = venCarrinho.length;
  }
 
- function enviarCatalogoClienteWhatsapp() {
-   const urlCatalogo = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
-   const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlCatalogo}`);
-   window.open(`https://wa.me/?text=${msg}`, '_blank');
- }
+function enviarCatalogoClienteWhatsapp() {
+     const urlBase = window.location.href.split('?')[0].replace('vendedora.html', 'catalogo.html');
+     // Anexa o WhatsApp da vendedora como parâmetro na URL
+     const urlComVendedora = `${urlBase}?ven=${encodeURIComponent(venDados.telefone)}`;
+     const msg = encodeURIComponent(`Olá! Confira as novidades do catálogo Toque Íntimo GS enviado pela consultora ${venDados.nome}: ${urlComVendedora}`);
+     window.open(`https://wa.me/?text=${msg}`, '_blank');
+   }
 
  function carregarCatalogoVendedora() {
    const container = document.getElementById('ven-grade-produtos');
