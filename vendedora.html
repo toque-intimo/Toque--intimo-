@@ -429,6 +429,8 @@
 
  function carregarCatalogoVendedora() {
   const container = document.getElementById('ven-grade-produtos');
+  if (!container) return;
+  
   container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Carregando produtos...</p>';
 
   db.collection("produtos").get().then(snapshot => {
@@ -436,28 +438,39 @@
     const categoriasEncontradas = new Set();
 
     if (snapshot.empty) {
-      container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto disponível.</p>';
+      container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto cadastrado no momento.</p>';
       return;
     }
 
     snapshot.forEach(doc => {
       const p = doc.data();
       p.id = doc.id;
+
+      // Proteção para garantir que o produto tenha o array de variações
+      if (!p.variacoes || !Array.isArray(p.variacoes)) {
+        p.variacoes = [];
+      }
+
       todosProdutosVen.push(p);
 
-      // Coleta todas as categorias existentes nos produtos cadastrados
-      if (p.categoria) {
-        categoriasEncontradas.add(p.categoria);
+      // Coleta a categoria do produto caso exista
+      if (p.categoria && typeof p.categoria === 'string' && p.categoria.trim() !== '') {
+        categoriasEncontradas.add(p.categoria.trim());
       }
     });
 
-    // Renderiza os botões de categorias dinamicamente
+    // Atualiza a barra de botões com as categorias encontradas
     renderizarBotoesCategorias(Array.from(categoriasEncontradas));
 
+    // Exibe os cards na tela
     renderizarCardsVendedora(todosProdutosVen);
+
   }).catch(err => {
-    console.error(err);
-    container.innerHTML = '<p style="grid-column: span 2; text-align: center; color: red; padding: 20px;">Erro ao carregar catálogo.</p>';
+    console.error("Erro detalhado do Firebase:", err);
+    container.innerHTML = `<p style="grid-column: span 2; text-align: center; color: red; padding: 20px;">
+      Erro ao carregar catálogo.<br>
+      <small style="color: #666;">${err.message || 'Verifique sua conexão ou as regras do Firestore.'}</small>
+    </p>`;
   });
 }
 
