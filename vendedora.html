@@ -623,80 +623,100 @@ function enviarPedidoParaLojaPrincipal() {
 
 function carregarHistoricoVendedora() {
   const container = document.getElementById('ven-historico-vendas');
+  if (!container) return;
+  
   container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
   
-  if (!venDados || !venDados.telefone) return;
-  
-  db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
-    container.innerHTML = '';
-    pedidosCache = {};
+  // 1. Valida se os dados da vendedora e telefone existem
+  if (!venDados || !venDados.telefone) {
+    container.innerHTML = '<p style="text-align: center; color: #777;">Sessão inválida. Por favor, faça login novamente.</p>';
+    return;
+  }
 
-    if (snapshot.empty) {
-      container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma venda registrada.</p>';
-      return;
-    }
+  // Limpa caracteres especiais do telefone para garantir o filtro correto
+  const telBusca = String(venDados.telefone).trim();
 
-    let htmlHistorico = '';
+  db.collection("pedidos")
+    .where("telefone", "==", telBusca)
+    .get()
+    .then(snapshot => {
+      container.innerHTML = '';
+      pedidosCache = {};
 
-    snapshot.forEach(doc => {
-      const d = doc.data();
-      const pedId = doc.id;
-      pedidosCache[pedId] = d;
-
-      const statusText = d.status || 'Pendente';
-      const isConfirmado = statusText.toLowerCase() !== 'pendente';
-      const statusClass = isConfirmado ? 'status-confirmado' : 'status-pendente';
-
-      let itensHtml = '';
-      if (d.itens && Array.isArray(d.itens)) {
-        d.itens.forEach(i => {
-          itensHtml += `<li style="font-size: 12px; color: #555;">${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(Number(i.preco)||0).toFixed(2)}</li>`;
-        });
+      if (snapshot.empty) {
+        container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma venda registrada até o momento.</p>';
+        return;
       }
 
-      let htmlPosConfirmacao = '';
-      if (isConfirmado) {
-        htmlPosConfirmacao = `
-          <div class="painel-pos-confirmacao">
-            <div class="form-group" style="margin-bottom: 8px;">
-              <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
-              <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
-                <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
-                <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
-                <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
-                <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
-                <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
-              </select>
+      let htmlHistorico = '';
+
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        const pedId = doc.id;
+        pedidosCache[pedId] = d;
+
+        const statusText = d.status || 'Pendente';
+        const isConfirmado = statusText.toLowerCase() !== 'pendente';
+        const statusClass = isConfirmado ? 'status-confirmado' : 'status-pendente';
+
+        let itensHtml = '';
+        if (d.itens && Array.isArray(d.itens)) {
+          d.itens.forEach(i => {
+            itensHtml += `<li style="font-size: 12px; color: #555;">${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(Number(i.preco)||0).toFixed(2)}</li>`;
+          });
+        }
+
+        let htmlPosConfirmacao = '';
+        if (isConfirmado) {
+          htmlPosConfirmacao = `
+            <div class="painel-pos-confirmacao">
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
+                <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+                  <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
+                  <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
+                  <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
+                  <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
+                  <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
+                  <i class="fa-brands fa-whatsapp"></i> Enviar Nota
+                </button>
+                <button class="btn-sm-pdf" onclick="gerarPDFNota('${pedId}')">
+                  <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+                </button>
+              </div>
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 10px;">
-              <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
-                <i class="fa-brands fa-whatsapp"></i> Enviar Nota
-              </button>
-              <button class="btn-sm-pdf" onclick="gerarPDFNota('${pedId}')">
-                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-              </button>
+          `;
+        }
+
+        htmlHistorico += `
+          <div class="card-venda">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: bold; color: #333;">Data: ${d.data || ''}</span>
+              <span class="badge-status ${statusClass}">${statusText}</span>
             </div>
+            <ul style="padding-left: 18px; margin-bottom: 8px;">${itensHtml}</ul>
+            <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
+              Total: R$ ${(Number(d.total)||0).toFixed(2)} | Comissão: R$ ${(Number(d.comissao)||0).toFixed(2)}
+            </div>
+            ${htmlPosConfirmacao}
           </div>
         `;
-      }
+      });
 
-      htmlHistorico += `
-        <div class="card-venda">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 12px; font-weight: bold; color: #333;">Data: ${d.data || ''}</span>
-            <span class="badge-status ${statusClass}">${statusText}</span>
-          </div>
-          <ul style="padding-left: 18px; margin-bottom: 8px;">${itensHtml}</ul>
-          <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
-            Total: R$ ${(Number(d.total)||0).toFixed(2)} | Comissão: R$ ${(Number(d.comissao)||0).toFixed(2)}
-          </div>
-          ${htmlPosConfirmacao}
-        </div>
-      `;
+      container.innerHTML = htmlHistorico;
+    })
+    .catch(err => {
+      // 2. Exibe mensagem tratada caso haja erro no Firebase
+      console.error("Erro ao carregar historico:", err);
+      container.innerHTML = `<p style="text-align: center; color: red; padding: 20px;">
+        Erro ao carregar suas vendas.<br>
+        <small style="color: #666;">${err.message || 'Verifique se as permissões de leitura do Firebase estão ativas.'}</small>
+      </p>`;
     });
-
-    container.innerHTML = htmlHistorico;
-  });
 }
 
  function atualizarPagamentoPedido(pedId) {
