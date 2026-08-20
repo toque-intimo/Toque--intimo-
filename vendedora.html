@@ -106,8 +106,8 @@
        <input type="text" id="login-identificacao" placeholder="Ex: Gisele Santos" required>
      </div>
      <div class="form-group">
-       <label>Código da Vendedora</label>
-       <input type="text" id="login-codigo" placeholder="Ex: GS-1234" required>
+       <label>Senha (Código da Vendedora)</label>
+       <input type="password" id="login-codigo" placeholder="Ex: GS-1234" required>
      </div>
      <button type="submit" class="btn-action" style="padding: 14px; font-size: 14px; margin-top: 10px;">Entrar no Portal</button>
    </form>
@@ -352,11 +352,14 @@
    };
 
    localStorage.setItem('ven_dados', JSON.stringify(venDados));
-   db.collection("vendedoras").add(venDados).catch(err => console.log(err));
+   db.collection("vendedoras").add(venDados).then(() => {
 
-   alert(`Cadastro realizado! O seu Código de Vendedora é: ${codigoGerado}\nGuarde este código para fazer login.`);
-   mostrarPainelPrincipal();
- });
+  alert(`Cadastro realizado com sucesso!\n\nSeus dados de acesso:\n- Login: ${venDados.nome}\n- Senha: ${codigoGerado}\n\nGuarde sua senha para acessar novamente.`);
+    mostrarPainelPrincipal();
+  }).catch(err => {
+    alert("Erro ao salvar cadastro.");
+  });
+});
 
  function mostrarPainelPrincipal() {
    document.getElementById('tela-cadastro-vendedora').style.display = 'none';
