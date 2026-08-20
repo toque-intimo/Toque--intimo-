@@ -461,6 +461,7 @@
   });
 }
 
+// SUBSTITUA A FUNÇÃO EXISTENTE POR ESTA:
 function renderizarBotoesCategorias(categorias) {
   const catBar = document.getElementById('ven-categorias-bar');
   if (!catBar) return;
@@ -471,6 +472,21 @@ function renderizarBotoesCategorias(categorias) {
   });
 
   catBar.innerHTML = html;
+}
+
+// ADICIONE ESTA NOVA FUNÇÃO QUE FALTAVA NO CÓDIGO:
+function filtrarCategoriaVen(categoria, btn) {
+  // Destaca o botão selecionado
+  document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  // Filtra na memória sem fazer nova requisição no banco
+  if (categoria === 'todas') {
+    renderizarCardsVendedora(todosProdutosVen);
+  } else {
+    const filtrados = todosProdutosVen.filter(p => p.categoria === categoria);
+    renderizarCardsVendedora(filtrados);
+  }
 }
 
  function renderizarCardsVendedora(lista) {
@@ -640,77 +656,81 @@ function renderizarBotoesCategorias(categorias) {
    });
  }
 
- function carregarHistoricoVendedora() {
-   const container = document.getElementById('ven-historico-vendas');
-   container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
-   
-   db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
-     container.innerHTML = '';
-     pedidosCache = {};
+function carregarHistoricoVendedora() {
+  const container = document.getElementById('ven-historico-vendas');
+  container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
+  
+  db.collection("pedidos").where("telefone", "==", venDados.telefone).get().then(snapshot => {
+    container.innerHTML = '';
+    pedidosCache = {};
 
-     if (snapshot.empty) {
-       container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma venda registrada.</p>';
-       return;
-     }
+    if (snapshot.empty) {
+      container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma venda registrada.</p>';
+      return;
+    }
 
-     snapshot.forEach(doc => {
-       const d = doc.data();
-       const pedId = doc.id;
-       pedidosCache[pedId] = d;
+    let htmlHistorico = ''; // Acumula HTML na memória para renderizar rápido
 
-       const statusText = d.status || 'Pendente';
-       const isConfirmado = statusText.toLowerCase() !== 'pendente';
-       const statusClass = isConfirmado ? 'status-confirmado' : 'status-pendente';
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      const pedId = doc.id;
+      pedidosCache[pedId] = d;
 
-       let itensHtml = '';
-       if (d.itens && Array.isArray(d.itens)) {
-         d.itens.forEach(i => {
-           itensHtml += `<li style="font-size: 12px; color: #555;">${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(Number(i.preco)||0).toFixed(2)}</li>`;
-         });
-       }
+      const statusText = d.status || 'Pendente';
+      const isConfirmado = statusText.toLowerCase() !== 'pendente';
+      const statusClass = isConfirmado ? 'status-confirmado' : 'status-pendente';
 
-       let htmlPosConfirmacao = '';
-       if (isConfirmado) {
-         htmlPosConfirmacao = `
-           <div class="painel-pos-confirmacao">
-             <div class="form-group" style="margin-bottom: 8px;">
-               <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
-               <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
-                 <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
-                 <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
-                 <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
-                 <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
-                 <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
-               </select>
-             </div>
-             <div style="display: flex; gap: 8px; margin-top: 10px;">
-               <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
-                 <i class="fa-brands fa-whatsapp"></i> Enviar Nota
-               </button>
-               <button class="btn-sm-pdf" onclick="gerarPDFNota('${pedId}')">
-                 <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-               </button>
-             </div>
-           </div>
-         `;
-       }
+      let itensHtml = '';
+      if (d.itens && Array.isArray(d.itens)) {
+        d.itens.forEach(i => {
+          itensHtml += `<li style="font-size: 12px; color: #555;">${i.nome} (${i.cor}/${i.tamanho}) - R$ ${(Number(i.preco)||0).toFixed(2)}</li>`;
+        });
+      }
 
-       container.innerHTML += `
-         <div class="card-venda">
-           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-             <span style="font-size: 12px; font-weight: bold; color: #333;">Data: ${d.data || ''}</span>
-             <span class="badge-status ${statusClass}">${statusText}</span>
-           </div>
-           <ul style="padding-left: 18px; margin-bottom: 8px;">${itensHtml}</ul>
-           <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
-             Total: R$ ${(Number(d.total)||0).toFixed(2)} | Comissão: R$ ${(Number(d.comissao)||0).toFixed(2)}
-           </div>
-           ${htmlPosConfirmacao}
-         </div>
-       `;
-     });
-   });
- }
+      let htmlPosConfirmacao = '';
+      if (isConfirmado) {
+        htmlPosConfirmacao = `
+          <div class="painel-pos-confirmacao">
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
+              <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+                <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
+                <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
+                <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
+                <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
+                <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
+                <i class="fa-brands fa-whatsapp"></i> Enviar Nota
+              </button>
+              <button class="btn-sm-pdf" onclick="gerarPDFNota('${pedId}')">
+                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      htmlHistorico += `
+        <div class="card-venda">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 12px; font-weight: bold; color: #333;">Data: ${d.data || ''}</span>
+            <span class="badge-status ${statusClass}">${statusText}</span>
+          </div>
+          <ul style="padding-left: 18px; margin-bottom: 8px;">${itensHtml}</ul>
+          <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark);">
+            Total: R$ ${(Number(d.total)||0).toFixed(2)} | Comissão: R$ ${(Number(d.comissao)||0).toFixed(2)}
+          </div>
+          ${htmlPosConfirmacao}
+        </div>
+      `;
+    });
+
+    container.innerHTML = htmlHistorico; // Injeta tudo no DOM de uma única vez
+  });
+}
 
  function atualizarPagamentoPedido(pedId) {
    const val = document.getElementById(`pagto-${pedId}`).value;
