@@ -72,6 +72,14 @@
  .btn-sm-pdf { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; }
  
  #nota-print-container { display: none; }
+ /* ADICIONAR NO SEU CSS (Dentro da tag <style>) */
+.fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.fin-card { background: #fff; border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.fin-card.full-width { grid-column: span 2; }
+.fin-card-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; display: block; }
+.fin-card-value { font-size: 16px; font-weight: bold; color: var(--text-dark); }
+.fin-card-value.primary { color: var(--primary); }
+.fin-card-value.green { color: #1e7e48; }
  </style>
 </head>
 <body>
@@ -784,18 +792,105 @@ function carregarHistoricoVendedora() {
    html2pdf().set(opt).from(element).save();
  }
 
- function carregarFinanceiroVendedora() {
-   const container = document.getElementById('ven-dados-financeiros');
-   const comissao = document.getElementById('ven-val-comissao').innerText;
-   container.innerHTML = `
-     <div style="background: #fff; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
-       <h4 style="color: var(--primary-dark); margin-bottom: 8px;">Resumo Financeiro</h4>
-       <p style="font-size: 14px;">Chave Pix Cadastrada: <b>${venDados ? venDados.pix : ''}</b></p>
-       <p style="font-size: 14px; margin-top: 5px;">Seu Código de Vendedora: <b style="color: var(--primary);">${venDados ? venDados.codigo : 'Não gerado'}</b></p>
-       <p style="font-size: 14px; margin-top: 5px;">Comissão Acumulada no Mês: <b style="color: green;">${comissao}</b></p>
-     </div>
-   `;
- }
+function carregarFinanceiroVendedora() {
+  const container = document.getElementById('ven-dados-financeiros');
+  if (!container) return;
+
+  container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando resumo financeiro...</p>';
+
+  if (!venDados || !venDados.telefone) {
+    container.innerHTML = '<p style="text-align: center; color: #777;">Sessão inválida. Faça login novamente.</p>';
+    return;
+  }
+
+  const telBusca = String(venDados.telefone).trim();
+
+  db.collection("pedidos").where("telefone", "==", telBusca).get().then(snapshot => {
+    let valorVendaTotal = 0;
+    let qtdVendasTotal = 0;
+    let valorComissaoTotal = 0;
+    let valorComissaoMes = 0;
+
+    const agora = new Date();
+    const mesAtual = (agora.getMonth() + 1).toString().padStart(2, '0');
+    const anoAtual = agora.getFullYear().toString();
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      const total = Number(d.total) || 0;
+      const comissao = Number(d.comissao) || 0;
+
+      valorVendaTotal += total;
+      valorComissaoTotal += comissao;
+      qtdVendasTotal += 1;
+
+      if (d.data) {
+        const partesData = d.data.split('/');
+        if (partesData.length === 3) {
+          const mesPedido = partesData[1];
+          const anoPedido = partesData[2];
+          if (mesPedido === mesAtual && anoPedido === anoAtual) {
+            valorComissaoMes += comissao;
+          }
+        }
+      }
+    });
+
+    const valorPagarLoja = valorVendaTotal - valorComissaoTotal;
+
+    container.innerHTML = `
+      <div style="background: #fff; padding: 12px; border: 1px solid var(--card-border); border-radius: 10px; margin-bottom: 10px;">
+        <p style="font-size: 13px; color: #555;"><b>Chave Pix:</b> ${venDados.pix || 'Não cadastrada'}</p>
+        <p style="font-size: 13px; color: #555;"><b>Código:</b> <span style="color: var(--primary); font-weight: bold;">${venDados.codigo || 'GS-0000'}</span></p>
+      </div>
+
+      <div class="fin-grid">
+        <div class="fin-card">
+          <span class="fin-card-label">Valor Venda Total</span>
+          <div class="fin-card-value">R$ ${valorVendaTotal.toFixed(2)}</div>
+        </div>
+
+        <div class="fin-card">
+          <span class="fin-card-label">Qtd. Vendas Total</span>
+          <div class="fin-card-value">${qtdVendasTotal}</div>
+        </div>
+
+        <div class="fin-card">
+          <span class="fin-card-label">Comissão Total</span>
+          <div class="fin-card-value green">R$ ${valorComissaoTotal.toFixed(2)}</div>
+        </div>
+
+        <div class="fin-card">
+          <span class="fin-card-label">Comissão do Mês</span>
+          <div class="fin-card-value green">R$ ${valorComissaoMes.toFixed(2)}</div>
+        </div>
+
+        <div class="fin-card full-width">
+          <span class="fin-card-label">Valor a Pagar para a Loja (-15% Comissão)</span>
+          <div class="fin-card-value primary" style="font-size: 20px;">R$ ${valorPagarLoja.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+
+    db.collection("financeiro_vendedoras").doc(venDados.codigo || telBusca).set({
+      vendedora: venDados.nome || '',
+      codigoVendedora: venDados.codigo || '',
+      telefone: telBusca,
+      valorVendaTotal: valorVendaTotal,
+      qtdVendasTotal: qtdVendasTotal,
+      valorComissaoTotal: valorComissaoTotal,
+      valorComissaoMes: valorComissaoMes,
+      valorPagarLoja: valorPagarLoja,
+      ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(err => {
+      console.error("Erro ao salvar resumo financeiro no Firebase:", err);
+    });
+
+  }).catch(err => {
+    console.error("Erro ao carregar financeiro:", err);
+    container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar dados financeiros.</p>';
+  });
+}
 </script>
 </body>
 </html>
