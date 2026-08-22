@@ -185,36 +185,36 @@
 
 <div id="nota-print-container">
   <div id="nota-pdf-content" style="padding: 30px; font-family: sans-serif; color: #333;">
-    <div style="text-align: center; border-bottom: 2px solid #70293b; padding-bottom: 15px; margin-bottom: 20px;">
-      <h1 style="color: #70293b; margin: 0; font-size: 24px;">Toque Íntimo GS</h1>
-      <p style="font-size: 12px; color: #666; margin-top: 3px;">Estilo, Conforto e Sofisticação</p>
-      <small style="font-size: 11px; color: #888;">Comprovante / Nota de Pedido</small>
-    </div>
+  <div style="text-align: center; border-bottom: 2px solid #70293b; padding-bottom: 15px; margin-bottom: 20px;">
+    <h1 style="color: #70293b; margin: 0; font-size: 24px;">Toque Íntimo GS</h1>
+    <p style="font-size: 12px; color: #666; margin-top: 3px;">Estilo, Conforto e Sofisticação</p>
+    <small style="font-size: 11px; color: #888;">Comprovante / Nota de Pedido</small>
+  </div>
 
-    <div style="margin-bottom: 15px; font-size: 13px; line-height: 1.6;">
-      <p><b>Consultora:</b> <span id="pdf-vendedora"></span></p>
-      <p><b>Data:</b> <span id="pdf-data"></span></p>
-      <p><b>Forma de Pagamento:</b> <span id="pdf-pagamento"></span></p>
-    </div>
+  <div style="margin-bottom: 15px; font-size: 13px; line-height: 1.6;">
+    <p><b>Consultora:</b> <span id="pdf-vendedora"></span></p>
+    <p id="pdf-box-cliente" style="display: none;"><b>Cliente:</b> <span id="pdf-cliente-nome"></span> <span id="pdf-cliente-tel"></span></p>
+    <p><b>Data:</b> <span id="pdf-data"></span></p>
+    <p><b>Forma de Pagamento:</b> <span id="pdf-pagamento"></span></p>
+  </div>
 
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
-      <thead>
-        <tr style="background: #70293b; color: white; text-align: left;">
-          <th style="padding: 8px;">Item</th>
-          <th style="padding: 8px;">Variação</th>
-          <th style="padding: 8px; text-align: right;">Preço</th>
-        </tr>
-      </thead>
-      <tbody id="pdf-itens-body"></tbody>
-    </table>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
+    <thead>
+      <tr style="background: #70293b; color: white; text-align: left;">
+        <th style="padding: 8px;">Item</th>
+        <th style="padding: 8px;">Variação</th>
+        <th style="padding: 8px; text-align: right;">Preço</th>
+      </tr>
+    </thead>
+    <tbody id="pdf-itens-body"></tbody>
+  </table>
 
-    <div style="text-align: right; font-size: 16px; border-top: 1px solid #ddd; padding-top: 10px;">
-      <b>Total do Pedido: <span id="pdf-total" style="color: #70293b;"></span></b>
-    </div>
+  <div style="text-align: right; font-size: 16px; border-top: 1px solid #ddd; padding-top: 10px;">
+    <b>Total do Pedido: <span id="pdf-total" style="color: #70293b;"></span></b>
+  </div>
 
-    <div style="margin-top: 40px; text-align: center; font-size: 11px; color: #777;">
-      Obrigado por comprar na Toque Íntimo GS!
-    </div>
+  <div style="margin-top: 40px; text-align: center; font-size: 11px; color: #777;">
+    Obrigado por comprar na Toque Íntimo GS!
   </div>
 </div>
 
@@ -713,19 +713,39 @@ function carregarHistoricoVendedora() {
 
         let htmlPosConfirmacao = '';
         if (isConfirmado) {
+          const isAPrazo = d.formaPagamento === 'A Prazo';
+
           htmlPosConfirmacao = `
             <div class="painel-pos-confirmacao">
               <div class="form-group" style="margin-bottom: 8px;">
-                <label style="font-size: 11px;">Forma de Pagamento com o Cliente:</label>
-                <select id="pagto-${pedId}" onchange="atualizarPagamentoPedido('${pedId}')" style="padding: 6px; font-size: 12px;">
+                <label style="font-size: 11px; font-weight: bold;">Forma de Pagamento:</label>
+                <select id="pagto-${pedId}" onchange="toggleCamposCliente('${pedId}')" style="padding: 6px; font-size: 12px;">
                   <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
                   <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
                   <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
                   <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
                   <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+                  <option value="A Prazo" ${isAPrazo ? 'selected' : ''}>A Prazo (Até 30 dias)</option>
                 </select>
               </div>
-              <div style="display: flex; gap: 8px; margin-top: 10px;">
+
+              <!-- Campos adicionais do Cliente para venda A Prazo -->
+              <div id="box-cliente-${pedId}" style="display: ${isAPrazo ? 'block' : 'none'}; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 10px;">
+                <div class="form-group" style="margin-bottom: 6px;">
+                  <label style="font-size: 11px;">Nome do Cliente:</label>
+                  <input type="text" id="nome-cli-${pedId}" value="${d.clienteNome || ''}" placeholder="Nome do cliente" style="padding: 6px; font-size: 12px;">
+                </div>
+                <div class="form-group">
+                  <label style="font-size: 11px;">WhatsApp/Telefone do Cliente:</label>
+                  <input type="text" id="tel-cli-${pedId}" value="${d.clienteTelefone || ''}" placeholder="11999999999" style="padding: 6px; font-size: 12px;">
+                </div>
+              </div>
+
+              <button onclick="atualizarPagamentoPedido('${pedId}')" style="background: var(--primary-dark); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; width: 100%; margin-bottom: 10px; cursor: pointer;">
+                Salvar Dados do Pagamento
+              </button>
+
+              <div style="display: flex; gap: 8px;">
                 <button class="btn-sm-whatsapp" onclick="enviarNotaClienteWhatsapp('${pedId}')">
                   <i class="fa-brands fa-whatsapp"></i> Enviar Nota
                 </button>
@@ -756,77 +776,140 @@ function carregarHistoricoVendedora() {
     })
     .catch(err => {
       console.error("Erro ao carregar historico:", err);
-      container.innerHTML = `<p style="text-align: center; color: red; padding: 20px;">
-        Erro ao carregar suas vendas.<br>
-        <small style="color: #666;">${err.message || 'Verifique se as permissões de leitura do Firebase estão ativas.'}</small>
-      </p>`;
+      container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar suas vendas.</p>';
     });
 }
 
- function atualizarPagamentoPedido(pedId) {
-   const val = document.getElementById(`pagto-${pedId}`).value;
-   db.collection("pedidos").doc(pedId).update({ formaPagamento: val }).then(() => {
-     pedidosCache[pedId].formaPagamento = val;
-   });
- }
+ // Exibe/Oculta os campos de Nome e Telefone se a opção for 'A Prazo'
+function toggleCamposCliente(pedId) {
+  const pagto = document.getElementById(`pagto-${pedId}`).value;
+  const box = document.getElementById(`box-cliente-${pedId}`);
+  if (box) {
+    box.style.display = pagto === 'A Prazo' ? 'block' : 'none';
+  }
+}
 
- function enviarNotaClienteWhatsapp(pedId) {
-   const ped = pedidosCache[pedId];
-   if (!ped) return;
+// Salva a forma de pagamento, nome e telefone do cliente no Firebase
+function atualizarPagamentoPedido(pedId) {
+  const pagto = document.getElementById(`pagto-${pedId}`).value;
+  const nomeCli = document.getElementById(`nome-cli-${pedId}`) ? document.getElementById(`nome-cli-${pedId}`).value.trim() : '';
+  const telCli = document.getElementById(`tel-cli-${pedId}`) ? document.getElementById(`tel-cli-${pedId}`).value.trim() : '';
 
-   const pagto = ped.formaPagamento || 'A combinar';
-   let textoItens = '';
-   if (ped.itens && Array.isArray(ped.itens)) {
-     ped.itens.forEach(i => {
-       textoItens += `• ${i.nome} (${i.cor}/${i.tamanho}) - R$ ${Number(i.preco).toFixed(2)}\n`;
-     });
-   }
+  const dadosUpdate = {
+    formaPagamento: pagto,
+    clienteNome: nomeCli,
+    clienteTelefone: telCli
+  };
 
-   const mensagem = `*Toque Íntimo GS - Comprovante do Pedido*\n` +
-                    `Consultora: ${venDados.nome}\n` +
-                    `Data: ${ped.data}\n` +
-                    `Forma de Pagamento: ${pagto}\n\n` +
-                    `*Itens:*\n${textoItens}\n` +
-                    `*Total: R$ ${Number(ped.total).toFixed(2)}*\n\n` +
-                    `Obrigado pela preferência! ✨`;
+  db.collection("pedidos").doc(pedId).update(dadosUpdate).then(() => {
+    alert("Dados do pagamento salvos com sucesso!");
+    if (pedidosCache[pedId]) {
+      pedidosCache[pedId].formaPagamento = pagto;
+      pedidosCache[pedId].clienteNome = nomeCli;
+      pedidosCache[pedId].clienteTelefone = telCli;
+    }
+  }).catch(err => {
+    console.error("Erro ao salvar dados:", err);
+    alert("Erro ao salvar alterações no Firebase.");
+  });
+}
 
-   window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
- }
+// Envia o comprovante diretamente para o WhatsApp do Cliente (se informado) ou abre na API
+function enviarNotaClienteWhatsapp(pedId) {
+  const ped = pedidosCache[pedId];
+  if (!ped) return;
 
- function gerarPDFNota(pedId) {
-   const ped = pedidosCache[pedId];
-   if (!ped) return;
+  let pagtoTexto = ped.formaPagamento || 'A combinar';
+  if (ped.formaPagamento === 'A Prazo') {
+    pagtoTexto = 'A Prazo (Vencimento em até 30 dias)';
+  }
 
-   document.getElementById('pdf-vendedora').innerText = venDados.nome;
-   document.getElementById('pdf-data').innerText = ped.data || '';
-   document.getElementById('pdf-pagamento').innerText = ped.formaPagamento || 'Não especificado';
-   document.getElementById('pdf-total').innerText = `R$ ${Number(ped.total || 0).toFixed(2)}`;
+  let textoCliente = '';
+  if (ped.clienteNome) textoCliente += `Cliente: ${ped.clienteNome}\n`;
 
-   const tbody = document.getElementById('pdf-itens-body');
-   tbody.innerHTML = '';
-   if (ped.itens && Array.isArray(ped.itens)) {
-     ped.itens.forEach(i => {
-       tbody.innerHTML += `
-         <tr style="border-bottom: 1px solid #eee;">
-           <td style="padding: 8px;">${i.nome}</td>
-           <td style="padding: 8px;">${i.cor} / ${i.tamanho}</td>
-           <td style="padding: 8px; text-align: right;">R$ ${Number(i.preco).toFixed(2)}</td>
-         </tr>
-       `;
-     });
-   }
+  let textoItens = '';
+  if (ped.itens && Array.isArray(ped.itens)) {
+    ped.itens.forEach(i => {
+      textoItens += `• ${i.nome} (${i.cor}/${i.tamanho}) - R$ ${Number(i.preco).toFixed(2)}\n`;
+    });
+  }
 
-   const element = document.getElementById('nota-pdf-content');
-   const opt = {
-     margin:       10,
-     filename:     `Nota_ToqueIntimoGS_${ped.data.replace(/\//g, '-')}.pdf`,
-     image:        { type: 'jpeg', quality: 0.98 },
-     html2canvas:  { scale: 2 },
-     jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
-   };
+  const mensagem = `*Toque Íntimo GS - Comprovante do Pedido*\n` +
+                   `Consultora: ${venDados.nome}\n` +
+                   textoCliente +
+                   `Data: ${ped.data}\n` +
+                   `Forma de Pagamento: ${pagtoTexto}\n\n` +
+                   `*Itens:*\n${textoItens}\n` +
+                   `*Total: R$ ${Number(ped.total).toFixed(2)}*\n\n` +
+                   `Obrigado pela preferência! ✨`;
 
-   html2pdf().set(opt).from(element).save();
- }
+  let telDestino = ped.clienteTelefone ? String(ped.clienteTelefone).replace(/\D/g, '') : '';
+  if (telDestino && telDestino.length <= 11) {
+    telDestino = '55' + telDestino;
+  }
+
+  const urlWhatsapp = telDestino 
+    ? `https://api.whatsapp.com/send?phone=${telDestino}&text=${encodeURIComponent(mensagem)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
+
+  window.location.href = urlWhatsapp;
+}
+
+function gerarPDFNota(pedId) {
+  const ped = pedidosCache[pedId];
+  if (!ped) return;
+
+  // Preenche dados da vendedora e data
+  document.getElementById('pdf-vendedora').innerText = venDados.nome || '';
+  document.getElementById('pdf-data').innerText = ped.data || '';
+
+  // Trata a exibição dos dados do Cliente
+  const boxCliente = document.getElementById('pdf-box-cliente');
+  if (ped.clienteNome || ped.clienteTelefone) {
+    boxCliente.style.display = 'block';
+    document.getElementById('pdf-cliente-nome').innerText = ped.clienteNome || 'Não informado';
+    document.getElementById('pdf-cliente-tel').innerText = ped.clienteTelefone ? `(${ped.clienteTelefone})` : '';
+  } else {
+    boxCliente.style.display = 'none';
+  }
+
+  // Trata a forma de pagamento (destacando 'A Prazo')
+  let pagtoTexto = ped.formaPagamento || 'Não especificado';
+  if (ped.formaPagamento === 'A Prazo') {
+    pagtoTexto = 'A Prazo (Vencimento em até 30 dias)';
+  }
+  document.getElementById('pdf-pagamento').innerText = pagtoTexto;
+
+  // Preenche o valor total
+  document.getElementById('pdf-total').innerText = `R$ ${Number(ped.total || 0).toFixed(2)}`;
+
+  // Preenche a tabela com os itens
+  const tbody = document.getElementById('pdf-itens-body');
+  tbody.innerHTML = '';
+  if (ped.itens && Array.isArray(ped.itens)) {
+    ped.itens.forEach(i => {
+      tbody.innerHTML += `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 8px;">${i.nome}</td>
+          <td style="padding: 8px;">${i.cor} / ${i.tamanho}</td>
+          <td style="padding: 8px; text-align: right;">R$ ${Number(i.preco).toFixed(2)}</td>
+        </tr>
+      `;
+    });
+  }
+
+  // Configuração e geração do PDF
+  const element = document.getElementById('nota-pdf-content');
+  const opt = {
+    margin:       10,
+    filename:     `Nota_ToqueIntimoGS_${(ped.data || '').replace(/\//g, '-')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save();
+}
 
 function carregarFinanceiroVendedora() {
   const container = document.getElementById('ven-dados-financeiros');
@@ -876,8 +959,7 @@ function carregarFinanceiroVendedora() {
 
     container.innerHTML = `
       <div style="background: #fff; padding: 12px; border: 1px solid var(--card-border); border-radius: 10px; margin-bottom: 10px;">
-        <p style="font-size: 13px; color: #555;"><b>Chave Pix:</b> ${venDados.pix || 'Não cadastrada'}</p>
-        <p style="font-size: 13px; color: #555;"><b>Código:</b> <span style="color: var(--primary); font-weight: bold;">${venDados.codigo || 'GS-0000'}</span></p>
+        <p style="font-size: 13px; color: #555;"><b>Código da Vendedora:</b> <span style="color: var(--primary); font-weight: bold;">${venDados.codigo || 'GS-0000'}</span></p>
       </div>
 
       <div class="fin-grid">
