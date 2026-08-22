@@ -620,23 +620,36 @@ function carregarPedidos() {
 
   container.innerHTML = '<p style="text-align: center; color: #999;">Carregando solicitações...</p>';
 
-  // Lendo diretamente da coleção 'pedidos'
-  db.collection("pedidos").onSnapshot((snapshot) => {
+  // Busca os pedidos e as informações financeiras da vendedora
+  db.collection("pedidos").onSnapshot(async (snapshot) => {
     if (snapshot.empty) {
       container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum pedido recebido das vendedoras até o momento.</p>';
       return;
     }
 
     container.innerHTML = '';
-    snapshot.forEach((doc) => {
+
+    for (const doc of snapshot.docs) {
       const p = doc.data();
       const id = doc.id;
       
-      // Aceita variações de nomes dos campos para evitar erro de leitura
       const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
       const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
       const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
       const clienteTel = p.clienteTelefone || p.telefoneCliente || p.telefone || 'Sem Tel';
+
+      // Consulta o saldo devedor atual da vendedora no Firebase
+      let saldoDevedor = 0;
+      if (vendedoraCodigo !== '-') {
+        try {
+          const finDoc = await db.collection("pagamentos_vendedoras").doc(vendedoraCodigo).get();
+          if (finDoc.exists) {
+            saldoDevedor = finDoc.data().saldoDevedor || 0;
+          }
+        } catch (e) {
+          console.error("Erro ao buscar saldo devedor:", e);
+        }
+      }
 
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
@@ -656,16 +669,30 @@ function carregarPedidos() {
             <b style="font-size: 14px; color: var(--primary);">${vendedoraNome}</b>
             <span style="background: ${badgeBg}; color: ${badgeCor}; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">${p.status || 'Pendente'}</span>
           </div>
-          <div style="font-size: 12px; color: #777;">
+          
+          <div style="font-size: 12px; color: #777; margin-top: 4px;">
             <b>Data:</b> ${p.data || '-'} | <b>Cód. Vendedora:</b> ${vendedoraCodigo}<br>
             <b>Cliente Final:</b> ${clienteNome} (${clienteTel})
           </div>
-          <div style="background: #fafafa; padding: 8px; border-radius: 8px; border: 1px dashed #ddd; margin-top: 4px;">
+
+          <!-- BLOCO DE DEBITO DA VENDEDORA -->
+          <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
+            <b style="color: #856404;">Débito da Vendedora: R$ ${saldoDevedor.toFixed(2)}</b>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="number" id="input-pago-${id}" placeholder="Valor pago (R$)" style="padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
+              <button class="btn-action btn-sell-direct" onclick="registrarBaixaVendedora('${vendedoraCodigo}', '${id}')">
+                <i class="fa-solid fa-hand-holding-dollar"></i> Dar Baixa
+              </button>
+            </div>
+          </div>
+
+          <div style="background: #fafafa; padding: 8px; border-radius: 8px; border: 1px dashed #ddd; margin-top: 8px;">
             <b style="font-size: 11px; color: #333;">Itens Solicitados:</b>
             ${itensHtml}
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-            <b style="font-size: 14px; color: var(--primary);">Total: R$ ${(p.total || 0).toFixed(2)}</b>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+            <b style="font-size: 14px; color: var(--primary);">Total Pedido: R$ ${(p.total || 0).toFixed(2)}</b>
             <div class="actions-row">
               <button class="btn-action btn-sell-direct" onclick="atualizarStatusPedido('${id}', 'Aprovado')"><i class="fa-solid fa-check"></i> Aprovar</button>
               <button class="btn-action btn-delete" onclick="atualizarStatusPedido('${id}', 'Recusado')"><i class="fa-solid fa-xmark"></i> Recusar</button>
@@ -674,13 +701,61 @@ function carregarPedidos() {
           </div>
         </div>
       `;
-    });
+    }
   }, (err) => {
     console.error("Erro ao carregar pedidos:", err);
     container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar pedidos.</p>';
   });
 }
+ 
+async function registrarBaixaVendedora(codigoVendedora, idPedido) {
+  const campoInput = document.getElementById(`input-pago-${idPedido}`);
+  const valorPago = parseFloat(campoInput.value);
 
+  if (codigoVendedora === '-' || !codigoVendedora) {
+    alert("Código da vendedora inválido para registrar o pagamento.");
+    return;
+  }
+
+  if (isNaN(valorPago) || valorPago <= 0) {
+    alert("Por favor, insira um valor numérico válido para dar baixa.");
+    return;
+  }
+
+  try {
+    const docRef = db.collection("pagamentos_vendedoras").doc(codigoVendedora);
+    const docSnap = await docRef.get();
+
+    let totalRepassado = 0;
+    let saldoDevedor = 0;
+
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      totalRepassado = data.totalRepassado || 0;
+      saldoDevedor = data.saldoDevedor || 0;
+    }
+
+    // Calcula os novos saldos
+    const novoTotalRepassado = totalRepassado + valorPago;
+    const novoSaldoDevedor = Math.max(0, saldoDevedor - valorPago);
+
+    // Atualiza o documento no Firebase
+    await docRef.set({
+      totalRepassado: novoTotalRepassado,
+      saldoDevedor: novoSaldoDevedor,
+      ultimaAtualizacao: new Date().toLocaleDateString()
+    }, { merge: true });
+
+    alert(`Baixa de R$ ${valorPago.toFixed(2)} registrada com sucesso!`);
+    campoInput.value = '';
+    carregarPedidos();
+
+  } catch (error) {
+    console.error("Erro ao registrar baixa:", error);
+    alert("Erro ao registrar o pagamento no Firebase.");
+  }
+}
+ 
 function atualizarStatusPedido(id, novoStatus) {
   // 1. Busca o pedido específico no Firebase
   db.collection("pedidos").doc(id).get().then((doc) => {
