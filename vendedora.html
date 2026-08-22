@@ -711,38 +711,36 @@ function carregarHistoricoVendedora() {
           });
         }
 
-        let htmlPosConfirmacao = '';
+       let htmlPosConfirmacao = '';
         if (isConfirmado) {
-          const isAPrazo = d.formaPagamento === 'A Prazo';
-
           htmlPosConfirmacao = `
             <div class="painel-pos-confirmacao">
               <div class="form-group" style="margin-bottom: 8px;">
                 <label style="font-size: 11px; font-weight: bold;">Forma de Pagamento:</label>
-                <select id="pagto-${pedId}" onchange="toggleCamposCliente('${pedId}')" style="padding: 6px; font-size: 12px;">
+                <select id="pagto-${pedId}" style="padding: 6px; font-size: 12px; width: 100%;">
                   <option value="" ${!d.formaPagamento ? 'selected' : ''}>Selecione...</option>
                   <option value="Pix" ${d.formaPagamento === 'Pix' ? 'selected' : ''}>Pix</option>
                   <option value="Cartão de Crédito" ${d.formaPagamento === 'Cartão de Crédito' ? 'selected' : ''}>Cartão de Crédito</option>
                   <option value="Cartão de Débito" ${d.formaPagamento === 'Cartão de Débito' ? 'selected' : ''}>Cartão de Débito</option>
                   <option value="Dinheiro" ${d.formaPagamento === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
-                  <option value="A Prazo" ${isAPrazo ? 'selected' : ''}>A Prazo (Até 30 dias)</option>
+                  <option value="A Prazo" ${d.formaPagamento === 'A Prazo' ? 'selected' : ''}>A Prazo (Até 30 dias)</option>
                 </select>
               </div>
 
-              <!-- Campos adicionais do Cliente para venda A Prazo -->
-              <div id="box-cliente-${pedId}" style="display: ${isAPrazo ? 'block' : 'none'}; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 10px;">
+              <!-- Campos do Cliente (Sempre visíveis) -->
+              <div id="box-cliente-${pedId}" style="background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px;">
                 <div class="form-group" style="margin-bottom: 6px;">
-                  <label style="font-size: 11px;">Nome do Cliente:</label>
-                  <input type="text" id="nome-cli-${pedId}" value="${d.clienteNome || ''}" placeholder="Nome do cliente" style="padding: 6px; font-size: 12px;">
+                  <label style="font-size: 11px; font-weight: 600;">Nome do Cliente:</label>
+                  <input type="text" id="nome-cli-${pedId}" value="${d.clienteNome || ''}" placeholder="Ex: Maria Silva" style="padding: 6px; font-size: 12px; width: 100%; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
                 <div class="form-group">
-                  <label style="font-size: 11px;">WhatsApp/Telefone do Cliente:</label>
-                  <input type="text" id="tel-cli-${pedId}" value="${d.clienteTelefone || ''}" placeholder="11999999999" style="padding: 6px; font-size: 12px;">
+                  <label style="font-size: 11px; font-weight: 600;">WhatsApp/Telefone do Cliente:</label>
+                  <input type="text" id="tel-cli-${pedId}" value="${d.clienteTelefone || ''}" placeholder="Ex: 11999999999" style="padding: 6px; font-size: 12px; width: 100%; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
               </div>
 
               <button onclick="atualizarPagamentoPedido('${pedId}')" style="background: var(--primary-dark); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; width: 100%; margin-bottom: 10px; cursor: pointer;">
-                Salvar Dados do Pagamento
+                Salvar Dados da Venda
               </button>
 
               <div style="display: flex; gap: 8px;">
@@ -779,16 +777,6 @@ function carregarHistoricoVendedora() {
       container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar suas vendas.</p>';
     });
 }
-
- // Exibe/Oculta os campos de Nome e Telefone se a opção for 'A Prazo'
-function toggleCamposCliente(pedId) {
-  const pagto = document.getElementById(`pagto-${pedId}`).value;
-  const box = document.getElementById(`box-cliente-${pedId}`);
-  if (box) {
-    box.style.display = pagto === 'A Prazo' ? 'block' : 'none';
-  }
-}
-
 // Salva a forma de pagamento, nome e telefone do cliente no Firebase
 function atualizarPagamentoPedido(pedId) {
   const pagto = document.getElementById(`pagto-${pedId}`).value;
