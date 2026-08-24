@@ -638,18 +638,27 @@ function carregarPedidos() {
       const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
       const clienteTel = p.clienteTelefone || p.telefoneCliente || p.telefone || 'Sem Tel';
 
-      // Consulta o saldo devedor atual da vendedora no Firebase
-      let saldoDevedor = 0;
-      if (vendedoraCodigo !== '-') {
-        try {
-          const finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo).get();
-          if (finDoc.exists) {
-            saldoDevedor = finDoc.data().saldoDevedor || 0;
-          }
-        } catch (e) {
-          console.error("Erro ao buscar saldo devedor:", e);
-        }
-      }
+      // Substitua o trecho de busca do saldo na função carregarPedidos por este:
+let saldoDevedor = 0;
+if (vendedoraCodigo !== '-') {
+  try {
+    // Tenta buscar pelo código da vendedora
+    let finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo).get();
+    
+    // Se não achar pelo código exato, busca pelo nome
+    if (!finDoc.exists && vendedoraNome) {
+      finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraNome).get();
+    }
+
+    if (finDoc.exists) {
+      const data = finDoc.data();
+      // Pega o valor independente do nome da chave usada na vendedora
+      saldoDevedor = data.saldoDevedor ?? data.saldo ?? data.debito ?? data.valorDevido ?? 0;
+    }
+  } catch (e) {
+    console.error("Erro ao buscar saldo devedor:", e);
+  }
+}
 
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
@@ -729,12 +738,13 @@ async function registrarBaixaVendedora(codigoVendedora, idPedido) {
     let totalRepassado = 0;
     let saldoDevedor = 0;
 
-    if (docSnap.exists) {
-      const data = docSnap.data();
-      totalRepassado = data.totalRepassado || 0;
-      saldoDevedor = data.saldoDevedor || 0;
-    }
-
+    // Dentro de registrarBaixaVendedora(), substitua a leitura do saldo por:
+if (docSnap.exists) {
+  const data = docSnap.data();
+  totalRepassado = data.totalRepassado || data.pago || 0;
+  saldoDevedor = data.saldoDevedor ?? data.saldo ?? data.debito ?? 0;
+}
+    
     // Calcula os novos saldos
     const novoTotalRepassado = totalRepassado + valorPago;
     const novoSaldoDevedor = Math.max(0, saldoDevedor - valorPago);
