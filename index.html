@@ -640,23 +640,29 @@ function carregarPedidos() {
 
       // Substitua o trecho de busca do saldo na função carregarPedidos por este:
 let saldoDevedor = 0;
-if (vendedoraCodigo !== '-') {
+
+if (vendedoraCodigo !== '-' || vendedoraNome) {
   try {
-    // Tenta buscar pelo código da vendedora
+    // 1. Tenta buscar pelo código (ex: "GS-7738")
     let finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo).get();
     
-    // Se não achar pelo código exato, busca pelo nome
-    if (!finDoc.exists && vendedoraNome) {
-      finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraNome).get();
+    // 2. Se não achar, tenta com .trim() (remove espaços acidentais)
+    if (!finDoc.exists && vendedoraCodigo) {
+      finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo.trim()).get();
     }
 
+    // 3. Se ainda não achar, busca pelo nome
+    if (!finDoc.exists && vendedoraNome) {
+      finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraNome.trim()).get();
+    }
+
+    // 4. Captura o valor do campo correto ("valorPagarLoja")
     if (finDoc.exists) {
       const data = finDoc.data();
-      // Pega o valor independente do nome da chave usada na vendedora
-      saldoDevedor = data.saldoDevedor ?? data.saldo ?? data.debito ?? data.valorDevido ?? 0;
+      saldoDevedor = data.valorPagarLoja ?? data.saldoDevedor ?? data.valorDevido ?? 0;
     }
   } catch (e) {
-    console.error("Erro ao buscar saldo devedor:", e);
+    console.error("Erro ao carregar saldo da vendedora:", e);
   }
 }
 
