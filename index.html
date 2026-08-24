@@ -642,7 +642,7 @@ function carregarPedidos() {
       let saldoDevedor = 0;
       if (vendedoraCodigo !== '-') {
         try {
-          const finDoc = await db.collection("pagamentos_vendedoras").doc(vendedoraCodigo).get();
+          const finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo).get();
           if (finDoc.exists) {
             saldoDevedor = finDoc.data().saldoDevedor || 0;
           }
@@ -723,7 +723,7 @@ async function registrarBaixaVendedora(codigoVendedora, idPedido) {
   }
 
   try {
-    const docRef = db.collection("pagamentos_vendedoras").doc(codigoVendedora);
+    const docRef = db.collection("financeiro_vendedoras").doc(codigoVendedora);
     const docSnap = await docRef.get();
 
     let totalRepassado = 0;
