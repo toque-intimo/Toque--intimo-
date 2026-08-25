@@ -728,7 +728,7 @@ async function registrarBaixaVendedora(codigoVendedora, idPedido) {
   const campoInput = document.getElementById(`input-pago-${idPedido}`);
   const valorPago = parseFloat(campoInput.value);
 
-  if (codigoVendedora === '-' || !codigoVendedora) {
+  if (!codigoVendedora || codigoVendedora === '-') {
     alert("Código da vendedora inválido para registrar o pagamento.");
     return;
   }
@@ -739,32 +739,36 @@ async function registrarBaixaVendedora(codigoVendedora, idPedido) {
   }
 
   try {
-    const docRef = db.collection("financeiro_vendedoras").doc(codigoVendedora);
+    const docRef = db.collection("financeiro_vendedoras").doc(codigoVendedora.trim());
     const docSnap = await docRef.get();
 
-    let totalRepassado = 0;
-    let saldoDevedor = 0;
+    let totalPago = 0;
+    let valorPagarLoja = 0;
 
-    // Dentro de registrarBaixaVendedora(), substitua a leitura do saldo por:
-if (docSnap.exists) {
-  const data = docSnap.data();
-  totalRepassado = data.totalRepassado || data.pago || 0;
-  saldoDevedor = data.saldoDevedor ?? data.saldo ?? data.debito ?? 0;
-}
-    
-    // Calcula os novos saldos
-    const novoTotalRepassado = totalRepassado + valorPago;
-    const novoSaldoDevedor = Math.max(0, saldoDevedor - valorPago);
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      totalPago = data.pago || data.totalRepassado || 0;
+      valorPagarLoja = data.valorPagarLoja ?? data.saldoDevedor ?? 0;
+    }
 
-    // Atualiza o documento no Firebase
+    // Abate o valor pago do débito atual
+    const novoTotalPago = totalPago + valorPago;
+    const novoValorPagarLoja = Math.max(0, valorPagarLoja - valorPago);
+    const novoStatus = novoValorPagarLoja === 0 ? 'concluido' : 'pendente';
+
+    // Salva/Atualiza o documento no Firebase
     await docRef.set({
-      totalRepassado: novoTotalRepassado,
-      saldoDevedor: novoSaldoDevedor,
+      codigo: codigoVendedora.trim(),
+      pago: novoTotalPago,
+      valorPagarLoja: novoValorPagarLoja,
+      statusFinanceiro: novoStatus,
       ultimaAtualizacao: new Date().toLocaleDateString()
     }, { merge: true });
 
     alert(`Baixa de R$ ${valorPago.toFixed(2)} registrada com sucesso!`);
     campoInput.value = '';
+    
+    // Atualiza a visualização dos pedidos na tela
     carregarPedidos();
 
   } catch (error) {
