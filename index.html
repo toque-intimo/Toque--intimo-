@@ -743,33 +743,43 @@ async function registrarBaixaVendedora(codigoVendedora, idPedido) {
     const docSnap = await docRef.get();
 
     let totalPago = 0;
-    let valorPagarLoja = 0;
+    let valorPagarAtual = 0;
 
     if (docSnap.exists) {
       const data = docSnap.data();
-      totalPago = data.pago || data.totalRepassado || 0;
-      valorPagarLoja = data.valorPagarLoja ?? data.saldoDevedor ?? 0;
+      totalPago = Number(data.pago || 0);
+      
+      // Se não existir valorPagarLoja, calcula baseado na venda bruta e comissão
+      if (data.valorPagarLoja !== undefined) {
+        valorPagarAtual = Number(data.valorPagarLoja);
+      } else {
+        const vendaTotal = Number(data.valorVendaTotal || 0);
+        const comissaoTotal = Number(data.valorComissaoTotal || 0);
+        valorPagarAtual = vendaTotal - comissaoTotal;
+      }
     }
 
-    // Abate o valor pago do débito atual
+    // Abate o valor pago do débito restante
     const novoTotalPago = totalPago + valorPago;
-    const novoValorPagarLoja = Math.max(0, valorPagarLoja - valorPago);
+    const novoValorPagarLoja = Math.max(0, valorPagarAtual - valorPago);
     const novoStatus = novoValorPagarLoja === 0 ? 'concluido' : 'pendente';
 
-    // Salva/Atualiza o documento no Firebase
+    // Salva o NOVO valor devedor já abatido no Firebase
     await docRef.set({
       codigo: codigoVendedora.trim(),
       pago: novoTotalPago,
       valorPagarLoja: novoValorPagarLoja,
       statusFinanceiro: novoStatus,
-      ultimaAtualizacao: new Date().toLocaleDateString()
+      ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
     alert(`Baixa de R$ ${valorPago.toFixed(2)} registrada com sucesso!`);
     campoInput.value = '';
     
-    // Atualiza a visualização dos pedidos na tela
-    carregarPedidos();
+    // Recarrega a lista para mostrar o novo valor em tela imediatamente
+    if (typeof carregarPedidos === 'function') {
+      carregarPedidos();
+    }
 
   } catch (error) {
     console.error("Erro ao registrar baixa:", error);
