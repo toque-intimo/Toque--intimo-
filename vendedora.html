@@ -912,24 +912,35 @@ function carregarFinanceiroVendedora() {
 
   const telBusca = String(venDados.telefone).trim();
 
-  db.collection("pedidos").where("telefone", "==", telBusca).get().then(snapshot => {
-    let valorVendaTotal = 0;
-    let qtdVendasTotal = 0;
-    let valorComissaoTotal = 0;
-    let valorComissaoMes = 0;
+ db.collection("pedidos").where("telefone", "==", telBusca).get().then(snapshot => {
+  let valorVendaTotal = 0;
+  let qtdVendasTotal = 0;
+  let valorComissaoTotal = 0;
+  let valorComissaoMes = 0;
+  let valorPagarLoja = 0;
 
-    const agora = new Date();
-    const mesAtual = (agora.getMonth() + 1).toString().padStart(2, '0');
-    const anoAtual = agora.getFullYear().toString();
+  const agora = new Date();
+  const mesAtual = (agora.getMonth() + 1).toString().padStart(2, '0');
+  const anoAtual = agora.getFullYear().toString();
 
-    snapshot.forEach(doc => {
-      const d = doc.data();
+  snapshot.forEach(doc => {
+    const d = doc.data();
+    
+    // Considera débitos e totais apenas para pedidos Aprovados (ou sem status definido)
+    if (!d.status || d.status === 'Aprovado') {
       const total = Number(d.total) || 0;
-      const comissao = Number(d.comissao) || 0;
+      const taxaComissao = Number(d.porcentagemComissao || 15) / 100;
+      const comissao = Number(d.comissao) || (total * taxaComissao);
+      const liquidoPedido = total - comissao;
+      
+      // Subtrai as baixas feitas individualmente no pedido
+      const valorPagoNoPedido = Number(d.valorPagoVendedora) || 0;
+      const debitoPedido = Math.max(0, liquidoPedido - valorPagoNoPedido);
 
       valorVendaTotal += total;
       valorComissaoTotal += comissao;
       qtdVendasTotal += 1;
+      valorPagarLoja += debitoPedido;
 
       if (d.data) {
         const partesData = d.data.split('/');
@@ -941,79 +952,57 @@ function carregarFinanceiroVendedora() {
           }
         }
       }
-    });
-
-    const valorPagarLoja = valorVendaTotal - valorComissaoTotal;
-
-    container.innerHTML = `
-      <div style="background: #fff; padding: 12px; border: 1px solid var(--card-border); border-radius: 10px; margin-bottom: 10px;">
-        <p style="font-size: 13px; color: #555;"><b>Código da Vendedora:</b> <span style="color: var(--primary); font-weight: bold;">${venDados.codigo || 'GS-0000'}</span></p>
-      </div>
-
-      <div class="fin-grid">
-        <div class="fin-card">
-          <span class="fin-card-label">Valor Venda Total</span>
-          <div class="fin-card-value">R$ ${valorVendaTotal.toFixed(2)}</div>
-        </div>
-
-        <div class="fin-card">
-          <span class="fin-card-label">Qtd. Vendas Total</span>
-          <div class="fin-card-value">${qtdVendasTotal}</div>
-        </div>
-
-        <div class="fin-card">
-          <span class="fin-card-label">Comissão Total</span>
-          <div class="fin-card-value green">R$ ${valorComissaoTotal.toFixed(2)}</div>
-        </div>
-
-        <div class="fin-card">
-          <span class="fin-card-label">Comissão do Mês</span>
-          <div class="fin-card-value green">R$ ${valorComissaoMes.toFixed(2)}</div>
-        </div>
-
-        <div class="fin-card full-width">
-          <span class="fin-card-label">Valor a Pagar para a Loja (-15% Comissão)</span>
-          <div class="fin-card-value primary" style="font-size: 20px;">R$ ${valorPagarLoja.toFixed(2)}</div>
-        </div>
-      </div>
-    `;
-const docRefFin = db.collection("financeiro_vendedoras").doc((venDados.codigo || telBusca).trim());
-
-// 1. Grava os totais calculados sem sobrescrever os abatimentos/baixas
-docRefFin.set({
-  vendedora: venDados.nome || '',
-  codigoVendedora: venDados.codigo || '',
-  telefone: telBusca,
-  valorVendaTotal: valorVendaTotal,
-  qtdVendasTotal: qtdVendasTotal,
-  valorComissaoTotal: valorComissaoTotal,
-  valorComissaoMes: valorComissaoMes,
-  ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true }).catch(err => {
-  console.error("Erro ao salvar resumo financeiro no Firebase:", err);
-});
-
-// 2. Escuta os abatimentos em tempo real enviados pelo painel principal
-docRefFin.onSnapshot((doc) => {
-  if (doc.exists) {
-    const data = doc.data();
-    // Prioriza o saldo devedor atualizado pelas baixas do admin
-    const saldoAtualizado = data.valorPagarLoja ?? valorPagarLoja;
-    
-    // Procura o card de "Valor a Pagar" na tela e atualiza o valor exibido
-    const elCards = container.querySelectorAll('.fin-card-value');
-    if (elCards && elCards.length > 0) {
-      // O último card é o "Valor a Pagar para a Loja"
-      const elValorPagar = elCards[elCards.length - 1];
-      if (elValorPagar) {
-        elValorPagar.innerText = `R$ ${saldoAtualizado.toFixed(2)}`;
-        if (saldoAtualizado === 0 || data.statusFinanceiro === 'concluido') {
-          elValorPagar.style.color = '#1e7e48'; // Verde para quitado
-        }
-      }
     }
-  }
-});
+  });
+
+  container.innerHTML = `
+    <div style="background: #fff; padding: 12px; border: 1px solid var(--card-border); border-radius: 10px; margin-bottom: 10px;">
+      <p style="font-size: 13px; color: #555;"><b>Código da Vendedora:</b> <span style="color: var(--primary); font-weight: bold;">${venDados.codigo || '-'}</span></p>
+    </div>
+
+    <div class="fin-grid">
+      <div class="fin-card">
+        <span class="fin-card-label">Valor Venda Total</span>
+        <div class="fin-card-value">R$ ${valorVendaTotal.toFixed(2)}</div>
+      </div>
+
+      <div class="fin-card">
+        <span class="fin-card-label">Qtd. Vendas Total</span>
+        <div class="fin-card-value">${qtdVendasTotal}</div>
+      </div>
+
+      <div class="fin-card">
+        <span class="fin-card-label">Comissão Total</span>
+        <div class="fin-card-value green">R$ ${valorComissaoTotal.toFixed(2)}</div>
+      </div>
+
+      <div class="fin-card">
+        <span class="fin-card-label">Comissão do Mês</span>
+        <div class="fin-card-value green">R$ ${valorComissaoMes.toFixed(2)}</div>
+      </div>
+
+      <div class="fin-card full-width">
+        <span class="fin-card-label">Valor a Pagar para a Loja</span>
+        <div class="fin-card-value primary" style="font-size: 20px; color: ${valorPagarLoja === 0 ? '#1e7e48' : ''};">R$ ${valorPagarLoja.toFixed(2)}</div>
+      </div>
+    </div>
+  `;
+
+  const docRefFin = db.collection("financeiro_vendedoras").doc((venDados.codigo || telBusca).trim());
+  
+  docRefFin.set({
+    vendedora: venDados.nome || '',
+    codigoVendedora: venDados.codigo || '',
+    telefone: telBusca,
+    valorVendaTotal: valorVendaTotal,
+    qtdVendasTotal: qtdVendasTotal,
+    valorComissaoTotal: valorComissaoTotal,
+    valorComissaoMes: valorComissaoMes,
+    valorPagarLoja: valorPagarLoja,
+    ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(err => {
+    console.error("Erro ao salvar resumo financeiro no Firebase:", err);
+  });
 
   }).catch(err => {
     console.error("Erro ao carregar financeiro:", err);
