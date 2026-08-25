@@ -977,20 +977,43 @@ function carregarFinanceiroVendedora() {
         </div>
       </div>
     `;
+const docRefFin = db.collection("financeiro_vendedoras").doc((venDados.codigo || telBusca).trim());
 
-    db.collection("financeiro_vendedoras").doc(venDados.codigo || telBusca).set({
-      vendedora: venDados.nome || '',
-      codigoVendedora: venDados.codigo || '',
-      telefone: telBusca,
-      valorVendaTotal: valorVendaTotal,
-      qtdVendasTotal: qtdVendasTotal,
-      valorComissaoTotal: valorComissaoTotal,
-      valorComissaoMes: valorComissaoMes,
-      valorPagarLoja: valorPagarLoja,
-      ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true }).catch(err => {
-      console.error("Erro ao salvar resumo financeiro no Firebase:", err);
-    });
+// 1. Grava os totais calculados sem sobrescrever os abatimentos/baixas
+docRefFin.set({
+  vendedora: venDados.nome || '',
+  codigoVendedora: venDados.codigo || '',
+  telefone: telBusca,
+  valorVendaTotal: valorVendaTotal,
+  qtdVendasTotal: qtdVendasTotal,
+  valorComissaoTotal: valorComissaoTotal,
+  valorComissaoMes: valorComissaoMes,
+  ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true }).catch(err => {
+  console.error("Erro ao salvar resumo financeiro no Firebase:", err);
+});
+
+// 2. Escuta os abatimentos em tempo real enviados pelo painel principal
+docRefFin.onSnapshot((doc) => {
+  if (doc.exists) {
+    const data = doc.data();
+    // Prioriza o saldo devedor atualizado pelas baixas do admin
+    const saldoAtualizado = data.valorPagarLoja ?? valorPagarLoja;
+    
+    // Procura o card de "Valor a Pagar" na tela e atualiza o valor exibido
+    const elCards = container.querySelectorAll('.fin-card-value');
+    if (elCards && elCards.length > 0) {
+      // O último card é o "Valor a Pagar para a Loja"
+      const elValorPagar = elCards[elCards.length - 1];
+      if (elValorPagar) {
+        elValorPagar.innerText = `R$ ${saldoAtualizado.toFixed(2)}`;
+        if (saldoAtualizado === 0 || data.statusFinanceiro === 'concluido') {
+          elValorPagar.style.color = '#1e7e48'; // Verde para quitado
+        }
+      }
+    }
+  }
+});
 
   }).catch(err => {
     console.error("Erro ao carregar financeiro:", err);
