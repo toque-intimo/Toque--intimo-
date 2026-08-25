@@ -620,16 +620,23 @@ function carregarPedidos() {
 
   container.innerHTML = '<p style="text-align: center; color: #999;">Carregando solicitações...</p>';
 
-  // Busca os pedidos e as informações financeiras da vendedora
-  db.collection("pedidos").onSnapshot(async (snapshot) => {
+  // Limpa ouvintes anteriores para evitar chamadas duplicadas
+  if (window.unsubscribePedidos) {
+    window.unsubscribePedidos();
+  }
+
+  window.unsubscribePedidos = db.collection("pedidos").onSnapshot(async (snapshot) => {
+    container.innerHTML = ''; // Limpa a lista antes de re-renderizar os itens
+
     if (snapshot.empty) {
       container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum pedido recebido das vendedoras até o momento.</p>';
       return;
     }
 
-    container.innerHTML = '';
-
-    for (const doc of snapshot.docs) {
+    // Processa os documentos de forma síncrona/ordenada para evitar duplicação no DOM
+    const docs = snapshot.docs;
+    
+    for (const doc of docs) {
       const p = doc.data();
       const id = doc.id;
       
@@ -638,33 +645,28 @@ function carregarPedidos() {
       const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
       const clienteTel = p.clienteTelefone || p.telefoneCliente || p.telefone || 'Sem Tel';
 
-      // Substitua o trecho de busca do saldo na função carregarPedidos por este:
-let saldoDevedor = 0;
+      let saldoDevedor = 0;
 
-if (vendedoraCodigo !== '-' || vendedoraNome) {
-  try {
-    // 1. Tenta buscar pelo código (ex: "GS-7738")
-    let finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo).get();
-    
-    // 2. Se não achar, tenta com .trim() (remove espaços acidentais)
-    if (!finDoc.exists && vendedoraCodigo) {
-      finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo.trim()).get();
-    }
+      if (vendedoraCodigo !== '-' || vendedoraNome) {
+        try {
+          let finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo).get();
+          
+          if (!finDoc.exists && vendedoraCodigo) {
+            finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraCodigo.trim()).get();
+          }
 
-    // 3. Se ainda não achar, busca pelo nome
-    if (!finDoc.exists && vendedoraNome) {
-      finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraNome.trim()).get();
-    }
+          if (!finDoc.exists && vendedoraNome) {
+            finDoc = await db.collection("financeiro_vendedoras").doc(vendedoraNome.trim()).get();
+          }
 
-    // 4. Captura o valor do campo correto ("valorPagarLoja")
-    if (finDoc.exists) {
-      const data = finDoc.data();
-      saldoDevedor = data.valorPagarLoja ?? data.saldoDevedor ?? data.valorDevido ?? 0;
-    }
-  } catch (e) {
-    console.error("Erro ao carregar saldo da vendedora:", e);
-  }
-}
+          if (finDoc.exists) {
+            const data = finDoc.data();
+            saldoDevedor = data.valorPagarLoja ?? data.saldoDevedor ?? data.valorDevido ?? 0;
+          }
+        } catch (e) {
+          console.error("Erro ao carregar saldo da vendedora:", e);
+        }
+      }
 
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
@@ -690,7 +692,6 @@ if (vendedoraCodigo !== '-' || vendedoraNome) {
             <b>Cliente Final:</b> ${clienteNome} (${clienteTel})
           </div>
 
-          <!-- BLOCO DE DEBITO DA VENDEDORA -->
           <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
             <b style="color: #856404;">Débito da Vendedora: R$ ${saldoDevedor.toFixed(2)}</b>
             <div style="display: flex; gap: 6px; margin-top: 6px;">
