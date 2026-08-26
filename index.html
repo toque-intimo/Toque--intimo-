@@ -711,56 +711,73 @@ const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
   });
 }
  
-async function registrarBaixaVendedora(codigoVendedora, idPedido) {
-  const campoInput = document.getElementById(`input-pago-${idPedido}`);
-  const valorPago = parseFloat(campoInput.value);
-
-  if (isNaN(valorPago) || valorPago <= 0) {
-    alert("Insira um valor válido para dar baixa.");
-    return;
-  }
-
+async function registrarBaixaVendedora(vendedoraCodigo, pedidoId) {
   try {
-    const pedidoRef = db.collection("pedidos").doc(idPedido);
-    const pedSnap = await pedidoRef.get();
+    const inputPago = document.getElementById(`input-pago-${pedidoId}`);
+    const valorPago = Number(inputPago ? inputPago.value : 0);
 
-    if (!pedSnap.exists) {
-      alert("Pedido não encontrado.");
-      return;
+    const docRef = db.collection("pedidos").doc(pedidoId);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) return;
+
+    const p = docSnap.data();
+
+    // 1. Cálculos de comissão e valor líquido
+    const totalPedido = Number(p.total || 0);
+    const taxaComissao = Number(p.porcentagemComissao || 15) / 100;
+    const comissaoPedido = totalPedido * taxaComissao;
+    const valorLiquidoPedido = totalPedido - comissaoPedido;
+
+    // 2. Formatação da lista de produtos para o texto da nota
+    let itensFormatados = "";
+    if (p.itens && Array.isArray(p.itens)) {
+      itensFormatados = p.itens.map(item => {
+        const nome = item.nome || 'Produto';
+        const qtd = item.qtd || item.quantidade || 1;
+        const preco = Number(item.preco || 0);
+        return `${nome} x${qtd} - R$ ${preco.toFixed(2)}`;
+      }).join('\n');
     }
 
-    const pedData = pedSnap.data();
-    
-    // Cálculo da comissão e valor líquido deste pedido específico
-    const valorTotalPedido = Number(pedData.total || 0);
-    const taxaComissao = Number(pedData.porcentagemComissao || 15) / 100;
-    const valorComissaoPedido = valorTotalPedido * taxaComissao;
-    const valorLiquidoPedido = valorTotalPedido - valorComissaoPedido;
+    // 3. Monta o texto no formato exato da nota (Vendedora: no lugar de Cliente:)
+    const textoNotaFormatado = `--- TOQUE ÍNTIMO GS ---
+Data: ${new Date().toLocaleString('pt-BR')}
+Vendedora: ${p.vendedoraNome || p.vendedora || 'Não informada'}
+--------------------------------
+${itensFormatados}
+--------------------------------
+Subtotal: R$ ${totalPedido.toFixed(2)}
+Desconto Comissão (${taxaComissao * 100}%): R$ ${comissaoPedido.toFixed(2)}
+Entrega: ${p.tipoEntrega || 'Retirada Física'}
+Pagamento: Forma: ${p.formaPagamento || 'Pix'}
+================================
+TOTAL FINAL: R$ ${valorLiquidoPedido.toFixed(2)}`;
 
-    // Atualiza o valor já pago deste pedido individual
-    const pagoAtual = Number(pedData.valorPagoVendedora || 0);
-    const novoPago = pagoAtual + valorPago;
-    const novoDebitoPedido = Math.max(0, valorLiquidoPedido - novoPago);
-    const novoStatusPagamento = novoDebitoPedido === 0 ? 'quitado' : 'parcial';
-
-    // Salva o abatimento diretamente no documento do PEDIDO
-    await pedidoRef.update({
-      valorPagoVendedora: novoPago,
-      debitoPedido: novoDebitoPedido,
-      statusPagamentoVendedora: novoStatusPagamento,
-      ultimaBaixa: firebase.firestore.FieldValue.serverTimestamp()
+    // 4. Salva a nota na coleção 'vendas' para ir direto para a aba Vendas (Histórico de Notas)
+    await db.collection("vendas").add({
+      textoNota: textoNotaFormatado,
+      vendedora: p.vendedoraNome || p.vendedora || 'Vendedora',
+      subtotal: totalPedido,
+      descontoComissao: comissaoPedido,
+      totalFinal: valorLiquidoPedido, // Lança o valor com desconto para não errar o lucro
+      valorPagoNaBaixa: valorPago,
+      data: new Date().toLocaleString('pt-BR'),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    alert(`Baixa de R$ ${valorPago.toFixed(2)} salva com sucesso para este pedido!`);
-    campoInput.value = '';
-    
-    if (typeof carregarPedidos === 'function') {
-      carregarPedidos();
-    }
+    // 5. Atualiza o valor pago no pedido original
+    const valorPagoAtual = Number(p.valorPagoVendedora || 0);
+    await docRef.update({
+      valorPagoVendedora: valorPagoAtual + valorPago,
+      status: 'Baixado'
+    });
 
-  } catch (error) {
-    console.error("Erro ao registrar baixa individual:", error);
-    alert("Erro ao registrar o pagamento.");
+    alert("Baixa registrada e nota adicionada à aba Vendas com sucesso!");
+    if (typeof carregarPedidos === 'function') carregarPedidos();
+
+  } catch (erro) {
+    console.error("Erro ao registrar baixa:", erro);
+    alert("Erro ao processar a baixa da vendedora.");
   }
 }
  
