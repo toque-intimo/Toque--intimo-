@@ -553,6 +553,7 @@ function cadastrarEEnviarWhatsApp() {
   const vendedoraData = {
     codigo: codigo,
     nome: nome,
+    telefone: tel,
     whatsapp: tel,
     data: data,
     status: 'Ativo'
@@ -594,7 +595,7 @@ function carregarVendedoras() {
         <tr>
           <td><b>${data.codigo || '-'}</b></td>
           <td>${data.nome}</td>
-          <td>${data.whatsapp}</td>
+          <td>${data.whatsapp || data.telefone || '-'}</td>
           <td>
             <button class="btn-action btn-delete" onclick="deletarVendedora('${doc.id}')">
               <i class="fa-solid fa-trash"></i>
