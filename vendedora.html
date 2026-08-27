@@ -115,7 +115,6 @@
      <div class="form-group"><label>Criar Senha de Acesso</label><input type="password" id="ven-senha" placeholder="Digite uma senha" required></div>
      <div class="form-group"><label>Endereço</label><input type="text" id="ven-endereco" required></div>
      <div class="form-group"><label>Número</label><input type="text" id="ven-num" required></div>
-     <div class="form-group"><label>Chave Pix</label><input type="text" id="ven-pix" placeholder="CPF, E-mail ou Telefone" required></div>
      <button type="submit" class="btn-action" style="padding: 14px; font-size: 14px; margin-top: 10px;">Finalizar Cadastro</button>
    </form>
  </section>
@@ -261,7 +260,28 @@
   </div>
   <div id="ven-foto-contador" style="color: white; margin-top: 10px; font-size: 13px;"></div>
 </div>
+<!-- Modal para Escolha de Modelo/Variação -->
+<div id="modal-selecao-modelo" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center; padding: 15px;">
+  <div style="background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+    <h3 id="modal-prod-titulo" style="font-size: 16px; color: var(--primary-dark); border-bottom: 1px solid #eee; padding-bottom: 8px;">Escolher Modelo</h3>
+    
+    <div class="form-group">
+      <label style="font-size: 12px; font-weight: bold;">Selecione a Variação / Tamanho:</label>
+      <select id="modal-select-variacao" style="padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 13px; width: 100%; margin-top: 5px;"></select>
+    </div>
 
+    <div class="form-group">
+      <label style="font-size: 12px; font-weight: bold;">Quantidade:</label>
+      <input type="number" id="modal-qtd-item" min="1" value="1" style="padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 13px; width: 100%; margin-top: 5px;">
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <button onclick="fecharModalModelo()" style="flex: 1; padding: 10px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancelar</button>
+      <button onclick="confirmarAdicaoCarrinho()" style="flex: 1; padding: 10px; border: none; background: var(--primary); color: white; border-radius: 8px; font-weight: bold; cursor: pointer;">Adicionar</button>
+    </div>
+  </div>
+</div>
+ 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script>
@@ -355,7 +375,6 @@ document.getElementById('formVendedora').addEventListener('submit', (e) => {
     senha: document.getElementById('ven-senha').value.trim(),
     endereco: document.getElementById('ven-endereco').value.trim(),
     numero: document.getElementById('ven-num').value.trim(),
-    pix: document.getElementById('ven-pix').value.trim(),
     codigo: codigoGerado,
     dataCadastro: new Date().toLocaleDateString('pt-BR'),
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
@@ -491,7 +510,10 @@ function filtrarCategoriaVen(categoria, btn) {
   }
 }
 
- function renderizarCardsVendedora(lista) {
+ let prodSelecionadoModal = null;
+
+// 1. Renderiza os cards sem o <select> embutido, usando um botão direto
+function renderizarCardsVendedora(lista) {
   const container = document.getElementById('ven-grade-produtos');
   container.innerHTML = '';
   mapaProdutosVen = {};
@@ -526,142 +548,131 @@ function filtrarCategoriaVen(categoria, btn) {
     mapaProdutosVen[p.id].fotos = listaFotos;
     const fotoCapa = listaFotos[0];
 
-    let opcoesSelect = '';
-    variacoesDisponiveis.forEach((v, idx) => {
-      const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : Infinity;
-      const textoEstoque = isFinite(qtdEstoque) ? ` (Estoque: ${qtdEstoque})` : '';
-      opcoesSelect += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)}${textoEstoque}</option>`;
-    });
-
     htmlCards += `
       <div class="prod-card">
         <div style="height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaPorId('${p.id}')">
           <img src="${fotoCapa}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
         </div>
-        <b style="font-size: 13px; color: #333; margin-bottom: 4px;">${p.nome}</b>
-        <select id="select-var-${p.id}" style="width: 100%; padding: 4px; font-size: 11px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 6px;">
-          ${opcoesSelect}
-        </select>
-        <button class="btn-action" onclick="adicionarVariacaoPorId('${p.id}')">Adicionar</button>
+        <b style="font-size: 13px; color: #333; margin-bottom: 6px;">${p.nome}</b>
+        <button class="btn-action" onclick="abrirModalModelo('${p.id}')">Selecionar Modelo</button>
       </div>
     `;
   });
 
-  if (!htmlCards) {
-    container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto em estoque no momento.</p>';
+  container.innerHTML = htmlCards || '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto em estoque no momento.</p>';
+}
+
+// 2. Abre o Modal para selecionar o modelo e a quantidade desejada
+function abrirModalModelo(pId) {
+  const prod = mapaProdutosVen[pId];
+  if (!prod) return;
+
+  prodSelecionadoModal = pId;
+  document.getElementById('modal-prod-titulo').innerText = prod.nome;
+  
+  const select = document.getElementById('modal-select-variacao');
+  select.innerHTML = '';
+
+  prod.variacoes.forEach((v, idx) => {
+    const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : Infinity;
+    const textoEstoque = isFinite(qtdEstoque) ? ` (Estoque: ${qtdEstoque})` : '';
+    select.innerHTML += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)}${textoEstoque}</option>`;
+  });
+
+  document.getElementById('modal-qtd-item').value = 1;
+  document.getElementById('modal-selecao-modelo').style.display = 'flex';
+}
+
+function fecharModalModelo() {
+  document.getElementById('modal-selecao-modelo').style.display = 'none';
+  prodSelecionadoModal = null;
+}
+
+// 3. Valida estoque e confirma a adição no carrinho
+function confirmarAdicaoCarrinho() {
+  if (!prodSelecionadoModal) return;
+
+  const prod = mapaProdutosVen[prodSelecionadoModal];
+  const selectIdx = document.getElementById('modal-select-variacao').value;
+  const qtdDesejada = parseInt(document.getElementById('modal-qtd-item').value) || 1;
+
+  const vEscolhida = prod.variacoes[selectIdx];
+  if (!vEscolhida) return;
+
+  const estoqueDisponivel = (vEscolhida.quantidade !== undefined && vEscolhida.quantidade !== "") ? Number(vEscolhida.quantidade) : 9999;
+  
+  const itemNoCarrinho = venCarrinho.find(i => i.idProd === prodSelecionadoModal && i.cor === vEscolhida.cor && i.tamanho === vEscolhida.tamanho);
+  const qtdAtualNoCarrinho = itemNoCarrinho ? itemNoCarrinho.qtd : 0;
+
+  if (qtdAtualNoCarrinho + qtdDesejada > estoqueDisponivel) {
+    alert(`Estoque insuficiente! Você já possui ${qtdAtualNoCarrinho} no carrinho. Estoque máximo disponível: ${estoqueDisponivel}`);
     return;
   }
 
-  container.innerHTML = htmlCards;
+  if (itemNoCarrinho) {
+    itemNoCarrinho.qtd += qtdDesejada;
+  } else {
+    venCarrinho.push({ 
+      idProd: prodSelecionadoModal, 
+      nome: prod.nome, 
+      cor: vEscolhida.cor, 
+      tamanho: vEscolhida.tamanho, 
+      preco: Number(vEscolhida.preco) || 0,
+      qtd: qtdDesejada,
+      estoqueMax: estoqueDisponivel
+    });
+  }
+
+  localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+  atualizarBadgeCarrinho();
+  fecharModalModelo();
+  alert("Produto adicionado ao carrinho!");
 }
- 
- function abrirGaleriaPorId(pId) {
-   const prod = mapaProdutosVen[pId];
-   if (prod && prod.fotos && prod.fotos.length > 0) {
-     fotosModalAtual = prod.fotos;
-     fotoIndexAtual = 0;
-     atualizarFotoModal();
-     document.getElementById('ven-modal-foto').style.display = 'flex';
-   }
- }
 
- function mudarFotoModal(direcao) {
-   fotoIndexAtual += direcao;
-   if (fotoIndexAtual < 0) fotoIndexAtual = fotosModalAtual.length - 1;
-   if (fotoIndexAtual >= fotosModalAtual.length) fotoIndexAtual = 0;
-   atualizarFotoModal();
- }
+// 4. Exibe o carrinho permitindo alteração de quantidade respeitando o estoque máximo
+function carregarCarrinhoVendedora() {
+  const container = document.getElementById('ven-itens-carrinho');
+  if (!venCarrinho.length) {
+    container.innerHTML = '<p style="text-align: center; color: #777;">Carrinho vazio.</p>';
+    return;
+  }
+  container.innerHTML = '';
+  venCarrinho.forEach((item, index) => {
+    const estoqueMax = (item.estoqueMax !== undefined && isFinite(item.estoqueMax)) ? item.estoqueMax : 9999;
+    container.innerHTML += `
+      <div style="background: #fff; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <div style="flex: 1;">
+          <b style="font-size: 13px;">${item.nome}</b><br>
+          <small style="color: #666;">Modelo: ${item.cor} / ${item.tamanho} - R$ ${item.preco.toFixed(2)}</small><br>
+          <small style="color: #888;">Estoque disponível: ${isFinite(estoqueMax) ? estoqueMax : 'Livre'}</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="number" min="1" max="${estoqueMax}" value="${item.qtd || 1}" class="input-qtd-carrinho" onchange="alterarQtdCarrinho(${index}, this.value)">
+          <button onclick="removerCarrinhoVen(${index})" style="background: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;">X</button>
+        </div>
+      </div>
+    `;
+  });
+}
 
- function atualizarFotoModal() {
-   document.getElementById('ven-img-expandida').src = fotosModalAtual[fotoIndexAtual];
-   document.getElementById('ven-foto-contador').innerText = `Foto ${fotoIndexAtual + 1} de ${fotosModalAtual.length}`;
- }
+function alterarQtdCarrinho(index, novaQtd) {
+  let qtd = parseInt(novaQtd) || 1;
+  const item = venCarrinho[index];
+  if (!item) return;
 
- function fecharFotoExpandidaVen() {
-   document.getElementById('ven-modal-foto').style.display = 'none';
- }
+  const estoqueMax = (item.estoqueMax !== undefined && isFinite(item.estoqueMax)) ? item.estoqueMax : 9999;
 
- function adicionarVariacaoPorId(pId) {
-   const prod = mapaProdutosVen[pId];
-   const select = document.getElementById(`select-var-${pId}`);
-   if (!prod || !select) return;
+  if (qtd > estoqueMax) {
+    alert(`Quantidade limite atingida! Estoque disponível: ${estoqueMax}`);
+    qtd = estoqueMax;
+  }
+  if (qtd < 1) qtd = 1;
 
-   const vEscolhida = prod.variacoes[select.value];
-   if (!vEscolhida) return;
-
-   const estoqueDisponivel = (vEscolhida.quantidade !== undefined && vEscolhida.quantidade !== "") ? Number(vEscolhida.quantidade) : 9999;
-   
-   // Verifica quanto deste item já existe no carrinho
-   const itemNoCarrinho = venCarrinho.find(i => i.idProd === pId && i.cor === vEscolhida.cor && i.tamanho === vEscolhida.tamanho);
-   const qtdNoCarrinho = itemNoCarrinho ? itemNoCarrinho.qtd : 0;
-
-   if (qtdNoCarrinho + 1 > estoqueDisponivel) {
-     alert(`Quantidade limite em estoque atingida! Estoque disponível: ${estoqueDisponivel}`);
-     return;
-   }
-
-   if (itemNoCarrinho) {
-     itemNoCarrinho.qtd += 1;
-   } else {
-     venCarrinho.push({ 
-       idProd: pId, 
-       nome: prod.nome, 
-       cor: vEscolhida.cor, 
-       tamanho: vEscolhida.tamanho, 
-       preco: Number(vEscolhida.preco) || 0,
-       qtd: 1,
-       estoqueMax: estoqueDisponivel
-     });
-   }
-
-   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
-   atualizarBadgeCarrinho();
-   alert("Produto adicionado ao carrinho!");
- }
-
- function carregarCarrinhoVendedora() {
-   const container = document.getElementById('ven-itens-carrinho');
-   if (!venCarrinho.length) {
-     container.innerHTML = '<p style="text-align: center; color: #777;">Carrinho vazio.</p>';
-     return;
-   }
-   container.innerHTML = '';
-   venCarrinho.forEach((item, index) => {
-     const estoqueMax = (item.estoqueMax !== undefined && isFinite(item.estoqueMax)) ? item.estoqueMax : 9999;
-     container.innerHTML += `
-       <div style="background: #fff; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-         <div style="flex: 1;">
-           <b style="font-size: 13px;">${item.nome}</b><br>
-           <small style="color: #666;">${item.cor} / ${item.tamanho} - R$ ${item.preco.toFixed(2)}</small><br>
-           <small style="color: #888;">Disponível: ${isFinite(estoqueMax) ? estoqueMax : 'Livre'}</small>
-         </div>
-         <div style="display: flex; align-items: center; gap: 8px;">
-           <input type="number" min="1" max="${estoqueMax}" value="${item.qtd || 1}" class="input-qtd-carrinho" onchange="alterarQtdCarrinho(${index}, this.value)">
-           <button onclick="removerCarrinhoVen(${index})" style="background: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;">X</button>
-         </div>
-       </div>
-     `;
-   });
- }
-
- function alterarQtdCarrinho(index, novaQtd) {
-   let qtd = parseInt(novaQtd) || 1;
-   const item = venCarrinho[index];
-   if (!item) return;
-
-   const estoqueMax = (item.estoqueMax !== undefined && isFinite(item.estoqueMax)) ? item.estoqueMax : 9999;
-
-   if (qtd > estoqueMax) {
-     alert(`Quantidade não pode ultrapassar a disponível em estoque (${estoqueMax}).`);
-     qtd = estoqueMax;
-   }
-   if (qtd < 1) qtd = 1;
-
-   item.qtd = qtd;
-   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
-   atualizarBadgeCarrinho();
-   carregarCarrinhoVendedora();
- }
+  item.qtd = qtd;
+  localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
+  atualizarBadgeCarrinho();
+  carregarCarrinhoVendedora();
+}
 
  function removerCarrinhoVen(index) {
    venCarrinho.splice(index, 1);
@@ -689,7 +700,6 @@ function enviarPedidoParaLojaPrincipal() {
   db.collection("pedidos").add({
     vendedora: venDados.nome || 'Vendedora',
     telefone: venDados.telefone || '',
-    pix: venDados.pix || '',
     codigoVendedora: venDados.codigo || '',
     clienteNome: clienteNome,
     clienteTelefone: clienteTelefone,
