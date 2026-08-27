@@ -667,10 +667,10 @@ function carregarPedidos() {
       let botoesAcao = '';
       if (p.status === 'Aprovado') {
         botoesAcao = `
-          <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
-              <label style="font-size: 11px; font-weight: bold; color: #555; white-space: nowrap;">Forma de Pagamento:</label>
-              <select id="forma-pagamento-${id}" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+              <label style="font-size: 11px; font-weight: bold; color: #555; white-space: nowrap;">Forma de Pagto:</label>
+              <select id="forma-pagamento-${id}" onchange="toggleDataVencimento('${id}')" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
                 <option value="Pix">Pix</option>
                 <option value="Dinheiro">Dinheiro</option>
                 <option value="Cartão de Crédito">Cartão de Crédito</option>
@@ -678,6 +678,13 @@ function carregarPedidos() {
                 <option value="A Prazo / Crediário">A Prazo / Crediário</option>
               </select>
             </div>
+
+            <!-- Campo de Vencimento escondido por padrão -->
+            <div id="container-vencimento-${id}" style="display: none; align-items: center; gap: 6px;">
+              <label style="font-size: 11px; font-weight: bold; color: #b57c1e; white-space: nowrap;">Vencimento:</label>
+              <input type="date" id="data-vencimento-${id}" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+            </div>
+
             <div style="display: flex; gap: 6px; justify-content: flex-end;">
               <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNotaPedido('${id}')" style="background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                 <i class="fa-brands fa-whatsapp"></i> WhatsApp
@@ -737,15 +744,38 @@ function carregarPedidos() {
     container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar pedidos.</p>';
   });
 }
+ // Exibe ou oculta o campo de data de vencimento conforme a seleção
+function toggleDataVencimento(id) {
+  const select = document.getElementById(`forma-pagamento-${id}`);
+  const containerVenc = document.getElementById(`container-vencimento-${id}`);
+  if (!select || !containerVenc) return;
 
- function enviarWhatsAppNotaPedido(pedidoId) {
+  if (select.value === 'A Prazo / Crediário') {
+    containerVenc.style.display = 'flex';
+  } else {
+    containerVenc.style.display = 'none';
+  }
+}
+
+function enviarWhatsAppNotaPedido(pedidoId) {
   db.collection("pedidos").doc(pedidoId).get().then((doc) => {
     if (!doc.exists) return;
     const p = doc.data();
 
-    // Obtém a forma de pagamento selecionada
+    // Forma de pagamento e Vencimento
     const selectPagamento = document.getElementById(`forma-pagamento-${pedidoId}`);
     const formaPagamento = selectPagamento ? selectPagamento.value : 'Não informado';
+    
+    let textoVencimento = '';
+    if (formaPagamento === 'A Prazo / Crediário') {
+      const inputData = document.getElementById(`data-vencimento-${pedidoId}`);
+      if (inputData && inputData.value) {
+        const parts = inputData.value.split('-');
+        textoVencimento = `\nVencimento: ${parts[2]}/${parts[1]}/${parts[0]}`;
+      } else {
+        textoVencimento = `\nVencimento: A combinar`;
+      }
+    }
 
     const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
     const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
@@ -762,7 +792,7 @@ function carregarPedidos() {
 Data: ${p.data || new Date().toLocaleDateString()}
 Vendedora: ${vendedoraNome}
 Código Vendedora: ${vendedoraCodigo}
-Forma de Pagamento: ${formaPagamento}
+Forma de Pagamento: ${formaPagamento}${textoVencimento}
 -----------------------
 ${itensFormatados}
 -----------------------
@@ -778,9 +808,20 @@ function baixarPDFNotaPedido(pedidoId) {
     if (!doc.exists) return;
     const p = doc.data();
 
-    // Obtém a forma de pagamento selecionada
+    // Forma de pagamento e Vencimento
     const selectPagamento = document.getElementById(`forma-pagamento-${pedidoId}`);
     const formaPagamento = selectPagamento ? selectPagamento.value : 'Não informado';
+
+    let dataVencTexto = '';
+    if (formaPagamento === 'A Prazo / Crediário') {
+      const inputData = document.getElementById(`data-vencimento-${pedidoId}`);
+      if (inputData && inputData.value) {
+        const parts = inputData.value.split('-');
+        dataVencTexto = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      } else {
+        dataVencTexto = 'A combinar';
+      }
+    }
 
     const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
     const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
@@ -791,7 +832,6 @@ function baixarPDFNotaPedido(pedidoId) {
     const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     let eixoY = 20;
 
-    // Cabeçalho igual à nota de cliente
     pdf.setFont("courier", "bold");
     pdf.setFontSize(16);
     pdf.text("TOQUE ÍNTIMO GS", 105, eixoY, { align: "center" });
@@ -804,8 +844,14 @@ function baixarPDFNotaPedido(pedidoId) {
     eixoY += 6;
     pdf.text(`Cód. Vendedora: ${vendedoraCodigo}`, 15, eixoY);
     pdf.text(`Forma Pagto: ${formaPagamento}`, 140, eixoY);
-    eixoY += 10;
+    eixoY += 6;
 
+    if (dataVencTexto) {
+      pdf.text(`Vencimento: ${dataVencTexto}`, 140, eixoY);
+      eixoY += 6;
+    }
+
+    eixoY += 4;
     pdf.line(15, eixoY, 195, eixoY);
     eixoY += 6;
 
