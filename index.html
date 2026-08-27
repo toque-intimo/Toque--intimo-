@@ -641,8 +641,7 @@ function carregarPedidos() {
       
       const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
       const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
-      const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
-      const clienteTel = p.clienteTelefone || p.telefoneCliente || p.telefone || 'Sem Tel';
+      const vendedoraTel = p.vendedoraTelefone || p.telefoneVendedora || p.clienteTelefone || p.telefone || '';
 
       const totalPedido = Number(p.total || 0);
       const taxaComissao = Number(p.porcentagemComissao || 15) / 100;
@@ -664,17 +663,31 @@ function carregarPedidos() {
         });
       }
 
-      // Monta os botões dinamicamente dependendo do status do pedido
+      // Monta os botões dinamicamente dependendo do status
       let botoesAcao = '';
       if (p.status === 'Aprovado') {
         botoesAcao = `
-          <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNotaPedido('${id}')">
-            <i class="fa-brands fa-whatsapp"></i> WhatsApp
-          </button>
-          <button class="btn-action btn-nota-pdf" onclick="baixarPDFNotaPedido('${id}')">
-            <i class="fa-solid fa-file-pdf"></i> PDF
-          </button>
-          <button class="btn-action btn-edit" onclick="excluirPedido('${id}')"><i class="fa-solid fa-trash"></i></button>
+          <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label style="font-size: 11px; font-weight: bold; color: #555; white-space: nowrap;">Forma de Pagamento:</label>
+              <select id="forma-pagamento-${id}" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+                <option value="Pix">Pix</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Cartão de Débito">Cartão de Débito</option>
+                <option value="A Prazo / Crediário">A Prazo / Crediário</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+              <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNotaPedido('${id}')" style="background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <i class="fa-brands fa-whatsapp"></i> WhatsApp
+              </button>
+              <button class="btn-action btn-nota-pdf" onclick="baixarPDFNotaPedido('${id}')" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button class="btn-action btn-edit" onclick="excluirPedido('${id}')"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
         `;
       } else {
         botoesAcao = `
@@ -687,16 +700,13 @@ function carregarPedidos() {
       container.innerHTML += `
         <div class="prod-list-card" style="border-left: 4px solid ${badgeCor};">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <b style="font-size: 14px; color: var(--primary);">${vendedoraNome}</b>
+            <b style="font-size: 14px; color: var(--primary);">${vendedoraNome} (Cód: ${vendedoraCodigo})</b>
             <span style="background: ${badgeBg}; color: ${badgeCor}; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">${p.status || 'Pendente'}</span>
           </div>
           
           <div style="font-size: 12px; color: #777; margin-top: 4px;">
-            <b>Data:</b> ${p.data || '-'} | <b>Cód. Vendedora:</b> ${vendedoraCodigo}<br>
-            <b>Cliente Final:</b> ${clienteNome} (${clienteTel})
+            <b>Data:</b> ${p.data || '-'} | <b>Telefone:</b> ${vendedoraTel || 'Não informado'}
           </div>
-
-          <div id="nota-pedido-${id}" class="nota-faturamento" style="display:none;">${p.notaCompleta || ''}</div>
 
           <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
             <b style="color: #856404;">Débito da Vendedora: R$ ${saldoDevedor.toFixed(2)}</b>
@@ -713,7 +723,7 @@ function carregarPedidos() {
             ${itensHtml}
           </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
             <b style="font-size: 14px; color: var(--primary);">Total Pedido: R$ ${totalPedido.toFixed(2)}</b>
             <div class="actions-row">
               ${botoesAcao}
@@ -733,14 +743,32 @@ function carregarPedidos() {
     if (!doc.exists) return;
     const p = doc.data();
 
+    // Obtém a forma de pagamento selecionada
+    const selectPagamento = document.getElementById(`forma-pagamento-${pedidoId}`);
+    const formaPagamento = selectPagamento ? selectPagamento.value : 'Não informado';
+
+    const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
+    const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
+    const vendedoraTel = p.vendedoraTelefone || p.telefoneVendedora || p.clienteTelefone || p.telefone || '';
+
     let itensFormatados = "";
     if (p.itens && Array.isArray(p.itens)) {
-      itensFormatados = p.itens.map(item => `${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.quantidade || item.qtd || 1} - R$ ${((item.preco || 0) * (item.quantidade || item.qtd || 1)).toFixed(2)}`).join('\n');
+      itensFormatados = p.itens.map(item => 
+        `• ${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.quantidade || item.qtd || 1} - R$ ${((item.preco || 0) * (item.quantidade || item.qtd || 1)).toFixed(2)}`
+      ).join('\n');
     }
 
-    const textoNota = `--- TOQUE ÍNTIMO GS ---\nData: ${p.data || new Date().toLocaleDateString()}\nVendedora: ${p.vendedoraNome || p.vendedora || 'Vendedora'}\nCliente: ${p.clienteNome || 'Consumidor Final'}\n-----------------------\n${itensFormatados}\n-----------------------\nTOTAL: R$ ${(p.total || 0).toFixed(2)}`;
+    const textoNota = `--- TOQUE ÍNTIMO GS ---
+Data: ${p.data || new Date().toLocaleDateString()}
+Vendedora: ${vendedoraNome}
+Código Vendedora: ${vendedoraCodigo}
+Forma de Pagamento: ${formaPagamento}
+-----------------------
+${itensFormatados}
+-----------------------
+TOTAL: R$ ${(p.total || 0).toFixed(2)}`;
     
-    const url = `https://wa.me/${p.clienteTelefone ? '55' + p.clienteTelefone.replace(/\D/g, '') : ''}?text=${encodeURIComponent(textoNota)}`;
+    const url = `https://wa.me/${vendedoraTel ? '55' + vendedoraTel.replace(/\D/g, '') : ''}?text=${encodeURIComponent(textoNota)}`;
     window.open(url, '_blank');
   });
 }
@@ -750,12 +778,20 @@ function baixarPDFNotaPedido(pedidoId) {
     if (!doc.exists) return;
     const p = doc.data();
 
+    // Obtém a forma de pagamento selecionada
+    const selectPagamento = document.getElementById(`forma-pagamento-${pedidoId}`);
+    const formaPagamento = selectPagamento ? selectPagamento.value : 'Não informado';
+
+    const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
+    const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
+
     const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
     if (!jsPDFLib) { alert("Biblioteca jsPDF indisponível."); return; }
 
     const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     let eixoY = 20;
 
+    // Cabeçalho igual à nota de cliente
     pdf.setFont("courier", "bold");
     pdf.setFontSize(16);
     pdf.text("TOQUE ÍNTIMO GS", 105, eixoY, { align: "center" });
@@ -763,15 +799,17 @@ function baixarPDFNotaPedido(pedidoId) {
 
     pdf.setFontSize(10);
     pdf.setFont("courier", "normal");
-    pdf.text(`Vendedora: ${p.vendedoraNome || p.vendedora || '-'}`, 15, eixoY);
+    pdf.text(`Vendedora: ${vendedoraNome}`, 15, eixoY);
     pdf.text(`Data: ${p.data || '-'}`, 140, eixoY);
     eixoY += 6;
-    pdf.text(`Cliente: ${p.clienteNome || 'Consumidor Final'}`, 15, eixoY);
+    pdf.text(`Cód. Vendedora: ${vendedoraCodigo}`, 15, eixoY);
+    pdf.text(`Forma Pagto: ${formaPagamento}`, 140, eixoY);
     eixoY += 10;
 
     pdf.line(15, eixoY, 195, eixoY);
     eixoY += 6;
 
+    // Itens
     if (p.itens && Array.isArray(p.itens)) {
       p.itens.forEach(item => {
         const qtd = item.quantidade || item.qtd || 1;
@@ -788,7 +826,7 @@ function baixarPDFNotaPedido(pedidoId) {
     pdf.setFont("courier", "bold");
     pdf.text(`TOTAL FINAL: R$ ${(p.total || 0).toFixed(2)}`, 130, eixoY);
 
-    pdf.save(`Pedido_${pedidoId}.pdf`);
+    pdf.save(`Nota_Vendedora_${vendedoraCodigo}_${pedidoId}.pdf`);
   });
 }
  
