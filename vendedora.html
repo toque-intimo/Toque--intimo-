@@ -186,7 +186,7 @@
 
        <div class="form-group">
          <label>Forma de Pagamento</label>
-         <select id="carrinho-forma-pagamento">
+         <select id="carrinho-forma-pagamento" onchange="alternarCampoVencimento(this.value)">
            <option value="">Selecione...</option>
            <option value="Pix">Pix</option>
            <option value="Cartão de Crédito">Cartão de Crédito</option>
@@ -195,8 +195,13 @@
            <option value="A Prazo">A Prazo (Até 30 dias)</option>
          </select>
        </div>
-     </div>
 
+       <!-- NOVO CONTAINER: Data de Vencimento -->
+       <div class="form-group" id="container-data-vencimento" style="display: none;">
+         <label>Data de Vencimento</label>
+         <input type="date" id="carrinho-data-vencimento">
+       </div>
+      
      <div id="ven-itens-carrinho" style="margin-top: 10px;"></div>
      <button class="btn-action" style="background: #1e7e48; margin-top: 15px; padding: 14px;" onclick="enviarPedidoParaLojaPrincipal()">Enviar Pedido para Toque Íntimo GS</button>
    </section>
@@ -672,6 +677,7 @@ function enviarPedidoParaLojaPrincipal() {
   const clienteNome = document.getElementById('carrinho-cliente-nome').value.trim();
   const clienteTelefone = document.getElementById('carrinho-cliente-tel').value.trim();
   const formaPagamento = document.getElementById('carrinho-forma-pagamento').value;
+  const dataVencimento = document.getElementById('carrinho-data-vencimento').value; // Resgata a data
 
   if (!formaPagamento) {
     return alert("Por favor, selecione a forma de pagamento antes de enviar!");
@@ -688,6 +694,7 @@ function enviarPedidoParaLojaPrincipal() {
     clienteNome: clienteNome,
     clienteTelefone: clienteTelefone,
     formaPagamento: formaPagamento,
+    dataVencimento: dataVencimento || null, // Salva no Firebase
     itens: venCarrinho,
     total: totalPedido,
     comissao: comissao,
@@ -699,10 +706,12 @@ function enviarPedidoParaLojaPrincipal() {
     venCarrinho = [];
     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
     
-    // Limpa os campos de cliente e pagamento no carrinho
+    // Limpa os campos
     document.getElementById('carrinho-cliente-nome').value = '';
     document.getElementById('carrinho-cliente-tel').value = '';
     document.getElementById('carrinho-forma-pagamento').value = '';
+    document.getElementById('carrinho-data-vencimento').value = '';
+    document.getElementById('container-data-vencimento').style.display = 'none';
 
     atualizarBadgeCarrinho();
     
@@ -1033,6 +1042,16 @@ function carregarFinanceiroVendedora() {
     container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar dados financeiros.</p>';
   });
 }
+
+function alternarCampoVencimento(valor) {
+  const container = document.getElementById('container-data-vencimento');
+  if (valor === 'A Prazo') {
+    container.style.display = 'flex';
+  } else {
+    container.style.display = 'none';
+    document.getElementById('carrinho-data-vencimento').value = '';
+  }
+} 
 </script>
 </body>
 </html>
