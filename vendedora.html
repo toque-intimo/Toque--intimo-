@@ -304,6 +304,7 @@
  let mapaProdutosVen = {};
  let todosProdutosVen = [];
  let pedidosCache = {};
+ let prodSelecionadoModal = null;
 
  window.addEventListener('DOMContentLoaded', () => {
    if (venDados) {
@@ -510,9 +511,6 @@ function filtrarCategoriaVen(categoria, btn) {
   }
 }
 
- let prodSelecionadoModal = null;
-
-// 1. Renderiza os cards sem o <select> embutido, usando um botão direto
 function renderizarCardsVendedora(lista) {
   const container = document.getElementById('ven-grade-produtos');
   container.innerHTML = '';
@@ -526,23 +524,23 @@ function renderizarCardsVendedora(lista) {
   let htmlCards = '';
 
   lista.forEach(p => {
-    const variacoesDisponiveis = (p.variacoes && Array.isArray(p.variacoes)) 
+    let variacoesDisponiveis = (p.variacoes && Array.isArray(p.variacoes)) 
       ? p.variacoes.filter(v => {
           if (v.quantidade === undefined || v.quantidade === null || v.quantidade === "") return true;
           return Number(v.quantidade) > 0;
         })
       : [];
 
-    if (variacoesDisponiveis.length === 0) return;
-
-    mapaProdutosVen[p.id] = { nome: p.nome, variacoes: variacoesDisponiveis, fotos: [] };
+    mapaProdutosVen[p.id] = { nome: p.nome, variacoes: p.variacoes || [], fotos: [] };
 
     let listaFotos = [];
     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
-    variacoesDisponiveis.forEach(v => {
-      const f = v.foto || v.imagem || v.fotoUrl;
-      if (f && !listaFotos.includes(f)) listaFotos.push(f);
-    });
+    if (p.variacoes && Array.isArray(p.variacoes)) {
+      p.variacoes.forEach(v => {
+        const f = v.foto || v.imagem || v.fotoUrl;
+        if (f && !listaFotos.includes(f)) listaFotos.push(f);
+      });
+    }
     if (listaFotos.length === 0) listaFotos.push('https://via.placeholder.com/150?text=Sem+Foto');
 
     mapaProdutosVen[p.id].fotos = listaFotos;
@@ -562,7 +560,39 @@ function renderizarCardsVendedora(lista) {
   container.innerHTML = htmlCards || '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto em estoque no momento.</p>';
 }
 
-// 2. Abre o Modal para selecionar o modelo e a quantidade desejada
+/* FUNÇÕES DE VISUALIZAÇÃO DE FOTOS */
+function abrirGaleriaPorId(pId) {
+  const prod = mapaProdutosVen[pId];
+  if (!prod || !prod.fotos || prod.fotos.length === 0) return;
+
+  fotosModalAtual = prod.fotos;
+  fotoIndexAtual = 0;
+  exibirFotoModal();
+  document.getElementById('ven-modal-foto').style.display = 'flex';
+}
+
+function exibirFotoModal() {
+  const img = document.getElementById('ven-img-expandida');
+  const contador = document.getElementById('ven-foto-contador');
+  img.src = fotosModalAtual[fotoIndexAtual];
+  contador.innerText = `${fotoIndexAtual + 1} / ${fotosModalAtual.length}`;
+
+  document.getElementById('btn-foto-prev').style.display = fotosModalAtual.length > 1 ? 'block' : 'none';
+  document.getElementById('btn-foto-next').style.display = fotosModalAtual.length > 1 ? 'block' : 'none';
+}
+
+function mudarFotoModal(direcao) {
+  fotoIndexAtual += direcao;
+  if (fotoIndexAtual < 0) fotoIndexAtual = fotosModalAtual.length - 1;
+  if (fotoIndexAtual >= fotosModalAtual.length) fotoIndexAtual = 0;
+  exibirFotoModal();
+}
+
+function fecharFotoExpandidaVen() {
+  document.getElementById('ven-modal-foto').style.display = 'none';
+}
+
+/* GERENCIAMENTO DO MODAL DE SELEÇÃO E CARRINHO */
 function abrirModalModelo(pId) {
   const prod = mapaProdutosVen[pId];
   if (!prod) return;
@@ -573,7 +603,17 @@ function abrirModalModelo(pId) {
   const select = document.getElementById('modal-select-variacao');
   select.innerHTML = '';
 
-  prod.variacoes.forEach((v, idx) => {
+  const variacoesValidas = prod.variacoes.filter(v => {
+    if (v.quantidade === undefined || v.quantidade === null || v.quantidade === "") return true;
+    return Number(v.quantidade) > 0;
+  });
+
+  if (variacoesValidas.length === 0) {
+    alert("Produto sem opções em estoque!");
+    return;
+  }
+
+  variacoesValidas.forEach((v, idx) => {
     const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : Infinity;
     const textoEstoque = isFinite(qtdEstoque) ? ` (Estoque: ${qtdEstoque})` : '';
     select.innerHTML += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)}${textoEstoque}</option>`;
@@ -588,15 +628,22 @@ function fecharModalModelo() {
   prodSelecionadoModal = null;
 }
 
-// 3. Valida estoque e confirma a adição no carrinho
 function confirmarAdicaoCarrinho() {
   if (!prodSelecionadoModal) return;
 
   const prod = mapaProdutosVen[prodSelecionadoModal];
-  const selectIdx = document.getElementById('modal-select-variacao').value;
+  const selectElem = document.getElementById('modal-select-variacao');
+  if (!selectElem.options.length) return;
+
+  const selectIdx = selectElem.value;
   const qtdDesejada = parseInt(document.getElementById('modal-qtd-item').value) || 1;
 
-  const vEscolhida = prod.variacoes[selectIdx];
+  const variacoesValidas = prod.variacoes.filter(v => {
+    if (v.quantidade === undefined || v.quantidade === null || v.quantidade === "") return true;
+    return Number(v.quantidade) > 0;
+  });
+
+  const vEscolhida = variacoesValidas[selectIdx];
   if (!vEscolhida) return;
 
   const estoqueDisponivel = (vEscolhida.quantidade !== undefined && vEscolhida.quantidade !== "") ? Number(vEscolhida.quantidade) : 9999;
@@ -629,7 +676,6 @@ function confirmarAdicaoCarrinho() {
   alert("Produto adicionado ao carrinho!");
 }
 
-// 4. Exibe o carrinho permitindo alteração de quantidade respeitando o estoque máximo
 function carregarCarrinhoVendedora() {
   const container = document.getElementById('ven-itens-carrinho');
   if (!venCarrinho.length) {
@@ -688,7 +734,7 @@ function enviarPedidoParaLojaPrincipal() {
   const clienteNome = document.getElementById('carrinho-cliente-nome').value.trim();
   const clienteTelefone = document.getElementById('carrinho-cliente-tel').value.trim();
   const formaPagamento = document.getElementById('carrinho-forma-pagamento').value;
-  const dataVencimento = document.getElementById('carrinho-data-vencimento').value; // Resgata a data
+  const dataVencimento = document.getElementById('carrinho-data-vencimento').value;
 
   if (!formaPagamento) {
     return alert("Por favor, selecione a forma de pagamento antes de enviar!");
@@ -704,7 +750,7 @@ function enviarPedidoParaLojaPrincipal() {
     clienteNome: clienteNome,
     clienteTelefone: clienteTelefone,
     formaPagamento: formaPagamento,
-    dataVencimento: dataVencimento || null, // Salva no Firebase
+    dataVencimento: dataVencimento || null,
     itens: venCarrinho,
     total: totalPedido,
     comissao: comissao,
@@ -716,7 +762,6 @@ function enviarPedidoParaLojaPrincipal() {
     venCarrinho = [];
     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
     
-    // Limpa os campos
     document.getElementById('carrinho-cliente-nome').value = '';
     document.getElementById('carrinho-cliente-tel').value = '';
     document.getElementById('carrinho-forma-pagamento').value = '';
@@ -1061,7 +1106,7 @@ function alternarCampoVencimento(valor) {
     container.style.display = 'none';
     document.getElementById('carrinho-data-vencimento').value = '';
   }
-} 
+}
 </script>
 </body>
 </html>
