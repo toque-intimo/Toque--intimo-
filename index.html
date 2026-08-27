@@ -621,20 +621,18 @@ function carregarPedidos() {
 
   container.innerHTML = '<p style="text-align: center; color: #999;">Carregando solicitações...</p>';
 
-  // Limpa ouvintes anteriores para evitar chamadas duplicadas
   if (window.unsubscribePedidos) {
     window.unsubscribePedidos();
   }
 
   window.unsubscribePedidos = db.collection("pedidos").onSnapshot(async (snapshot) => {
-    container.innerHTML = ''; // Limpa a lista antes de re-renderizar os itens
+    container.innerHTML = '';
 
     if (snapshot.empty) {
       container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum pedido recebido das vendedoras até o momento.</p>';
       return;
     }
 
-    // Processa os documentos de forma síncrona/ordenada para evitar duplicação no DOM
     const docs = snapshot.docs;
     
     for (const doc of docs) {
@@ -646,14 +644,13 @@ function carregarPedidos() {
       const clienteNome = p.clienteNome || p.nomeCliente || p.cliente || 'Não informado';
       const clienteTel = p.clienteTelefone || p.telefoneCliente || p.telefone || 'Sem Tel';
 
-      // Substitua o trecho das linhas 648-669 por:
-const totalPedido = Number(p.total || 0);
-const taxaComissao = Number(p.porcentagemComissao || 15) / 100;
-const comissaoPedido = totalPedido * taxaComissao;
-const valorLiquidoPedido = totalPedido - comissaoPedido;
+      const totalPedido = Number(p.total || 0);
+      const taxaComissao = Number(p.porcentagemComissao || 15) / 100;
+      const comissaoPedido = totalPedido * taxaComissao;
+      const valorLiquidoPedido = totalPedido - comissaoPedido;
 
-const valorPagoNoPedido = Number(p.valorPagoVendedora || 0);
-const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
+      const valorPagoNoPedido = Number(p.valorPagoVendedora || 0);
+      const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
 
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
@@ -663,8 +660,28 @@ const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
       let itensHtml = '';
       if (p.itens && Array.isArray(p.itens)) {
         p.itens.forEach(item => {
-          itensHtml += `<div style="font-size: 12px; color: #555;">• ${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.quantidade || 1} - R$ ${((item.preco || 0) * (item.quantidade || 1)).toFixed(2)}</div>`;
+          itensHtml += `<div style="font-size: 12px; color: #555;">• ${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.quantidade || item.qtd || 1} - R$ ${((item.preco || 0) * (item.quantidade || item.qtd || 1)).toFixed(2)}</div>`;
         });
+      }
+
+      // Monta os botões dinamicamente dependendo do status do pedido
+      let botoesAcao = '';
+      if (p.status === 'Aprovado') {
+        botoesAcao = `
+          <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNotaPedido('${id}')">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+          </button>
+          <button class="btn-action btn-nota-pdf" onclick="baixarPDFNotaPedido('${id}')">
+            <i class="fa-solid fa-file-pdf"></i> PDF
+          </button>
+          <button class="btn-action btn-edit" onclick="excluirPedido('${id}')"><i class="fa-solid fa-trash"></i></button>
+        `;
+      } else {
+        botoesAcao = `
+          <button class="btn-action btn-sell-direct" onclick="atualizarStatusPedido('${id}', 'Aprovado')"><i class="fa-solid fa-check"></i> Aprovar</button>
+          <button class="btn-action btn-delete" onclick="atualizarStatusPedido('${id}', 'Recusado')"><i class="fa-solid fa-xmark"></i> Recusar</button>
+          <button class="btn-action btn-edit" onclick="excluirPedido('${id}')"><i class="fa-solid fa-trash"></i></button>
+        `;
       }
 
       container.innerHTML += `
@@ -678,6 +695,8 @@ const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
             <b>Data:</b> ${p.data || '-'} | <b>Cód. Vendedora:</b> ${vendedoraCodigo}<br>
             <b>Cliente Final:</b> ${clienteNome} (${clienteTel})
           </div>
+
+          <div id="nota-pedido-${id}" class="nota-faturamento" style="display:none;">${p.notaCompleta || ''}</div>
 
           <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
             <b style="color: #856404;">Débito da Vendedora: R$ ${saldoDevedor.toFixed(2)}</b>
@@ -695,11 +714,9 @@ const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-            <b style="font-size: 14px; color: var(--primary);">Total Pedido: R$ ${(p.total || 0).toFixed(2)}</b>
+            <b style="font-size: 14px; color: var(--primary);">Total Pedido: R$ ${totalPedido.toFixed(2)}</b>
             <div class="actions-row">
-              <button class="btn-action btn-sell-direct" onclick="atualizarStatusPedido('${id}', 'Aprovado')"><i class="fa-solid fa-check"></i> Aprovar</button>
-              <button class="btn-action btn-delete" onclick="atualizarStatusPedido('${id}', 'Recusado')"><i class="fa-solid fa-xmark"></i> Recusar</button>
-              <button class="btn-action btn-edit" onclick="excluirPedido('${id}')"><i class="fa-solid fa-trash"></i></button>
+              ${botoesAcao}
             </div>
           </div>
         </div>
@@ -708,6 +725,70 @@ const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
   }, (err) => {
     console.error("Erro ao carregar pedidos:", err);
     container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar pedidos.</p>';
+  });
+}
+
+ function enviarWhatsAppNotaPedido(pedidoId) {
+  db.collection("pedidos").doc(pedidoId).get().then((doc) => {
+    if (!doc.exists) return;
+    const p = doc.data();
+
+    let itensFormatados = "";
+    if (p.itens && Array.isArray(p.itens)) {
+      itensFormatados = p.itens.map(item => `${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.quantidade || item.qtd || 1} - R$ ${((item.preco || 0) * (item.quantidade || item.qtd || 1)).toFixed(2)}`).join('\n');
+    }
+
+    const textoNota = `--- TOQUE ÍNTIMO GS ---\nData: ${p.data || new Date().toLocaleDateString()}\nVendedora: ${p.vendedoraNome || p.vendedora || 'Vendedora'}\nCliente: ${p.clienteNome || 'Consumidor Final'}\n-----------------------\n${itensFormatados}\n-----------------------\nTOTAL: R$ ${(p.total || 0).toFixed(2)}`;
+    
+    const url = `https://wa.me/${p.clienteTelefone ? '55' + p.clienteTelefone.replace(/\D/g, '') : ''}?text=${encodeURIComponent(textoNota)}`;
+    window.open(url, '_blank');
+  });
+}
+
+function baixarPDFNotaPedido(pedidoId) {
+  db.collection("pedidos").doc(pedidoId).get().then((doc) => {
+    if (!doc.exists) return;
+    const p = doc.data();
+
+    const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+    if (!jsPDFLib) { alert("Biblioteca jsPDF indisponível."); return; }
+
+    const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    let eixoY = 20;
+
+    pdf.setFont("courier", "bold");
+    pdf.setFontSize(16);
+    pdf.text("TOQUE ÍNTIMO GS", 105, eixoY, { align: "center" });
+    eixoY += 10;
+
+    pdf.setFontSize(10);
+    pdf.setFont("courier", "normal");
+    pdf.text(`Vendedora: ${p.vendedoraNome || p.vendedora || '-'}`, 15, eixoY);
+    pdf.text(`Data: ${p.data || '-'}`, 140, eixoY);
+    eixoY += 6;
+    pdf.text(`Cliente: ${p.clienteNome || 'Consumidor Final'}`, 15, eixoY);
+    eixoY += 10;
+
+    pdf.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
+
+    if (p.itens && Array.isArray(p.itens)) {
+      p.itens.forEach(item => {
+        const qtd = item.quantidade || item.qtd || 1;
+        const totalItem = (item.preco || 0) * qtd;
+        pdf.text(`${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${qtd}`, 15, eixoY);
+        pdf.text(`R$ ${totalItem.toFixed(2)}`, 160, eixoY);
+        eixoY += 6;
+      });
+    }
+
+    pdf.line(15, eixoY, 195, eixoY);
+    eixoY += 8;
+
+    pdf.setFont("courier", "bold");
+    pdf.text(`TOTAL FINAL: R$ ${(p.total || 0).toFixed(2)}`, 130, eixoY);
+
+    pdf.save(`Pedido_${pedidoId}.pdf`);
   });
 }
  
