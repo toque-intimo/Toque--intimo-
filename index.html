@@ -910,8 +910,6 @@ function baixarPDFNotaPedido(pedidoId) {
         subtotal += totalItem;
 
         const nomeProd = `${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'})`;
-        
-        // Trunca o nome do produto caso fique muito longo para a linha
         const nomeFormatado = nomeProd.length > 55 ? nomeProd.substring(0, 52) + '...' : nomeProd;
 
         pdf.text(nomeFormatado, 15, y);
@@ -924,9 +922,11 @@ function baixarPDFNotaPedido(pedidoId) {
     y += 4;
     pdf.line(15, y, 195, y);
 
-    // --- TOTALIZADORES ---
-    const desconto = Number(p.desconto || 0);
-    const totalFinal = Number(p.total || (subtotal - desconto));
+    // --- CÁLCULO DE COMISSÃO E TOTALIZADORES ---
+    // Usa a comissão salva no banco de dados ou assume o padrão de 15%
+    const taxaComissao = Number(p.porcentagemComissao || 15) / 100;
+    const valorComissao = subtotal * taxaComissao;
+    const totalFinal = subtotal - valorComissao;
 
     y += 6;
     pdf.setFont("helvetica", "bold");
@@ -934,13 +934,11 @@ function baixarPDFNotaPedido(pedidoId) {
     pdf.setFont("helvetica", "normal");
     pdf.text(`R$ ${subtotal.toFixed(2)}`, 195, y, { align: "right" });
 
-    if (desconto > 0) {
-      y += 5;
-      pdf.setFont("helvetica", "bold");
-      pdf.text("(-) Desconto:", 140, y);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(`R$ ${desconto.toFixed(2)}`, 195, y, { align: "right" });
-    }
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("(-) Comissão (15%):", 125, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`R$ ${valorComissao.toFixed(2)}`, 195, y, { align: "right" });
 
     y += 6;
     pdf.setFontSize(11);
@@ -965,7 +963,7 @@ function baixarPDFNotaPedido(pedidoId) {
     y += 12;
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(10);
-    pdf.text("Obrigado pela sua compra!", 105, y, { align: "center" });
+    pdf.text("Obrigado pela sua parceria!", 105, y, { align: "center" });
 
     y += 5;
     pdf.setFontSize(8);
