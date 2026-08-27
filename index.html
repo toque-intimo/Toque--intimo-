@@ -805,74 +805,175 @@ TOTAL: R$ ${(p.total || 0).toFixed(2)}`;
 
 function baixarPDFNotaPedido(pedidoId) {
   db.collection("pedidos").doc(pedidoId).get().then((doc) => {
-    if (!doc.exists) return;
+    if (!doc.exists) {
+      alert("Pedido não encontrado.");
+      return;
+    }
     const p = doc.data();
 
-    // Forma de pagamento e Vencimento
+    // Lendo a Forma de Pagamento e Vencimento
     const selectPagamento = document.getElementById(`forma-pagamento-${pedidoId}`);
-    const formaPagamento = selectPagamento ? selectPagamento.value : 'Não informado';
+    const formaPagamento = selectPagamento ? selectPagamento.value : (p.formaPagamento || 'Não informado');
 
-    let dataVencTexto = '';
+    let textoPagamentoInfo = `Forma: ${formaPagamento}`;
     if (formaPagamento === 'A Prazo / Crediário') {
       const inputData = document.getElementById(`data-vencimento-${pedidoId}`);
       if (inputData && inputData.value) {
         const parts = inputData.value.split('-');
-        dataVencTexto = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        textoPagamentoInfo += ` (1x | Entrada: R$ 0.00 | 1ª Parc: ${parts[2]}/${parts[1]}/${parts[0]})`;
       } else {
-        dataVencTexto = 'A combinar';
+        textoPagamentoInfo += ` (A combinar)`;
       }
     }
 
     const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
     const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
+    const dataNota = p.data || new Date().toLocaleDateString('pt-BR');
+    const tipoEntrega = p.tipoEntrega || 'Retirada Física';
 
     const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-    if (!jsPDFLib) { alert("Biblioteca jsPDF indisponível."); return; }
-
-    const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    let eixoY = 20;
-
-    pdf.setFont("courier", "bold");
-    pdf.setFontSize(16);
-    pdf.text("TOQUE ÍNTIMO GS", 105, eixoY, { align: "center" });
-    eixoY += 10;
-
-    pdf.setFontSize(10);
-    pdf.setFont("courier", "normal");
-    pdf.text(`Vendedora: ${vendedoraNome}`, 15, eixoY);
-    pdf.text(`Data: ${p.data || '-'}`, 140, eixoY);
-    eixoY += 6;
-    pdf.text(`Cód. Vendedora: ${vendedoraCodigo}`, 15, eixoY);
-    pdf.text(`Forma Pagto: ${formaPagamento}`, 140, eixoY);
-    eixoY += 6;
-
-    if (dataVencTexto) {
-      pdf.text(`Vencimento: ${dataVencTexto}`, 140, eixoY);
-      eixoY += 6;
+    if (!jsPDFLib) {
+      alert("Biblioteca jsPDF indisponível.");
+      return;
     }
 
-    eixoY += 4;
-    pdf.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
+    // Instancia o PDF tamanho A4
+    const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    let y = 15;
 
-    // Itens
+    // --- CABEÇALHO ---
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.text("TOQUE ÍNTIMO GS", 105, y, { align: "center" });
+    
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text("CNPJ: 45.230.643/0001-60", 105, y, { align: "center" });
+    
+    y += 5;
+    pdf.text("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", 105, y, { align: "center" });
+
+    y += 7;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("NOTA DE VENDA (VENDEDORA)", 105, y, { align: "center" });
+
+    y += 5;
+    pdf.setLineWidth(0.3);
+    pdf.line(15, y, 195, y);
+
+    // --- DADOS DA VENDEDORA E PEDIDO ---
+    y += 6;
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Vendedora: ", 15, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`${vendedoraNome} (Cód: ${vendedoraCodigo})`, 37, y);
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Data: ", 145, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(dataNota, 157, y);
+
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Entrega: ", 15, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(tipoEntrega, 32, y);
+
+    y += 4;
+    pdf.line(15, y, 195, y);
+
+    // --- CABEÇALHO DA TABELA ---
+    y += 6;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.text("Produto", 15, y);
+    pdf.text("Qtd", 130, y, { align: "center" });
+    pdf.text("Preço", 160, y, { align: "right" });
+    pdf.text("Total", 195, y, { align: "right" });
+
+    y += 2;
+    pdf.line(15, y, 195, y);
+
+    // --- ITENS DO PEDIDO ---
+    let subtotal = 0;
+    pdf.setFont("helvetica", "normal");
+
     if (p.itens && Array.isArray(p.itens)) {
       p.itens.forEach(item => {
-        const qtd = item.quantidade || item.qtd || 1;
-        const totalItem = (item.preco || 0) * qtd;
-        pdf.text(`${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${qtd}`, 15, eixoY);
-        pdf.text(`R$ ${totalItem.toFixed(2)}`, 160, eixoY);
-        eixoY += 6;
+        y += 6;
+        const qtd = Number(item.quantidade || item.qtd || 1);
+        const precoUnit = Number(item.preco || 0);
+        const totalItem = precoUnit * qtd;
+        subtotal += totalItem;
+
+        const nomeProd = `${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'})`;
+        
+        // Trunca o nome do produto caso fique muito longo para a linha
+        const nomeFormatado = nomeProd.length > 55 ? nomeProd.substring(0, 52) + '...' : nomeProd;
+
+        pdf.text(nomeFormatado, 15, y);
+        pdf.text(qtd.toString(), 130, y, { align: "center" });
+        pdf.text(`R$ ${precoUnit.toFixed(2)}`, 160, y, { align: "right" });
+        pdf.text(`R$ ${totalItem.toFixed(2)}`, 195, y, { align: "right" });
       });
     }
 
-    pdf.line(15, eixoY, 195, eixoY);
-    eixoY += 8;
+    y += 4;
+    pdf.line(15, y, 195, y);
 
-    pdf.setFont("courier", "bold");
-    pdf.text(`TOTAL FINAL: R$ ${(p.total || 0).toFixed(2)}`, 130, eixoY);
+    // --- TOTALIZADORES ---
+    const desconto = Number(p.desconto || 0);
+    const totalFinal = Number(p.total || (subtotal - desconto));
 
-    pdf.save(`Nota_Vendedora_${vendedoraCodigo}_${pedidoId}.pdf`);
+    y += 6;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Subtotal:", 140, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`R$ ${subtotal.toFixed(2)}`, 195, y, { align: "right" });
+
+    if (desconto > 0) {
+      y += 5;
+      pdf.setFont("helvetica", "bold");
+      pdf.text("(-) Desconto:", 140, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`R$ ${desconto.toFixed(2)}`, 195, y, { align: "right" });
+    }
+
+    y += 6;
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("TOTAL:", 140, y);
+    pdf.text(`R$ ${totalFinal.toFixed(2)}`, 195, y, { align: "right" });
+
+    y += 4;
+    pdf.line(15, y, 195, y);
+
+    // --- SEÇÃO DE PARCELAS / PAGAMENTO ---
+    y += 6;
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("PARCELAS:", 15, y);
+
+    y += 5;
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Pagamento: ${textoPagamentoInfo}`, 15, y);
+
+    // --- RODAPÉ ---
+    y += 12;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("Obrigado pela sua compra!", 105, y, { align: "center" });
+
+    y += 5;
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", 105, y, { align: "center" });
+
+    // Salva o PDF
+    pdf.save(`Nota_Vendedora_${vendedoraCodigo}_${dataNota.replace(/\//g, '-')}.pdf`);
   });
 }
  
