@@ -512,13 +512,13 @@ function filtrarCategoriaVen(categoria, btn) {
 
  let prodSelecionadoModal = null;
 
-// 1. Renderiza os cards sem o <select> embutido, usando um botão direto
+// Função corrigida para garantir o mapeamento de produtos e abertura do modal
 function renderizarCardsVendedora(lista) {
   const container = document.getElementById('ven-grade-produtos');
   container.innerHTML = '';
   mapaProdutosVen = {};
 
-  if (!lista.length) {
+  if (!lista || !lista.length) {
     container.innerHTML = '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto disponível.</p>';
     return;
   }
@@ -526,17 +526,37 @@ function renderizarCardsVendedora(lista) {
   let htmlCards = '';
 
   lista.forEach(p => {
-    const variacoesDisponiveis = (p.variacoes && Array.isArray(p.variacoes)) 
-      ? p.variacoes.filter(v => {
-          if (v.quantidade === undefined || v.quantidade === null || v.quantidade === "") return true;
-          return Number(v.quantidade) > 0;
-        })
-      : [];
+    // 1. Garante que se não houver variações, cria uma variação padrão com o preço/dados do produto
+    let variacoesTratadas = [];
+    
+    if (p.variacoes && Array.isArray(p.variacoes) && p.variacoes.length > 0) {
+      variacoesTratadas = p.variacoes;
+    } else {
+      variacoesTratadas = [{
+        cor: p.cor || 'Padrão',
+        tamanho: p.tamanho || 'U',
+        preco: p.preco || 0,
+        quantidade: p.quantidade !== undefined ? p.quantidade : 9999
+      }];
+    }
 
+    // 2. Filtra variações com quantidade maior que zero (considerando produtos sem limite)
+    const variacoesDisponiveis = variacoesTratadas.filter(v => {
+      if (v.quantidade === undefined || v.quantidade === null || v.quantidade === "") return true;
+      return Number(v.quantidade) > 0;
+    });
+
+    // Se realmente não houver estoque disponível, ignora a exibição
     if (variacoesDisponiveis.length === 0) return;
 
-    mapaProdutosVen[p.id] = { nome: p.nome, variacoes: variacoesDisponiveis, fotos: [] };
+    // 3. Mapeia o produto ANTES de gerar o HTML do card
+    mapaProdutosVen[p.id] = { 
+      nome: p.nome || 'Produto sem nome', 
+      variacoes: variacoesDisponiveis, 
+      fotos: [] 
+    };
 
+    // Mapeamento de fotos
     let listaFotos = [];
     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
     variacoesDisponiveis.forEach(v => {
@@ -548,6 +568,7 @@ function renderizarCardsVendedora(lista) {
     mapaProdutosVen[p.id].fotos = listaFotos;
     const fotoCapa = listaFotos[0];
 
+    // Renderiza o card e vincula o ID correto ao evento onclick
     htmlCards += `
       <div class="prod-card">
         <div style="height: 120px; border-radius: 8px; overflow: hidden; background: #f9f9f9; margin-bottom: 8px; cursor: pointer;" onclick="abrirGaleriaPorId('${p.id}')">
@@ -561,7 +582,6 @@ function renderizarCardsVendedora(lista) {
 
   container.innerHTML = htmlCards || '<p style="grid-column: span 2; text-align: center; padding: 20px;">Nenhum produto em estoque no momento.</p>';
 }
-
 // 2. Abre o Modal para selecionar o modelo e a quantidade desejada
 function abrirModalModelo(pId) {
   const prod = mapaProdutosVen[pId];
