@@ -2349,15 +2349,21 @@ function excluirVendaFirebase(idVenda) {
 
    const totalLucroEstoque = Math.max(0, faturamento - custoGeral);
 
-   if (document.getElementById('fin-card-faturamento')) document.getElementById('fin-card-faturamento').innerText = `R$ ${faturamento.toFixed(2)}`;
-   if (document.getElementById('fin-card-custo')) document.getElementById('fin-card-custo').innerText = `R$ ${custoGeral.toFixed(2)}`;
-   if (document.getElementById('fin-card-lucro')) document.getElementById('fin-card-lucro').innerText = `R$ ${totalLucroEstoque.toFixed(2)}`;
-   if (document.getElementById('fin-card-receber')) document.getElementById('fin-card-receber').innerText = `R$ ${aReceber.toFixed(2)}`;
+   const elFat = document.getElementById('fin-card-faturamento');
+   const elCusto = document.getElementById('fin-card-custo');
+   const elLucro = document.getElementById('fin-card-lucro');
+   const elReceber = document.getElementById('fin-card-receber');
+
+   if (elFat) elFat.innerText = `R$ ${faturamento.toFixed(2)}`;
+   if (elCusto) elCusto.innerText = `R$ ${custoGeral.toFixed(2)}`;
+   if (elLucro) elLucro.innerText = `R$ ${totalLucroEstoque.toFixed(2)}`;
+   if (elReceber) elReceber.innerText = `R$ ${aReceber.toFixed(2)}`;
  }
 
  function atualizarDash() {
    let totalProdutos = produtos.length;
    let valorEstoque = 0;
+   let totalClientes = clientes.length;
 
    produtos.forEach(p => {
      p.variacoes.forEach(v => {
@@ -2365,21 +2371,24 @@ function excluirVendaFirebase(idVenda) {
      });
    });
 
-   let totalVendas = vendas.reduce((acc, v) => acc + v.total, 0);
+   let totalVendasVal = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
 
-   if (document.getElementById('dash-produtos-qtd')) document.getElementById('dash-produtos-qtd').innerText = totalProdutos;
-   if (document.getElementById('dash-estoque-val')) document.getElementById('dash-estoque-val').innerText = `R$ ${valorEstoque.toFixed(2)}`;
-   if (document.getElementById('dash-vendas-val')) document.getElementById('dash-vendas-val').innerText = `R$ ${totalVendas.toFixed(2)}`;
-   if (document.getElementById('dash-clientes-qtd')) document.getElementById('dash-clientes-qtd').innerText = clientes.length;
+   const dashProd = document.getElementById('dash-produtos-qtd');
+   const dashEstoque = document.getElementById('dash-estoque-val');
+   const dashVendas = document.getElementById('dash-vendas-val');
+   const dashClientes = document.getElementById('dash-clientes-qtd');
+
+   if (dashProd) dashProd.innerText = totalProdutos;
+   if (dashEstoque) dashEstoque.innerText = `R$ ${valorEstoque.toFixed(2)}`;
+   if (dashVendas) dashVendas.innerText = `R$ ${totalVendasVal.toFixed(2)}`;
+   if (dashClientes) dashClientes.innerText = totalClientes;
  }
 
- // Inicialização do sistema
  window.addEventListener('DOMContentLoaded', () => {
    carregarProdutosDoFirebase();
    carregarClientesDoFirebase();
    carregarVendasDoFirebase();
-   carregarCarrinho();
-   atualizarDash();
+   resetarParaNeutro();
  });
 </script>
 </body>
