@@ -724,6 +724,7 @@ function enviarPedidoParaLojaPrincipal() {
   const comissao = totalPedido * 0.15;
 
   db.collection("pedidos").add({
+    uidVendedora: venDados.id || venDados.codigo || '', // <--- INSERIR ESTA LINHA NA LINHA 445
     vendedora: venDados.nome || 'Vendedora',
     telefone: venDados.telefone || venDados.tel || '',
     codigoVendedora: venDados.codigo || '',
