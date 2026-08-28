@@ -2305,15 +2305,30 @@ function excluirVendaFirebase(idVenda) {
    const anoAtual = agora.getFullYear();
 
    let faturamento = 0;
-   let custoGeral = 0;
-   let aReceber = 0;
+    let custoGeral = 0;
+    let aReceber = 0;
 
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       faturamento += (v.preco * v.quantidade);
-       custoGeral += (v.custo * v.quantidade);
-     });
-   });
+    // Calcula faturamento de todas as vendas aprovadas
+    vendas.forEach(venda => {
+      const statusNormalizado = (venda.status || '').toString().toLowerCase();
+      
+      if (statusNormalizado === 'aprovado') {
+        const valorTotal = Number(venda.total) || 0;
+        
+        // Se for venda de vendedora, pega o débito; se for venda direta sua, a comissão é 0
+        const comissao = Number(venda.debitoVendedora) || Number(venda.comissao) || 0;
+        
+        // Soma o valor líquido para você
+        faturamento += Math.max(0, valorTotal - comissao);
+      }
+    });
+
+    // Custo geral do estoque
+    produtos.forEach(p => {
+      p.variacoes.forEach(v => {
+        custoGeral += ((Number(v.custo) || 0) * (Number(v.quantidade) || 0));
+      });
+    });
 
    const tabelaCorpo = document.getElementById('fin-tabela-corpo');
    if (tabelaCorpo) tabelaCorpo.innerHTML = '';
