@@ -1956,188 +1956,108 @@ function excluirVendaFirebase(idVenda) {
      
      const extrairCampo = (regex, padrao = "Não informado") => {
        const matches = textoOriginal.match(regex);
-       return matches ? matches[1].trim() : padrao;
+       return matches ? matches[1] : padrao;
      };
 
-     const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
-     const dataOriginal = extrairCampo(/Data:\s*([^\s]+)/i, new Date().toLocaleDateString());
-     const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
-     const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
-
-     doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
-     doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
-     
-     doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
-     doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
-     
-     eixoY += 6;
-     
-     doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
-     doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
-
-     eixoY += 8;
-
-     doc.setLineWidth(0.2);
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
-
-     doc.setFont("courier", "bold");
-     doc.setFontSize(10);
-     doc.text("Produto", 15, eixoY);
-     doc.text("Qtd", 110, eixoY);
-     doc.text("Preço", 130, eixoY);
-     doc.text("Total", 170, eixoY);
-     
-     eixoY += 4;
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
-
-     doc.setFont("courier", "normal");
-     
-     const linhasOriginal = textoOriginal.split("\n");
-     let extraindoItens = false;
-
-     let subtotalStr = "R$ 0,00";
-     let descontoStr = "R$ 0,00";
-     let totalStr = "R$ 0,00";
-     let temParcelas = false;
-     let listaParcelas = [];
-
-     linhasOriginal.forEach(linha => {
-         if (linha.includes("-----") && !extraindoItens) {
-             extraindoItens = true;
-             return;
-         }
-         if (linha.includes("-----") && extraindoItens) {
-             extraindoItens = false;
-             return;
-         }
-
-         if (linha.includes("Subtotal:")) {
-             subtotalStr = linha.split("Subtotal:")[1].trim();
-         }
-         if (linha.includes("Desconto:")) {
-             descontoStr = linha.split("Desconto:")[1].trim();
-         }
-         if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
-             totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
-         }
-
-         if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
-             temParcelas = true;
-             listaParcelas.push(linha.trim());
-         }
-
-         if (extraindoItens && linha.trim() !== "") {
-             const partes = linha.split(" - ");
-             const nomeEVar = partes[0].trim();
-             const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-             const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
-
-             doc.text(nomeLimitado, 15, eixoY);
-             doc.text("1", 110, eixoY);
-             doc.text(precoStr, 130, eixoY);
-             doc.text(precoStr, 170, eixoY);
-             eixoY += 6;
-         }
+     const linhas = textoOriginal.split('\n');
+     linhas.forEach(linha => {
+       if (eixoY > 270) {
+         doc.addPage();
+         eixoY = 20;
+       }
+       doc.text(linha, 15, eixoY);
+       eixoY += 5;
      });
 
-     eixoY += 2;
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
-
-     doc.setFont("courier", "normal");
-     doc.text("Subtotal:", 130, eixoY);
-     doc.text(subtotalStr, 170, eixoY);
-     eixoY += 5;
-
-     doc.text("(-) Desconto:", 130, eixoY);
-     doc.text(descontoStr, 170, eixoY);
-     eixoY += 5;
-
-     doc.setFont("courier", "bold");
-     doc.setFontSize(11);
-     doc.text("TOTAL:", 130, eixoY);
-     doc.text(totalStr, 170, eixoY);
-     eixoY += 10;
-
-     if (temParcelas && listaParcelas.length > 0) {
-       doc.line(15, eixoY, 195, eixoY);
-       eixoY += 6;
-       doc.setFont("courier", "bold");
-       doc.setFontSize(10);
-       doc.text("PARCELAS:", 15, eixoY);
-       eixoY += 6;
-
-       doc.setFont("courier", "normal");
-       listaParcelas.forEach(parc => {
-         doc.text(parc, 15, eixoY);
-         eixoY += 5;
-       });
-       eixoY += 5;
-     }
-
-     eixoY = Math.max(eixoY, 265);
-     doc.setLineWidth(0.2);
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
-
-     textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
-     eixoY += 5;
-     textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
-
-     doc.save(`Nota_Venda_${id}.pdf`);
-
-   } catch (erro) {
-     console.error("Erro ao gerar PDF profissional:", erro);
-     alert("Ocorreu um erro ao formatar a nota: " + erro.message);
+     doc.save(`Nota_${id}.pdf`);
+   } catch (err) {
+     console.error("Erro ao gerar PDF:", err);
+     alert("Erro ao gerar a nota em PDF.");
    }
  }
 
  function excluirNota(id) {
-   if (confirm("Tem certeza que deseja excluir esta nota do histórico? Isso devolverá os produtos ao estoque.")) {
-     const venda = vendas.find(v => v.id === id);
-     
-     if (venda && venda.itens && Array.isArray(venda.itens)) {
-       venda.itens.forEach(item => {
-         const prod = produtos.find(p => p.id === item.idProd);
-         if (prod) {
-           const v = prod.variacoes.find(varItem => varItem.cor === item.cor && varItem.tamanho === item.tamanho);
-           if (v) {
-             v.quantidade += (item.quantidade || 1);
-           }
-           sincronizarFirebase(prod);
-         }
-       });
-       localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-     }
-
+   if (confirm("Deseja realmente excluir esta nota do histórico?")) {
      vendas = vendas.filter(v => v.id !== id);
      localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-     
-     // REMOVE A VENDA DO FIREBASE
      excluirVendaFirebase(id);
-
      carregarVendas();
      atualizarDash();
    }
  }
 
- function sincronizarClienteFirebase(clienteData) {
-   if (typeof firebase !== 'undefined' && firebase.apps.length) {
-     const idDoc = clienteData.cpf ? clienteData.cpf.toString() : clienteData.id.toString();
-     db.collection("clientes").doc(idDoc).set(clienteData)
-       .then(() => console.log("Cliente sincronizado no Firebase:", idDoc))
-       .catch(err => console.error("Erro ao salvar cliente no Firebase:", err));
+ function carregarEstoque() {
+   const container = document.getElementById('lista-estoque-produtos');
+   if (!container) return;
+   container.innerHTML = '';
+
+   if (!produtos.length) {
+     container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum item cadastrado.</p>';
+     return;
    }
+
+   produtos.forEach(p => {
+     let variacoesHtml = '';
+     p.variacoes.forEach(v => {
+       variacoesHtml += `
+         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:4px 0; font-size:12px;">
+           <span><b>${v.cor}</b> (${v.tamanho}) - R$ ${v.preco.toFixed(2)}</span>
+           <div>
+             <span>Qtd: <b>${v.quantidade}</b></span>
+             <button class="btn-sm" style="background:#1e7e48; color:white; margin-left:6px;" onclick="venderImediato('${p.id}', '${v.cor}', '${v.tamanho}', false)">+ Separar</button>
+           </div>
+         </div>
+       `;
+     });
+
+     container.innerHTML += `
+       <div class="prod-list-card">
+         <div style="display:flex; justify-content:space-between; align-items:center;">
+           <b style="color:var(--primary);">${p.nome}</b>
+           <small style="color:#666;">${p.categoria}</small>
+         </div>
+         <div style="margin-top:8px;">${variacoesHtml}</div>
+       </div>
+     `;
+   });
  }
 
- function excluirClienteFirebase(idClienteOuCpf) {
-   if (typeof firebase !== 'undefined' && firebase.apps.length) {
-     db.collection("clientes").doc(idClienteOuCpf.toString()).delete()
-       .then(() => console.log("Cliente removido do Firebase:", idClienteOuCpf))
-       .catch(err => console.error("Erro ao remover cliente do Firebase:", err));
+ function renderizarClientes() {
+   const container = document.getElementById('lista-clientes-container');
+   if (!container) return;
+   const busca = (document.getElementById('buscaCliente')?.value || '').toLowerCase();
+   container.innerHTML = '';
+
+   const filtrados = clientes.filter(c => 
+     c.nome.toLowerCase().includes(busca) || 
+     c.telefone.includes(busca) || 
+     (c.codigo && c.codigo.toLowerCase().includes(busca))
+   );
+
+   if (!filtrados.length) {
+     container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum cliente encontrado.</p>';
+     return;
    }
+
+   filtrados.forEach(c => {
+     container.innerHTML += `
+       <div class="client-list-card">
+         <div class="item-row">
+           <b>${c.nome}</b>
+           <small style="color:#888;">${c.codigo || ''}</small>
+         </div>
+         <div style="font-size:12px; color:#555;">
+           <div><i class="fa-solid fa-phone"></i> ${c.telefone}</div>
+           ${c.email ? `<div><i class="fa-solid fa-envelope"></i> ${c.email}</div>` : ''}
+           ${c.endereco ? `<div><i class="fa-solid fa-location-dot"></i> ${c.endereco}</div>` : ''}
+         </div>
+         <div class="actions-row">
+           <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+           <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
+         </div>
+       </div>
+     `;
+   });
  }
 
  function abrirCadastroCliente() {
@@ -2148,254 +2068,100 @@ function excluirVendaFirebase(idVenda) {
    mudarTela('cadastro-cliente');
  }
 
- document.getElementById('formCliente').addEventListener('submit', function(e) {
+ document.getElementById('formCliente')?.addEventListener('submit', function(e) {
    e.preventDefault();
    const id = document.getElementById('cli-id').value;
    const nome = document.getElementById('cli-nome').value;
    const telefone = document.getElementById('cli-telefone').value;
    const email = document.getElementById('cli-email').value;
    const endereco = document.getElementById('cli-endereco').value;
-   const dataCad = document.getElementById('cli-data').value;
+   const data = document.getElementById('cli-data').value;
 
-   let clienteSalvo;
+   const clienteData = {
+     id: id || Date.now().toString(),
+     codigo: id ? undefined : 'CLI' + Math.floor(1000 + Math.random() * 9000),
+     nome, telefone, email, endereco, data
+   };
 
    if (id) {
      const idx = clientes.findIndex(c => c.id === id);
-     if (idx !== -1) {
-       clientes[idx] = { ...clientes[idx], nome, telefone, email, endereco, dataCad };
-       clienteSalvo = clientes[idx];
-     }
+     if (idx !== -1) clientes[idx] = { ...clientes[idx], ...clienteData };
    } else {
-     const codigoAutomatico = "CLI" + Math.floor(1000 + Math.random() * 9000);
-     clienteSalvo = { 
-       id: Date.now().toString(), 
-       codigo: codigoAutomatico, 
-       nome, 
-       telefone, 
-       email, 
-       endereco, 
-       dataCad 
-     };
-     clientes.push(clienteSalvo);
-   }
-
-   if (clienteSalvo) {
-     sincronizarClienteFirebase(clienteSalvo);
+     clientes.push(clienteData);
    }
 
    localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-
-   if (typeof renderizarClientes === 'function') {
-     renderizarClientes();
+   if (typeof firebase !== 'undefined' && firebase.apps.length) {
+     db.collection("clientes").doc(clienteData.id).set(clienteData);
    }
 
+   alert('Cliente salvo com sucesso!');
    mudarTela('clientes');
  });
-  
+
  function editarCliente(id) {
-   const cli = clientes.find(c => c.id === id);
-   if (!cli) return;
-
-   document.getElementById('cli-id').value = cli.id;
-   document.getElementById('cli-nome').value = cli.nome;
-   document.getElementById('cli-telefone').value = cli.telefone;
-   document.getElementById('cli-email').value = cli.email;
-   document.getElementById('cli-endereco').value = cli.endereco;
-   document.getElementById('cli-data').value = cli.dataCad;
-
+   const c = clientes.find(item => item.id === id);
+   if (!c) return;
+   document.getElementById('cli-id').value = c.id;
+   document.getElementById('cli-nome').value = c.nome;
+   document.getElementById('cli-telefone').value = c.telefone;
+   document.getElementById('cli-email').value = c.email || '';
+   document.getElementById('cli-endereco').value = c.endereco || '';
+   document.getElementById('cli-data').value = c.data || new Date().toISOString().split('T')[0];
    document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
    mudarTela('cadastro-cliente');
  }
 
  function excluirCliente(id) {
-   if (confirm("Excluir este cliente permanentemente?")) {
-     const clienteParaRemover = clientes.find(c => c.id === id);
-
+   if (confirm("Deseja remover este cliente?")) {
      clientes = clientes.filter(c => c.id !== id);
      localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-
-     if (clienteParaRemover) {
-       excluirClienteFirebase(clienteParaRemover.cpf || clienteParaRemover.id);
+     if (typeof firebase !== 'undefined' && firebase.apps.length) {
+       db.collection("clientes").doc(id).delete();
      }
-
-     if (typeof renderizarClientes === 'function') {
-       renderizarClientes();
-     }
-   }
- }
-
- function renderizarClientes() {
-   const container = document.getElementById('lista-clientes-container');
-   const buscaInput = document.getElementById('buscaCliente');
-   const busca = buscaInput ? buscaInput.value.toLowerCase() : '';
-   
-   if (!container) return;
-   container.innerHTML = '';
-
-   const filtrados = clientes.filter(c => 
-     (c.nome && c.nome.toLowerCase().includes(busca)) || 
-     (c.telefone && c.telefone.includes(busca)) || 
-     (c.codigo && c.codigo.toLowerCase().includes(busca))
-   );
-
-   if (!filtrados.length) {
-     container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum cliente encontrado.</p>';
-     return;
-   }
-
-   filtrados.forEach(c => {
-     const telLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
-     const numFormatted = telLimpo.startsWith('55') ? telLimpo : '55' + telLimpo;
-
-     container.innerHTML += `
-     <div class="client-list-card">
-       <div>
-         <div class="item-row">
-           <b>${c.nome}</b> 
-           <span style="font-size:11px; background:#eee; padding:2px 6px; border-radius:4px; font-weight:bold;">${c.codigo || ''}</span>
-         </div>
-         <div style="font-size:12px; color:#666; margin-top:4px;">
-           <i class="fa-solid fa-phone"></i> ${c.telefone || 'Sem telefone'}<br>
-           <i class="fa-solid fa-envelope"></i> ${c.email || 'Sem e-mail'}<br>
-           <i class="fa-solid fa-location-dot"></i> ${c.endereco || 'Sem endereço'}
-         </div>
-       </div>
-       <div class="actions-row">
-         ${c.telefone ? `<a href="https://wa.me/${numFormatted}" target="_blank" class="btn-action btn-sell-direct" style="text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
-         <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-         <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
-       </div>
-     </div>`;
-   });
- }
-
- function carregarEstoque() {
-   const container = document.getElementById('lista-estoque-produtos');
-   if (!container) return;
-
-   let totalCadastrados = produtos.length;
-   let totalPecas = 0;
-
-   container.innerHTML = '';
-
-   if (!produtos.length) {
-     container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum item cadastrado no estoque.</p>';
-   } else {
-     produtos.forEach(p => {
-       let variacoesHtml = '';
-       p.variacoes.forEach(v => {
-         totalPecas += v.quantidade;
-         variacoesHtml += `
-           <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:4px 0; border-bottom:1px dashed #eee;">
-             <span>${v.cor} (${v.tamanho}) - Cód: ${v.codigo || 'S/C'}</span>
-             <span><b>Qtd:</b> ${v.quantidade} | R$ ${v.preco.toFixed(2)}</span>
-           </div>
-         `;
-       });
-
-       container.innerHTML += `
-         <div class="prod-list-card">
-           <div style="display:flex; justify-content:space-between; align-items:center;">
-             <b style="color:var(--primary);">${p.nome}</b>
-             <span style="font-size:11px; background:#f1f3f5; padding:2px 8px; border-radius:10px;">${p.categoria}</span>
-           </div>
-           <div style="margin-top:6px;">${variacoesHtml}</div>
-           <div class="actions-row">
-             <button class="btn-action btn-edit" onclick="editarProduto('${p.id}')"><i class="fa-solid fa-pen"></i> Editar Produto</button>
-           </div>
-         </div>
-       `;
-     });
-   }
-
-   const elMeta = document.getElementById('total-produtos-estoque');
-   if (elMeta) {
-     elMeta.innerHTML = `Cadastrados: <b>${totalCadastrados}</b><br>Peças em Estoque: <b>${totalPecas}</b>`;
+     renderizarClientes();
    }
  }
 
  function carregarFinanceiro() {
-   const filtro = document.getElementById('fin-filtro-periodo') ? document.getElementById('fin-filtro-periodo').value : 'todos';
-   const hojeStr = new Date().toLocaleDateString();
-   const agora = new Date();
-   const mesAtual = agora.getMonth();
-   const anoAtual = agora.getFullYear();
+   let totalFaturamento = 0;
+   let totalCusto = 0;
+   let totalAgerer = 0;
 
-   let faturamento = 0;
-    let custoGeral = 0;
-    let aReceber = 0;
-
-    // Calcula faturamento de todas as vendas aprovadas
-    vendas.forEach(venda => {
-      const statusNormalizado = (venda.status || '').toString().toLowerCase();
-      
-      if (statusNormalizado === 'aprovado') {
-        const valorTotal = Number(venda.total) || 0;
-        
-        // Se for venda de vendedora, pega o débito; se for venda direta sua, a comissão é 0
-        const comissao = Number(venda.debitoVendedora) || Number(venda.comissao) || 0;
-        
-        // Soma o valor líquido para você
-        faturamento += Math.max(0, valorTotal - comissao);
-      }
-    });
-
-    // Custo geral do estoque
-    produtos.forEach(p => {
-      p.variacoes.forEach(v => {
-        custoGeral += ((Number(v.custo) || 0) * (Number(v.quantidade) || 0));
-      });
-    });
-
-   const tabelaCorpo = document.getElementById('fin-tabela-corpo');
-   if (tabelaCorpo) tabelaCorpo.innerHTML = '';
-
-   let vendasFiltradas = vendas.filter(v => {
-     if (filtro === 'hoje') return v.data === hojeStr;
-     if (filtro === 'mes') {
-       const partes = v.data.split('/');
-       if (partes.length === 3) {
-         return (parseInt(partes[1]) - 1) === mesAtual && parseInt(partes[2]) === anoAtual;
-       }
-     }
-     return true;
-   });
-
-   vendasFiltradas.forEach(v => {
+   vendas.forEach(v => {
+     totalFaturamento += Number(v.total || 0);
+     totalCusto += Number(v.custoTotal || 0);
      if (v.formaPagamento === 'A prazo') {
-       const entrada = v.valorEntrada || 0;
-       aReceber += Math.max(0, v.total - entrada);
-     }
-
-     if (tabelaCorpo) {
-       tabelaCorpo.innerHTML += `
-         <tr>
-           <td>${v.data}</td>
-           <td>${v.clienteNome || 'Consumidor Final'}</td>
-           <td><span class="${v.formaPagamento === 'A prazo' ? 'badge-prazo' : 'badge-pago'}">${v.formaPagamento}</span></td>
-           <td>R$ ${v.total.toFixed(2)}</td>
-         </tr>
-       `;
+       totalAgerer += (Number(v.total || 0) - Number(v.valorEntrada || 0));
      }
    });
 
-   const totalLucroEstoque = Math.max(0, faturamento - custoGeral);
+   const lucroLiquido = totalFaturamento - totalCusto;
 
-   const elFat = document.getElementById('fin-card-faturamento');
-   const elCusto = document.getElementById('fin-card-custo');
-   const elLucro = document.getElementById('fin-card-lucro');
-   const elReceber = document.getElementById('fin-card-receber');
+   document.getElementById('fin-card-faturamento').innerText = `R$ ${totalFaturamento.toFixed(2)}`;
+   document.getElementById('fin-card-custo').innerText = `R$ ${totalCusto.toFixed(2)}`;
+   document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquido.toFixed(2)}`;
+   document.getElementById('fin-card-receber').innerText = `R$ ${totalAgerer.toFixed(2)}`;
 
-   if (elFat) elFat.innerText = `R$ ${faturamento.toFixed(2)}`;
-   if (elCusto) elCusto.innerText = `R$ ${custoGeral.toFixed(2)}`;
-   if (elLucro) elLucro.innerText = `R$ ${totalLucroEstoque.toFixed(2)}`;
-   if (elReceber) elReceber.innerText = `R$ ${aReceber.toFixed(2)}`;
+   const tbody = document.getElementById('fin-tabela-corpo');
+   if (!tbody) return;
+   tbody.innerHTML = '';
+
+   [...vendas].reverse().forEach(v => {
+     tbody.innerHTML += `
+       <tr>
+         <td>${v.data || '-'}</td>
+         <td>${v.clienteNome || v.vendedora || 'Consumidor'}</td>
+         <td><span class="${v.formaPagamento === 'A prazo' ? 'badge-prazo' : 'badge-pago'}">${v.formaPagamento || 'Pix'}</span></td>
+         <td>R$ ${Number(v.total || 0).toFixed(2)}</td>
+       </tr>
+     `;
+   });
  }
 
  function atualizarDash() {
-   let totalProdutos = produtos.length;
+   const totalProdutos = produtos.length;
    let valorEstoque = 0;
-   let totalClientes = clientes.length;
 
    produtos.forEach(p => {
      p.variacoes.forEach(v => {
@@ -2403,25 +2169,21 @@ function excluirVendaFirebase(idVenda) {
      });
    });
 
-   let totalVendasVal = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
+   const totalVendas = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+   const totalClientes = clientes.length;
 
-   const dashProd = document.getElementById('dash-produtos-qtd');
-   const dashEstoque = document.getElementById('dash-estoque-val');
-   const dashVendas = document.getElementById('dash-vendas-val');
-   const dashClientes = document.getElementById('dash-clientes-qtd');
-
-   if (dashProd) dashProd.innerText = totalProdutos;
-   if (dashEstoque) dashEstoque.innerText = `R$ ${valorEstoque.toFixed(2)}`;
-   if (dashVendas) dashVendas.innerText = `R$ ${totalVendasVal.toFixed(2)}`;
-   if (dashClientes) dashClientes.innerText = totalClientes;
+   document.getElementById('dash-produtos-qtd').innerText = totalProdutos;
+   document.getElementById('dash-estoque-val').innerText = `R$ ${valorEstoque.toFixed(2)}`;
+   document.getElementById('dash-vendas-val').innerText = `R$ ${totalVendas.toFixed(2)}`;
+   document.getElementById('dash-clientes-qtd').innerText = totalClientes;
  }
 
- window.addEventListener('DOMContentLoaded', () => {
+ window.onload = function() {
    carregarProdutosDoFirebase();
    carregarClientesDoFirebase();
    carregarVendasDoFirebase();
-   resetarParaNeutro();
- });
+   atualizarDash();
+ };
 </script>
 </body>
 </html>
