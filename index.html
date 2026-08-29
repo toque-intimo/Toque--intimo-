@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Vendas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e7e48;
+      --bg: #f4f6f9;
+      --card-bg: #ffffff;
+      --text: #333333;
+    }
+    body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .card { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; background: var(--primary); color: white; }
+    .btn-sm { font-size: 11px; padding: 4px 8px; }
+    .btn-danger { background: #dc3545; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; }
+    input, select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2><i class="fa-solid fa-cart-shopping"></i> Carrinho de Vendas</h2>
+  
+  <div class="card">
+    <div id="carrinho-itens">
+      <p style="text-align:center; color:#999;">Carrinho vazio.</p>
+    </div>
+    
+    <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:18px; font-weight:bold;">
+      <span>Total a Pagar:</span>
+      <span id="carrinho-total-val" style="color:var(--primary);">R$ 0,00</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Estruturas Globais
+  let carrinho = [];
+  let produtos = [];
+  let clientes = [];
+  let vendas = [];
+
+  // ==========================================
+  // LÓGICA DO CARRINHO COM DESCONTO POR ITEM
+  // ==========================================
+
+  function adicionarAoCarrinho(produtoId, cor, tamanho) {
+    const produto = produtos.find(p => p.id === produtoId);
+    if (!produto) return;
+
+    const variacao = produto.variacoes ? produto.variacoes.find(v => v.cor === cor && v.tamanho === tamanho) : null;
+    if (!variacao || variacao.quantidade <= 0) {
+      alert("Produto sem estoque disponível!");
+      return;
+    }
+
+    const index = carrinho.findIndex(i => i.id === produtoId && i.cor === cor && i.tamanho === tamanho);
+
+    if (index !== -1) {
+      carrinho[index].quantidade += 1;
+    } else {
+      carrinho.push({
+        id: produtoId,
+        nome: produto.nome,
+        cor: variacao.cor,
+        tamanho: variacao.tamanho,
+        preco: Number(variacao.preco || 0),
+        custo: Number(variacao.custo || 0),
+        quantidade: 1,
+        desconto: 0 // NOVO CAMPO: Desconto unitário em R$
+      });
+    }
+
+    renderizarCarrinho();
+  }
+
+  function renderizarCarrinho() {
+    const container = document.getElementById('carrinho-itens');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (carrinho.length === 0) {
+      container.innerHTML = '<p style="text-align:center; padding:15px; color:#888;">Carrinho vazio.</p>';
+      atualizarTotalCarrinho();
+      return;
+    }
+
+    carrinho.forEach((item, index) => {
+      // Valor do item com desconto unitário aplicado
+      const precoComDesconto = Math.max(0, item.preco - (item.desconto || 0));
+      const subtotal = precoComDesconto * item.quantidade;
+
+      container.innerHTML += `
+        <div class="cart-item">
+          <div style="flex:1;">
+            <b>${item.nome}</b> 
+            <span style="font-size:12px; color:#666;">(${item.cor} - ${item.tamanho})</span><br>
+            <small style="color:#888;">Preço original: R$ ${item.preco.toFixed(2)}</small>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <!-- Campo de Desconto em R$ por Unidade -->
+            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+              <label style="font-size:10px; color:#555;">Desc. un. (R$):</label>
+              <input type="number" min="0" step="0.50" value="${item.desconto || 0}" 
+                     style="width:65px; padding:3px; font-size:12px; text-align:right;"
+                     onchange="atualizarDescontoItem(${index}, this.value)">
+            </div>
+
+            <div style="font-size:13px;">Qtd: <b>${item.quantidade}</b></div>
+
+            <div style="font-size:13px; font-weight:bold; min-width:70px; text-align:right;">
+              R$ ${subtotal.toFixed(2)}
+            </div>
+
+            <button onclick="removerDoCarrinho(${index})" class="btn btn-sm btn-danger">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    atualizarTotalCarrinho();
+  }
+
+  function atualizarDescontoItem(index, valor) {
+    const desc = parseFloat(valor) || 0;
+    // Garante que o desconto não ultrapasse o valor original do item nem seja negativo
+    carrinho[index].desconto = Math.min(carrinho[index].preco, Math.max(0, desc));
+    renderizarCarrinho();
+  }
+
+  function removerDoCarrinho(index) {
+    carrinho.splice(index, 1);
+    renderizarCarrinho();
+  }
+
+  function atualizarTotalCarrinho() {
+    let totalGeral = 0;
+
+    carrinho.forEach(item => {
+      const precoFinalUnitario = Math.max(0, item.preco - (item.desconto || 0));
+      totalGeral += precoFinalUnitario * item.quantidade;
+    });
+
+    const elTotal = document.getElementById('carrinho-total-val');
+    if (elTotal) {
+      elTotal.innerText = `R$ ${totalGeral.toFixed(2)}`;
+    }
+  }
+
+  // ==========================================
+  // FUNÇÕES DE IMPRESSÃO / PDF E HISTÓRICO
+  // ==========================================
+
+  function baixarPDFNota(id) {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let eixoY = 20;
+
+      doc.setFontSize(16);
+      doc.text("Comprovante de Venda", 15, eixoY);
+      eixoY += 10;
+
+      const elementoNota = document.getElementById(`nota-${id}`);
+      if (!elementoNota) {
+        alert("Nota não encontrada para impressão.");
+        return;
+      }
+
+      const textoOriginal = elementoNota.innerText;
+      const linhas = textoOriginal.split('\n');
+
+      doc.setFontSize(10);
+      linhas.forEach(linha => {
+        if (eixoY > 270) {
+          doc.addPage();
+          eixoY = 20;
+        }
+        doc.text(linha, 15, eixoY);
+        eixoY += 5;
+      });
+
+      doc.save(`Nota_${id}.pdf`);
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      alert("Erro ao gerar a nota em PDF.");
+    }
+  }
+
+  function excluirNota(id) {
+    if (confirm("Deseja realmente excluir esta nota do histórico?")) {
+      vendas = vendas.filter(v => v.id !== id);
+      localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+      if (typeof excluirVendaFirebase === 'function') {
+        excluirVendaFirebase(id);
+      }
+      if (typeof carregarVendas === 'function') carregarVendas();
+      atualizarDash();
+    }
+  }
+
+  function atualizarDash() {
+    const totalProdutos = produtos.length;
+    let valorEstoque = 0;
+
+    produtos.forEach(p => {
+      if (p.variacoes) {
+        p.variacoes.forEach(v => {
+          valorEstoque += (v.preco * v.quantidade);
+        });
+      }
+    });
+
+    const totalVendas = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+    const totalClientes = clientes.length;
+
+    const elProd = document.getElementById('dash-produtos-qtd');
+    const elEst = document.getElementById('dash-estoque-val');
+    const elVend = document.getElementById('dash-vendas-val');
+    const elCli = document.getElementById('dash-clientes-qtd');
+
+    if (elProd) elProd.innerText = totalProdutos;
+    if (elEst) elEst.innerText = `R$ ${valorEstoque.toFixed(2)}`;
+    if (elVend) elVend.innerText = `R$ ${totalVendas.toFixed(2)}`;
+    if (elCli) elCli.innerText = totalClientes;
+  }
+
+  window.onload = function() {
+    renderizarCarrinho();
+    atualizarDash();
+  };
+</script>
+</body>
+</html>
