@@ -1651,7 +1651,7 @@ function excluirVendaFirebase(idVenda) {
      if (itemExistente) {
        itemExistente.quantidade++;
      } else {
-       carrinho.push({ idProd: id, cor, tamanho, nome: prod.nome, preco: v.preco, custo: v.custo, quantidade: 1 });
+       carrinho.push({ idProd: id, cor, tamanho, nome: prod.nome, preco: v.preco, custo: v.custo, quantidade: 1, desconto: 0 });
      }
 
      v.quantidade--; 
@@ -1675,6 +1675,15 @@ function excluirVendaFirebase(idVenda) {
      alert('Quantidade indisponível no estoque!');
    }
  }
+ 
+ function alterarDescontoItemCarrinho(index, valorDesconto) {
+  const desconto = parseFloat(valorDesconto) || 0;
+  const precoItem = carrinho[index].preco;
+  carrinho[index].desconto = Math.min(desconto, precoItem);
+
+  localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
+  calcularTotalCarrinho();
+}
  
  function alterarQuantidadeCarrinho(index, delta) {
    const item = carrinho[index];
