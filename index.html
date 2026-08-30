@@ -2306,83 +2306,200 @@ function excluirVendaFirebase(idVenda) {
  }
 
  function carregarFinanceiro() {
-   const filtro = document.getElementById('fin-filtro-periodo') ? document.getElementById('fin-filtro-periodo').value : 'todos';
-   const hojeStr = new Date().toLocaleDateString();
-   const agora = new Date();
-   const mesAtual = agora.getMonth();
-   const anoAtual = agora.getFullYear();
+  const filtro = document.getElementById('fin-filtro-periodo')?.value || 'todos';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const mesAtual = new Date().getMonth();
+  const anoAtual = new Date().getFullYear();
 
-   let faturamento = 0;
-    let custoGeral = 0;
-    let aReceber = 0;
+  let vendasFiltradas = vendas.filter(v => {
+    if (!v.data) return true;
+    const partes = v.data.split('/');
+    if (partes.length !== 3) return true;
+    const dataVenda = new Date(partes[2], partes[1] - 1, partes[0]);
 
-    // Calcula faturamento de todas as vendas aprovadas
-    vendas.forEach(venda => {
-      const statusNormalizado = (venda.status || '').toString().toLowerCase();
-      
-      if (statusNormalizado === 'aprovado') {
-        const valorTotal = Number(venda.total) || 0;
-        
-        // Se for venda de vendedora, pega o débito; se for venda direta sua, a comissão é 0
-        const comissao = Number(venda.debitoVendedora) || Number(venda.comissao) || 0;
-        
-        // Soma o valor líquido para você
-        faturamento += Math.max(0, valorTotal - comissao);
-      }
+    if (filtro === 'hoje') {
+      return v.data === hoje;
+    } else if (filtro === 'mes') {
+      return dataVenda.getMonth() === mesAtual && dataVenda.getFullYear() === anoAtual;
+    }
+    return true;
+  });
+
+  // Cálculos dos Cards
+  let totalFaturamento = 0;
+  let totalCusto = 0;
+  let totalAReceber = 0;
+
+  vendasFiltradas.forEach(v => {
+    const totalVenda = Number(v.total || v.totalFinal || 0);
+    const custoVenda = Number(v.custoTotal || 0);
+    
+    totalFaturamento += totalVenda;
+    totalCusto += custoVenda;
+
+    // Saldo pendente para vendas a prazo
+    if (v.formaPagamento === 'A prazo' || v.statusPagamento === 'Pendente') {
+      const valorEntrada = Number(v.valorEntrada || 0);
+      const valorJaPago = Number(v.valorPagoTotal || valorEntrada || 0);
+      const saldoDevedor = Math.max(0, totalVenda - valorJaPago);
+      totalAReceber += saldoDevedor;
+    }
+  });
+
+  const lucroLiquido = totalFaturamento - totalCusto;
+
+  // Atualiza os Cards
+  if (document.getElementById('fin-card-faturamento')) 
+    document.getElementById('fin-card-faturamento').innerText = `R$ ${totalFaturamento.toFixed(2)}`;
+  if (document.getElementById('fin-card-custo')) 
+    document.getElementById('fin-card-custo').innerText = `R$ ${totalCusto.toFixed(2)}`;
+  if (document.getElementById('fin-card-lucro')) 
+    document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquido.toFixed(2)}`;
+  if (document.getElementById('fin-card-receber')) 
+    document.getElementById('fin-card-receber').innerText = `R$ ${totalAReceber.toFixed(2)}`;
+
+  // Renderiza Tabela de Contas a Receber
+  renderizarContasAReceber(vendasFiltradas);
+
+  // Renderiza Tabela Histórico Geral
+  const tbody = document.getElementById('fin-tabela-corpo');
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (!vendasFiltradas.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#999;">Nenhuma transação encontrada.</td></tr>';
+      return;
+    }
+
+    vendasFiltradas.forEach(v => {
+      const isPrazo = v.formaPagamento === 'A prazo' && (v.statusPagamento !== 'Pago');
+      const badge = isPrazo 
+        ? '<span class="badge-prazo">A Prazo</span>' 
+        : '<span class="badge-pago">Pago</span>';
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${v.data || '-'}</td>
+          <td>${v.clienteNome || v.vendedora || 'Consumidor Final'}</td>
+          <td>${badge}</td>
+          <td><b>R$ ${Number(v.total || v.totalFinal || 0).toFixed(2)}</b></td>
+        </tr>
+      `;
     });
+  }
+}
+// Renderiza a lista específica de 'A Receber' com botão de dar baixa
+function renderizarContasAReceber(listaVendas) {
+  let containerAReceber = document.getElementById('fin-container-a-receber');
 
-    // Custo geral do estoque
-    produtos.forEach(p => {
-      p.variacoes.forEach(v => {
-        custoGeral += ((Number(v.custo) || 0) * (Number(v.quantidade) || 0));
+  if (!containerAReceber) {
+    const telaFinanceiro = document.getElementById('tela-financeiro');
+    if (!telaFinanceiro) return;
+
+    const divBloco = document.createElement('div');
+    divBloco.style.cssText = "margin-bottom: 20px; background: #fff8eb; padding: 15px; border-radius: 12px; border: 1px dashed #b57c1e;";
+    divBloco.innerHTML = `
+      <div class="section-title" style="font-size:14px; margin:0 0 10px 0; color:#b57c1e;">
+        <i class="fa-solid fa-clock"></i> Contas a Receber (Vendas A Prazo)
+      </div>
+      <div id="fin-container-a-receber"></div>
+    `;
+    
+    const historicoTitulo = telaFinanceiro.querySelector('.section-title');
+    telaFinanceiro.insertBefore(divBloco, historicoTitulo);
+    containerAReceber = document.getElementById('fin-container-a-receber');
+  }
+
+  containerAReceber.innerHTML = '';
+
+  const vendasAPrazo = listaVendas.filter(v => 
+    v.formaPagamento === 'A prazo' && v.statusPagamento !== 'Pago'
+  );
+
+  if (!vendasAPrazo.length) {
+    containerAReceber.innerHTML = '<p style="font-size:12px; color:#777; text-align:center;">Nenhuma conta pendente a receber neste período.</p>';
+    return;
+  }
+
+  vendasAPrazo.forEach(v => {
+    const totalVenda = Number(v.total || v.totalFinal || 0);
+    const entrada = Number(v.valorEntrada || 0);
+    const valorJaPago = Number(v.valorPagoTotal || entrada || 0);
+    const saldoDevedor = Math.max(0, totalVenda - valorJaPago);
+
+    containerAReceber.innerHTML += `
+      <div class="prod-list-card" style="background: white; border: 1px solid #ffeeba; margin-bottom: 8px; padding: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <b style="font-size: 13px; color: var(--primary);">${v.clienteNome || 'Cliente'}</b>
+            <div style="font-size: 11px; color: #666;">Data: ${v.data || '-'} | Total: R$ ${totalVenda.toFixed(2)}</div>
+            <div style="font-size: 11px; color: #1e7e48;">Já Pago: R$ ${valorJaPago.toFixed(2)}</div>
+            <b style="font-size: 12px; color: #b57c1e;">Saldo Devedor: R$ ${saldoDevedor.toFixed(2)}</b>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+            <input type="number" step="0.01" id="input-baixa-venda-${v.id}" placeholder="R$ Recebido" style="width: 100px; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px;">
+            <button class="btn-action btn-sell-direct" onclick="darBaixaVendaPrazo('${v.id}')" style="font-size: 11px; padding: 4px 8px;">
+              <i class="fa-solid fa-hand-holding-dollar"></i> Baixar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// Função para registrar a baixa no Firebase e LocalStorage
+async function darBaixaVendaPrazo(vendaId) {
+  try {
+    const inputValor = document.getElementById(`input-baixa-venda-${vendaId}`);
+    const valorInformado = Number(inputValor ? inputValor.value : 0);
+
+    if (valorInformado <= 0) {
+      alert("Por favor, informe um valor válido para dar baixa.");
+      return;
+    }
+
+    const venda = vendas.find(v => v.id === vendaId.toString());
+    if (!venda) {
+      alert("Venda não encontrada.");
+      return;
+    }
+
+    const totalVenda = Number(venda.total || venda.totalFinal || 0);
+    const entrada = Number(venda.valorEntrada || 0);
+    const valorJaPagoAnterior = Number(venda.valorPagoTotal || entrada || 0);
+    const novoValorPagoTotal = valorJaPagoAnterior + valorInformado;
+
+    let novoStatusPagamento = 'Pendente';
+    if (novoValorPagoTotal >= totalVenda) {
+      novoStatusPagamento = 'Pago';
+    }
+
+    venda.valorPagoTotal = novoValorPagoTotal;
+    venda.statusPagamento = novoStatusPagamento;
+
+    localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+
+    if (typeof firebase !== 'undefined' && firebase.apps.length) {
+      await db.collection("vendas").doc(vendaId.toString()).update({
+        valorPagoTotal: novoValorPagoTotal,
+        statusPagamento: novoStatusPagamento,
+        ultimaBaixaEm: new Date().toISOString()
       });
-    });
+    }
 
-   const tabelaCorpo = document.getElementById('fin-tabela-corpo');
-   if (tabelaCorpo) tabelaCorpo.innerHTML = '';
+    alert(novoStatusPagamento === 'Pago' 
+      ? "Venda quitada com sucesso!" 
+      : `Baixa de R$ ${valorInformado.toFixed(2)} registrada com sucesso!`);
 
-   let vendasFiltradas = vendas.filter(v => {
-     if (filtro === 'hoje') return v.data === hojeStr;
-     if (filtro === 'mes') {
-       const partes = v.data.split('/');
-       if (partes.length === 3) {
-         return (parseInt(partes[1]) - 1) === mesAtual && parseInt(partes[2]) === anoAtual;
-       }
-     }
-     return true;
-   });
+    carregarFinanceiro();
+    if (typeof atualizarDash === 'function') atualizarDash();
 
-   vendasFiltradas.forEach(v => {
-     if (v.formaPagamento === 'A prazo') {
-       const entrada = v.valorEntrada || 0;
-       aReceber += Math.max(0, v.total - entrada);
-     }
-
-     if (tabelaCorpo) {
-       tabelaCorpo.innerHTML += `
-         <tr>
-           <td>${v.data}</td>
-           <td>${v.clienteNome || 'Consumidor Final'}</td>
-           <td><span class="${v.formaPagamento === 'A prazo' ? 'badge-prazo' : 'badge-pago'}">${v.formaPagamento}</span></td>
-           <td>R$ ${v.total.toFixed(2)}</td>
-         </tr>
-       `;
-     }
-   });
-
-   const totalLucroEstoque = Math.max(0, faturamento - custoGeral);
-
-   const elFat = document.getElementById('fin-card-faturamento');
-   const elCusto = document.getElementById('fin-card-custo');
-   const elLucro = document.getElementById('fin-card-lucro');
-   const elReceber = document.getElementById('fin-card-receber');
-
-   if (elFat) elFat.innerText = `R$ ${faturamento.toFixed(2)}`;
-   if (elCusto) elCusto.innerText = `R$ ${custoGeral.toFixed(2)}`;
-   if (elLucro) elLucro.innerText = `R$ ${totalLucroEstoque.toFixed(2)}`;
-   if (elReceber) elReceber.innerText = `R$ ${aReceber.toFixed(2)}`;
- }
-
+  } catch (erro) {
+    console.error("Erro ao dar baixa em venda a prazo:", erro);
+    alert("Ocorreu um erro ao processar a baixa. Tente novamente.");
+  }
+}
+ 
  function atualizarDash() {
    let totalProdutos = produtos.length;
    let valorEstoque = 0;
