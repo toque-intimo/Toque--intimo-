@@ -2326,15 +2326,27 @@ function excluirVendaFirebase(idVenda) {
   });
 
   // Cálculos dos Cards
-  let totalFaturamento = 0;
+  let totalFaturamentoBruto = 0;
+  let totalFaturamentoLiquido = 0; // Já descontando os 15% da vendedora
   let totalCusto = 0;
   let totalAReceber = 0;
 
   vendasFiltradas.forEach(v => {
     const totalVenda = Number(v.total || v.totalFinal || 0);
     const custoVenda = Number(v.custoTotal || 0);
-    
-    totalFaturamento += totalVenda;
+
+    // Identifica se a venda foi feita por vendedora
+    const isVendedora = Boolean(v.vendedora || v.vendedoraId || v.debitoVendedora);
+
+    // Calcula comissão da vendedora (15% padrão ou o valor gravado no registro)
+    let comissaoVendedora = 0;
+    if (isVendedora) {
+      comissaoVendedora = Number(v.debitoVendedora || v.comissao || (totalVenda * 0.15));
+    }
+
+    // Faturamento bruto e líquido (descontando os 15%)
+    totalFaturamentoBruto += totalVenda;
+    totalFaturamentoLiquido += (totalVenda - comissaoVendedora);
     totalCusto += custoVenda;
 
     // Saldo pendente para vendas a prazo
@@ -2346,11 +2358,11 @@ function excluirVendaFirebase(idVenda) {
     }
   });
 
-  const lucroLiquido = totalFaturamento - totalCusto;
+  const lucroLiquido = totalFaturamentoLiquido - totalCusto;
 
-  // Atualiza os Cards
+  // Atualiza os Cards na Interface
   if (document.getElementById('fin-card-faturamento')) 
-    document.getElementById('fin-card-faturamento').innerText = `R$ ${totalFaturamento.toFixed(2)}`;
+    document.getElementById('fin-card-faturamento').innerText = `R$ ${totalFaturamentoLiquido.toFixed(2)}`;
   if (document.getElementById('fin-card-custo')) 
     document.getElementById('fin-card-custo').innerText = `R$ ${totalCusto.toFixed(2)}`;
   if (document.getElementById('fin-card-lucro')) 
@@ -2375,13 +2387,21 @@ function excluirVendaFirebase(idVenda) {
       const badge = isPrazo 
         ? '<span class="badge-prazo">A Prazo</span>' 
         : '<span class="badge-pago">Pago</span>';
+      
+      const totalVenda = Number(v.total || v.totalFinal || 0);
+      const isVendedora = Boolean(v.vendedora || v.vendedoraId || v.debitoVendedora);
+      const comissao = isVendedora ? Number(v.debitoVendedora || v.comissao || (totalVenda * 0.15)) : 0;
+      const valorLiquidoLoja = totalVenda - comissao;
 
       tbody.innerHTML += `
         <tr>
           <td>${v.data || '-'}</td>
-          <td>${v.clienteNome || v.vendedora || 'Consumidor Final'}</td>
+          <td>${v.clienteNome || (v.vendedora ? `Vendedora: ${v.vendedora}` : 'Consumidor Final')}</td>
           <td>${badge}</td>
-          <td><b>R$ ${Number(v.total || v.totalFinal || 0).toFixed(2)}</b></td>
+          <td>
+            <b>R$ ${valorLiquidoLoja.toFixed(2)}</b>
+            ${isVendedora ? `<br><small style="color:#888; font-size:10px;">(Total: R$ ${totalVenda.toFixed(2)} - 15%)</small>` : ''}
+          </td>
         </tr>
       `;
     });
