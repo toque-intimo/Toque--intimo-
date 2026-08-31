@@ -1187,26 +1187,21 @@ function sincronizarVendaFirebase(vendaData) {
 
 function carregarVendasDoFirebase() {
   if (typeof firebase !== 'undefined' && firebase.apps.length) {
-    db.collection("vendas").get().then(snapshot => {
-      if (!snapshot.empty) {
-        vendas = [];
-        snapshot.forEach(doc => {
-          // Pega os dados e inclui o ID do Firebase
-          vendas.push({ id: doc.id, ...doc.data() });
-        });
-        
-        localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-        
-        // Atualiza a tela de Vendas se a função existir
-        if (typeof carregarVendas === 'function') {
-          carregarVendas();
-        }
-        // Atualiza os números no Dashboard se a função existir
-        if (typeof atualizarDash === 'function') {
-          atualizarDash();
-        }
+    db.collection("vendas").onSnapshot(snapshot => {
+      vendas = [];
+      snapshot.forEach(doc => {
+        vendas.push({ id: doc.id, ...doc.data() });
+      });
+
+      localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+
+      if (typeof carregarVendas === 'function') {
+        carregarVendas();
       }
-    }).catch(err => console.error("Erro ao carregar vendas do Firebase:", err));
+      if (typeof atualizarDash === 'function') {
+        atualizarDash();
+      }
+    }, err => console.error("Erro ao escutar vendas do Firebase:", err));
   }
 }
 
