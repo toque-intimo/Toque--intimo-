@@ -2521,22 +2521,20 @@ async function darBaixaVendaPrazo(vendaId) {
 }
  
  function atualizarDash() {
-   let totalProdutos = produtos.length;
-   let valorEstoque = 0;
-   let totalClientes = clientes.length;
+  const qtdProdutos = produtos.length;
+  const valorEstoque = produtos.reduce((total, prod) => {
+    return total + prod.variacoes.reduce((sub, v) => sub + (v.quantidade * v.preco), 0);
+  }, 0);
 
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       valorEstoque += (v.preco * v.quantidade);
-     });
-   });
+  // Soma vendas diretas do carrinho + vendas/baixas das vendedoras
+  const totalVendas = vendas.reduce((acc, v) => acc + (v.total || v.totalFinal || 0), 0);
+  const qtdClientes = clientes.length;
 
-   let totalVendasVal = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
-
-   const dashProd = document.getElementById('dash-produtos-qtd');
-   const dashEstoque = document.getElementById('dash-estoque-val');
-   const dashVendas = document.getElementById('dash-vendas-val');
-   const dashClientes = document.getElementById('dash-clientes-qtd');
+  document.getElementById('dash-produtos-qtd').innerText = qtdProdutos;
+  document.getElementById('dash-estoque-val').innerText = `R$ ${valorEstoque.toFixed(2)}`;
+  document.getElementById('dash-vendas-val').innerText = `R$ ${totalVendas.toFixed(2)}`;
+  document.getElementById('dash-clientes-qtd').innerText = qtdClientes;
+}
 
    if (dashProd) dashProd.innerText = totalProdutos;
    if (dashEstoque) dashEstoque.innerText = `R$ ${valorEstoque.toFixed(2)}`;
