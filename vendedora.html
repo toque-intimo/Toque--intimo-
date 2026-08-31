@@ -798,7 +798,7 @@ function carregarHistoricoVendedora() {
   container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
   
   const codBusca = String(venDados ? (venDados.codigo || '') : '').trim();
-  if (!telBusca) {
+  if (!codBusca) {
     container.innerHTML = '<p style="text-align: center; color: #777;">Sessão inválida ou código não encontrado.</p>';
     return;
   }
@@ -1019,6 +1019,17 @@ function carregarFinanceiroVendedora() {
   }
 
   db.collection("pedidos").where("telefone", "==", telBusca).get().then(snapshot => {
+```[cite: 2]
+
+**Para:**
+```javascript
+  const codBusca = String(venDados ? (venDados.codigo || '') : '').trim();
+  if (!codBusca) {
+    container.innerHTML = '<p style="text-align: center; color: #777;">Sessão inválida ou código não encontrado.</p>';
+    return;
+  }
+
+  db.collection("pedidos").where("codigoVendedora", "==", codBusca).get().then(snapshot => {
     let valorVendaTotal = 0;
     let qtdVendasTotal = 0;
     let valorComissaoTotal = 0;
