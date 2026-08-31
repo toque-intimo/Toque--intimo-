@@ -1846,28 +1846,30 @@ function excluirVendaFirebase(idVenda) {
  }
 
  function carregarVendas() {
-   const div = document.getElementById('historico-vendas-lista');
-   div.innerHTML = vendas.length ? '' : 'Nenhuma venda registrada.';
-   
-   [...vendas].reverse().forEach(v => {
-     div.innerHTML += `
-     <div class="prod-list-card">
-     <div id="nota-${v.id}" class="nota-faturamento" style="white-space: pre-wrap; background: #fffdf6; padding: 15px;">${v.notaCompleta || `Data: ${v.data}\nTotal: R$ ${v.total.toFixed(2)}`}</div>
-     
-     <div class="actions-row" style="margin-top: 10px;">
-     <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNota('${v.id}')">
-     <i class="fa-brands fa-whatsapp"></i> WhatsApp
-     </button>
-     <button class="btn-action btn-nota-pdf" onclick="baixarPDFNota('${v.id}')">
-     <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-     </button>
-     <button class="btn-action btn-nota-excluir" onclick="excluirNota('${v.id}')">
-     <i class="fa-solid fa-trash"></i> Excluir
-     </button>
-     </div>
-     </div>`;
-   });
- }
+  const div = document.getElementById('historico-vendas-lista');
+  div.innerHTML = vendas.length ? '' : '<p style="text-align:center; padding:20px; color:#999;">Nenhuma venda registrada.</p>';
+  
+  [...vendas].reverse().forEach(v => {
+    const conteudoNota = v.notaCompleta || v.textoNota || `Data: ${v.data}\nVendedora: ${v.vendedora || '-'}\nTotal: R$ ${(v.total || v.totalFinal || 0).toFixed(2)}`;
+
+    div.innerHTML += `
+    <div class="prod-list-card">
+      <div id="nota-${v.id}" class="nota-faturamento" style="white-space: pre-wrap; background: #fffdf6; padding: 15px;">${conteudoNota}</div>
+      
+      <div class="actions-row" style="margin-top: 10px;">
+        <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNota('${v.id}')">
+          <i class="fa-brands fa-whatsapp"></i> WhatsApp
+        </button>
+        <button class="btn-action btn-nota-pdf" onclick="baixarPDFNota('${v.id}')">
+          <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+        </button>
+        <button class="btn-action btn-nota-excluir" onclick="excluirNota('${v.id}')">
+          <i class="fa-solid fa-trash"></i> Excluir
+        </button>
+      </div>
+    </div>`;
+  });
+}
 
  function enviarWhatsAppNota(id) {
    const venda = vendas.find(v => v.id === id);
