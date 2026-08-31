@@ -336,25 +336,32 @@
 
 document.getElementById('formLoginVendedora').addEventListener('submit', (e) => {
   e.preventDefault();
-  const codigo = document.getElementById('login-codigo').value.trim().toUpperCase();
+  const codigoInput = document.getElementById('login-codigo').value.trim();
   const senha = document.getElementById('login-senha').value.trim();
 
-  db.collection("vendedoras").where("codigo", "==", codigo).get().then(snapshot => {
+  db.collection("vendedoras").get().then(snapshot => {
     if (snapshot.empty) {
-      alert("Código de Vendedora não encontrado!");
+      alert("Nenhuma vendedora cadastrada no sistema!");
       return;
     }
 
     let vendedoraEncontrada = null;
+    let codigoExiste = false;
+
     snapshot.forEach(doc => {
       const v = doc.data();
-      if (v.senha === senha) {
-        vendedoraEncontrada = v;
-        vendedoraEncontrada.id = doc.id;
+      if (v.codigo && v.codigo.trim().toLowerCase() === codigoInput.toLowerCase()) {
+        codigoExiste = true;
+        if (String(v.senha).trim() === senha) {
+          vendedoraEncontrada = v;
+          vendedoraEncontrada.id = doc.id;
+        }
       }
     });
 
-    if (vendedoraEncontrada) {
+    if (!codigoExiste) {
+      alert("Código de Vendedora não encontrado!");
+    } else if (vendedoraEncontrada) {
       venDados = vendedoraEncontrada;
       localStorage.setItem('ven_dados', JSON.stringify(venDados));
       mostrarPainelPrincipal();
