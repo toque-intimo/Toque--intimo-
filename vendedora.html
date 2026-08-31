@@ -763,33 +763,33 @@ function enviarPedidoParaLojaPrincipal() {
 }
 
  function carregarMetricasVendedora() {
-   if (!venDados) return;
-   const telBusca = String(venDados.telefone || venDados.tel || '').trim();
-   if (!telBusca) return;
+  if (!venDados) return;
+  const codBusca = String(venDados ? (venDados.codigo || '') : '').trim();
+  if (!codBusca) return;
 
-   db.collection("pedidos").where("telefone", "==", telBusca).get().then(snapshot => {
-     let qtdVendas = 0;
-     let valVendas = 0;
-     let valComissao = 0;
+  db.collection("pedidos").where("codigoVendedora", "==", codBusca).get().then(snapshot => {
+    let qtdVendas = 0;
+    let valVendas = 0;
+    let valComissao = 0;
 
-     snapshot.forEach(doc => {
-       const d = doc.data();
-       valVendas += Number(d.total) || 0;
-       valComissao += Number(d.comissao) || 0;
-       if (d.itens && Array.isArray(d.itens)) {
-         d.itens.forEach(i => {
-           qtdVendas += (Number(i.qtd) || 1);
-         });
-       }
-     });
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      valVendas += Number(d.total) || 0;
+      valComissao += Number(d.comissao) || 0;
+      if (d.itens && Array.isArray(d.itens)) {
+        d.itens.forEach(i => {
+          qtdVendas += (Number(i.qtd) || 1);
+        });
+      }
+    });
 
-     document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
-     document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
-     document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
-   }).catch(err => {
-     console.error("Erro ao carregar métricas:", err);
-   });
- }
+    document.getElementById('ven-qtd-vendas').innerText = qtdVendas;
+    document.getElementById('ven-val-vendas').innerText = `R$ ${valVendas.toFixed(2)}`;
+    document.getElementById('ven-val-comissao').innerText = `R$ ${valComissao.toFixed(2)}`;
+  }).catch(err => {
+    console.error("Erro ao carregar métricas:", err);
+  });
+}
 
 function carregarHistoricoVendedora() {
   const container = document.getElementById('ven-historico-vendas');
@@ -797,14 +797,14 @@ function carregarHistoricoVendedora() {
   
   container.innerHTML = '<p style="text-align: center; padding: 20px;">Carregando vendas...</p>';
   
-  const telBusca = String(venDados ? (venDados.telefone || venDados.tel || '') : '').trim();
+  const codBusca = String(venDados ? (venDados.codigo || '') : '').trim();
   if (!telBusca) {
-    container.innerHTML = '<p style="text-align: center; color: #777;">Sessão inválida ou telefone não cadastrado.</p>';
+    container.innerHTML = '<p style="text-align: center; color: #777;">Sessão inválida ou código não encontrado.</p>';
     return;
   }
 
   db.collection("pedidos")
-    .where("telefone", "==", telBusca)
+    .where("codigoVendedora", "==", codBusca)
     .get()
     .then(snapshot => {
       container.innerHTML = '';
