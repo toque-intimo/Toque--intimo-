@@ -1562,84 +1562,106 @@ function excluirVendaFirebase(idVenda) {
  }
 
  function renderizarGradeProdutos() {
-   const grade = document.getElementById('gradeProdutos');
-   const busca = document.getElementById('buscaProduto').value.toLowerCase();
-   grade.innerHTML = '';
+  const container = document.getElementById('gradeProdutos');
+  const busca = (document.getElementById('buscaProduto')?.value || '').toLowerCase();
+  
+  if (!container) return;
+  container.innerHTML = '';
 
-   const produtosFiltrados = produtos.filter(p => {
-     const matchesCategoria = (categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada);
-     const matchesBusca = p.nome.toLowerCase().includes(busca) || p.variacoes.some(v => v.codigo.toLowerCase().includes(busca));
-     const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
+  // Filtra apenas produtos que possuem pelo menos UMA variação com estoque > 0
+  const produtosComEstoque = produtos.map(p => {
+    return {
+      ...p,
+      variacoesDisponiveis: (p.variacoes || []).filter(v => Number(v.quantidade || 0) > 0)
+    };
+  }).filter(p => p.variacoesDisponiveis.length > 0);
 
-     return matchesCategoria && matchesBusca && totalEstoque > 0;
-   });
+  // Aplica a busca por nome, código ou categoria nos produtos que têm estoque
+  const produtosFiltrados = produtosComEstoque.filter(p => {
+    const combinaNome = p.nome.toLowerCase().includes(busca);
+    const combinaCategoria = (p.categoria || '').toLowerCase().includes(busca);
+    const combinaCodigo = p.variacoesDisponiveis.some(v => (v.codigo || '').toLowerCase().includes(busca));
+    
+    // Se houver filtro de categoria ativo
+    const atendeCategoria = !categoriaAtiva || p.categoria === categoriaAtiva;
 
-   if (!produtosFiltrados.length) {
-     grade.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:20px; color:#999;">Nenhum produto disponível em estoque.</p>';
-     return;
-   }
+    return (combinaNome || combinaCategoria || combinaCodigo) && atendeCategoria;
+  });
 
-   produtosFiltrados.forEach(p => {
-     const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
-     const variacoesDisponiveis = p.variacoes.filter(v => v.quantidade > 0);
-     const menorPreco = Math.min(...variacoesDisponiveis.map(v => v.preco));
-     const varComFoto = p.variacoes.find(v => v.foto) || {};
-     
-     let itemFoto = `<div style="width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image fa-2x"></i></div>`;
-     if (varComFoto.foto) {
-       itemFoto = `<img src="${varComFoto.foto}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="verFotoTelaCheia('${varComFoto.foto}', '${p.id}')">`;
-     }
+  if (!produtosFiltrados.length) {
+    container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">Nenhum produto disponível no estoque.</p>';
+    return;
+  }
 
-     grade.innerHTML += `
-     <div style="background: white; border-radius:16px; border:1px solid #f0f0f0; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
-     <div>
-     ${itemFoto}
-     <b style="font-size:14px; display:block; margin-top:6px;">${p.nome}</b>
-     <small style="color:#aaa; font-size:11px;">${p.categoria}</small>
-     <div style="font-size:11px; color:#777; margin: 2px 0;">Estoque: ${totalEstoque} un.</div>
-     <div style="font-size:13px; font-weight:bold; color:#6b1d2f;">R$ ${menorPreco.toFixed(2)}</div>
-     </div>
-     <div class="actions-row">
-     <button class="btn-action btn-sell-direct" style="width:100%; justify-content:center;" onclick="abrirVendaDireta('${p.id}')"><i class="fa-solid fa-cart-plus"></i> Vender</button>
-     <button class="btn-action btn-edit" onclick="editarProduto('${p.id}')"><i class="fa-solid fa-pen"></i></button>
-     <button class="btn-action btn-delete" onclick="excluirProduto('${p.id}')"><i class="fa-solid fa-trash"></i></button>
-     </div>
-     </div>`;
-   });
- }
+  produtosFiltrados.forEach(p => {
+    // Pega a foto da primeira variação disponível com estoque
+    const foto = p.variacoesDisponiveis[0]?.foto || '';
+    const precoExibicao = p.variacoesDisponiveis[0]?.preco || 0;
 
- function abrirVendaDireta(id) {
-   const prod = produtos.find(p => p.id === id);
-   if(!prod) return;
-   
-   document.getElementById('venda-direta-nome-prod').innerText = prod.nome;
-   const opcoesContainer = document.getElementById('venda-direta-opcoes');
-   opcoesContainer.innerHTML = '';
+    let imgTag = `<div style="width:100%; height:120px; background:#f0f0f0; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image fa-2x"></i></div>`;
+    if (foto) {
+      imgTag = `<img src="${foto}" style="width:100%; height:120px; object-fit:cover; border-radius:10px;">`;
+    }
 
-   prod.variacoes.forEach(v => {
-     let fotoEstoque = `<div style="width:40px; height:40px; background:#f5f5f5; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image"></i></div>`;
-     if (v.foto) {
-       fotoEstoque = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${prod.id}')">`;
-     }
+    container.innerHTML += `
+    <div class="prod-list-card" style="padding:10px; text-align:center;">
+      ${imgTag}
+      <b style="font-size:13px; margin-top:8px; display:block;">${p.nome}</b>
+      <small style="color:#777; font-size:11px;">${p.categoria || ''}</small>
+      <div style="font-weight:bold; color:var(--primary); margin: 5px 0;">R$ ${Number(precoExibicao).toFixed(2)}</div>
+      <button class="btn-sm" style="background:var(--primary); color:white; width:100%; margin-top:5px;" onclick="iniciarVendaDireta('${p.id}')">
+        <i class="fa-solid fa-cart-plus"></i> Vender
+      </button>
+    </div>`;
+  });
+}
 
-     opcoesContainer.innerHTML += `
-     <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; background:#fdfdfd;">
-     <div style="display:flex; gap:10px; align-items:center;">
-     ${fotoEstoque}
-     <div>
-     <b>${v.cor} / Tam: ${v.tamanho}</b><br>
-     <small style="color:#888;">Cód: ${v.codigo || 'Sem Código'}</small><br>
-     <span style="font-size:13px; font-weight:bold; color:var(--primary);">R$ ${v.preco.toFixed(2)}</span> 
-     <span style="font-size:11px; color:${v.quantidade > 0 ? 'green' : 'red'}; font-weight:bold;">(Qtd: ${v.quantidade})</span>
-     </div>
-     </div>
-     <button class="btn-sm" style="background:#1e7e48; color:white;" ${v.quantidade <= 0 ? 'disabled style="background:#ccc;"' : ''} onclick="venderImediato('${prod.id}', '${v.cor}', '${v.tamanho}', false)">+ Separar</button>
-     </div>
-     `;
-   });
+ function iniciarVendaDireta(produtoId) {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) return;
 
-   mudarTela('venda-direta');
- }
+  const containerOpcoes = document.getElementById('venda-direta-opcoes');
+  const tituloNome = document.getElementById('venda-direta-nome-prod');
+  
+  if (tituloNome) tituloNome.innerText = produto.nome;
+  if (!containerOpcoes) return;
+
+  containerOpcoes.innerHTML = '';
+
+  // Filtra apenas variações que possuem estoque > 0
+  const variacoesEmEstoque = (produto.variacoes || []).filter(v => Number(v.quantidade || 0) > 0);
+
+  if (!variacoesEmEstoque.length) {
+    containerOpcoes.innerHTML = '<p style="text-align:center; color:#999;">Todas as variações deste produto estão esgotadas.</p>';
+    mudarTela('venda-direta');
+    return;
+  }
+
+  variacoesEmEstoque.forEach(v => {
+    let imgThumb = `<div style="width:40px; height:40px; background:#eee; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#aaa;"><i class="fa-solid fa-image"></i></div>`;
+    if (v.foto) {
+      imgThumb = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px;">`;
+    }
+
+    containerOpcoes.innerHTML += `
+    <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        ${imgThumb}
+        <div>
+          <b>${v.cor} / ${v.tamanho}</b><br>
+          <small style="color:#777;">Cód: ${v.codigo || '-'}</small><br>
+          <span style="font-weight:bold; color:var(--primary);">R$ ${Number(v.preco || 0).toFixed(2)}</span>
+          <small style="color:green; font-weight:bold; margin-left:8px;">(${v.quantidade} em estoque)</small>
+        </div>
+      </div>
+      <button class="btn-sm" style="background:#1e7e48; color:white;" onclick="venderImediato('${produto.id}', '${v.cor}', '${v.tamanho}', true)">
+        + Adicionar
+      </button>
+    </div>`;
+  });
+
+  mudarTela('venda-direta');
+}
 
  function venderImediato(id, cor, tamanho, redirecionarParaCarrinho = false) {
    const prod = produtos.find(p => p.id === id);
