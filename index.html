@@ -1525,7 +1525,8 @@ function excluirVendaFirebase(idVenda) {
 
    const prod = produtos.find(p => p.id === idProd);
    if (prod) {
-     const variacoesComFoto = prod.variacoes.filter(v => v.foto);
+     // ALTERADO AQUI: ignora fotos de variações que estão zeradas no estoque
+     const variacoesComFoto = prod.variacoes.filter(v => v.foto && v.quantidade > 0);
 
      if (variacoesComFoto.length > 1) {
        thumbsContainer.style.display = 'flex';
@@ -1583,7 +1584,9 @@ function excluirVendaFirebase(idVenda) {
      const totalEstoque = p.variacoes.reduce((acc, v) => acc + v.quantidade, 0);
      const variacoesDisponiveis = p.variacoes.filter(v => v.quantidade > 0);
      const menorPreco = Math.min(...variacoesDisponiveis.map(v => v.preco));
-     const varComFoto = p.variacoes.find(v => v.foto) || {};
+     
+     // ALTERADO AQUI: busca apenas variações com foto E com estoque (> 0)
+     const varComFoto = p.variacoes.find(v => v.foto && v.quantidade > 0) || {};
      
      let itemFoto = `<div style="width:100%; height:120px; background:#f5f5f5; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image fa-2x"></i></div>`;
      if (varComFoto.foto) {
