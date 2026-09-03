@@ -1376,39 +1376,43 @@ function excluirVendaFirebase(idVenda) {
  }
 
  function adicionarVariacaoForm(data = {}) {
-   const container = document.getElementById('container-variacoes');
-   const index = container.children.length;
-   const div = document.createElement('div');
-   div.className = 'variant-card';
-   const temFoto = data.foto ? true : false;
+  const container = document.getElementById('container-variacoes');
+  const index = container.children.length;
+  const div = document.createElement('div');
+  div.className = 'variant-card';
+  const temFoto = data.foto ? true : false;
 
-   div.innerHTML = `
-   <div class="variant-header">
-   <span>Variação</span>
-   ${index > 0 ? `<button type="button" onclick="this.closest('.variant-card').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
-   </div>
-   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-   <div class="form-group"><label>Cor</label><input type="text" class="v-cor" value="${data.cor || ''}" required></div>
-   <div class="form-group"><label>Tamanho</label><input type="text" class="v-tamanho" value="${data.tamanho || ''}" required></div>
-   </div>
-   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-   <div class="form-group"><label>Qtd em Estoque</label><input type="number" class="v-qtd" value="${data.quantidade || '1'}" required></div>
-   <div class="form-group"><label>Código de Barras</label><input type="text" class="v-codigo" value="${data.codigo || ''}"></div>
-   </div>
-   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-   <div class="form-group"><label>Custo (R$)</label><input type="number" step="0.01" class="v-custo" value="${data.custo || ''}" required></div>
-   <div class="form-group"><label>Preço Venda (R$)</label><input type="number" step="0.01" class="v-preco" value="${data.preco || ''}" required></div>
-   </div>
-   <div class="form-group">
-   <label>Foto da Variação</label>
-   <input type="file" accept="image/*" class="v-foto" onchange="previewImage(this)">
-   <div class="preview-img-container" style="display: ${temFoto ? 'block' : 'none'};">
-   <img src="${data.foto || ''}" alt="Preview">
-   </div>
-   </div>
-   `;
-   container.appendChild(div);
- }
+  div.innerHTML = `
+  <div class="variant-header">
+    <span>Variação</span>
+    ${index > 0 ? `<button type="button" onclick="this.closest('.variant-card').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+    <div class="form-group"><label>Cor</label><input type="text" class="v-cor" value="${data.cor || ''}" required></div>
+    <div class="form-group"><label>Tamanho</label><input type="text" class="v-tamanho" value="${data.tamanho || ''}" required></div>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+    <div class="form-group"><label>Qtd em Estoque</label><input type="number" class="v-qtd" value="${data.quantidade || '1'}" required></div>
+    <div class="form-group"><label>Código de Barras</label><input type="text" class="v-codigo" value="${data.codigo || ''}"></div>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+    <div class="form-group"><label>Custo (R$)</label><input type="number" step="0.01" class="v-custo" value="${data.custo || ''}" required></div>
+    <div class="form-group"><label>Preço Venda (R$)</label><input type="number" step="0.01" class="v-preco" value="${data.preco || ''}" required></div>
+  </div>
+  <div class="form-group" style="margin-bottom: 8px;">
+    <label>Descrição da Variação</label>
+    <textarea class="v-descricao" rows="2" placeholder="Ex: Tecido com renda especial...">${data.descricao || ''}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Foto da Variação</label>
+    <input type="file" accept="image/*" class="v-foto" onchange="previewImage(this)">
+    <div class="preview-img-container" style="display: ${temFoto ? 'block' : 'none'};">
+      <img src="${data.foto || ''}" alt="Preview">
+    </div>
+  </div>
+  `;
+  container.appendChild(div);
+}
 
  async function previewImage(input) {
    const file = input.files[0];
@@ -1449,43 +1453,43 @@ function excluirVendaFirebase(idVenda) {
  }
 
  document.getElementById('formNovoProduto').addEventListener('submit', function(e) {
-   e.preventDefault();
-   const id = document.getElementById('cad-prod-id').value;
-   const nome = document.getElementById('cad-nome').value;
-   const categoria = document.getElementById('cad-categoria').value;
-   const descricao = document.getElementById('cad-descricao').value;
+  e.preventDefault();
+  const id = document.getElementById('cad-prod-id').value;
+  const nome = document.getElementById('cad-nome').value;
+  const categoria = document.getElementById('cad-categoria').value;
 
-   const variacoes = [];
-   document.querySelectorAll('.variant-card').forEach(card => {
-     const imgEl = card.querySelector('.preview-img-container img');
-     variacoes.push({
-       cor: card.querySelector('.v-cor').value,
-       tamanho: card.querySelector('.v-tamanho').value,
-       quantidade: parseInt(card.querySelector('.v-qtd').value),
-       codigo: card.querySelector('.v-codigo').value,
-       custo: parseFloat(card.querySelector('.v-custo').value),
-       preco: parseFloat(card.querySelector('.v-preco').value),
-       foto: imgEl && imgEl.src ? imgEl.src : ''
-     });
-   });
+  const variacoes = [];
+  document.querySelectorAll('.variant-card').forEach(card => {
+    const imgEl = card.querySelector('.preview-img-container img');
+    variacoes.push({
+      cor: card.querySelector('.v-cor').value,
+      tamanho: card.querySelector('.v-tamanho').value,
+      quantidade: parseInt(card.querySelector('.v-qtd').value),
+      codigo: card.querySelector('.v-codigo').value,
+      custo: parseFloat(card.querySelector('.v-custo').value),
+      preco: parseFloat(card.querySelector('.v-preco').value),
+      descricao: card.querySelector('.v-descricao').value, // <--- Coleta a descrição individual
+      foto: imgEl && imgEl.src ? imgEl.src : ''
+    });
+  });
 
-   const produtoData = { id: id || Date.now().toString(), nome, categoria, descricao, variacoes };
+  const produtoData = { id: id || Date.now().toString(), nome, categoria, variacoes };
 
-   if(id) {
-     const idx = produtos.findIndex(p => p.id === id);
-     produtos[idx] = produtoData;
-     alert("Alterações salvas com sucesso!");
-   } else {
-     produtos.push(produtoData);
-     alert("Cadastrado com sucesso");
-   }
+  if(id) {
+    const idx = produtos.findIndex(p => p.id === id);
+    produtos[idx] = produtoData;
+    alert("Alterações salvas com sucesso!");
+  } else {
+    produtos.push(produtoData);
+    alert("Cadastrado com sucesso");
+  }
 
-   localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-   sincronizarFirebase(produtoData);
-   
-   document.getElementById('formNovoProduto').reset();
-   mudarTela('produtos');
- });
+  localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+  sincronizarFirebase(produtoData);
+  
+  document.getElementById('formNovoProduto').reset();
+  mudarTela('produtos');
+});
 
  function editarProduto(id) {
    const prod = produtos.find(p => p.id === id);
@@ -1612,37 +1616,38 @@ function excluirVendaFirebase(idVenda) {
  }
 
  function abrirVendaDireta(id) {
-   const prod = produtos.find(p => p.id === id);
-   if(!prod) return;
-   
-   document.getElementById('venda-direta-nome-prod').innerText = prod.nome;
-   const opcoesContainer = document.getElementById('venda-direta-opcoes');
-   opcoesContainer.innerHTML = '';
+  const prod = produtos.find(p => p.id === id);
+  if(!prod) return;
+  
+  document.getElementById('venda-direta-nome-prod').innerText = prod.nome;
+  const opcoesContainer = document.getElementById('venda-direta-opcoes');
+  opcoesContainer.innerHTML = '';
 
-   prod.variacoes.forEach(v => {
-     let fotoEstoque = `<div style="width:40px; height:40px; background:#f5f5f5; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image"></i></div>`;
-     if (v.foto) {
-       fotoEstoque = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${prod.id}')">`;
-     }
+  prod.variacoes.forEach(v => {
+    let fotoEstoque = `<div style="width:40px; height:40px; background:#f5f5f5; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image"></i></div>`;
+    if (v.foto) {
+      fotoEstoque = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${prod.id}')">`;
+    }
 
-     opcoesContainer.innerHTML += `
-     <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; background:#fdfdfd;">
-     <div style="display:flex; gap:10px; align-items:center;">
-     ${fotoEstoque}
-     <div>
-     <b>${v.cor} / Tam: ${v.tamanho}</b><br>
-     <small style="color:#888;">Cód: ${v.codigo || 'Sem Código'}</small><br>
-     <span style="font-size:13px; font-weight:bold; color:var(--primary);">R$ ${v.preco.toFixed(2)}</span> 
-     <span style="font-size:11px; color:${v.quantidade > 0 ? 'green' : 'red'}; font-weight:bold;">(Qtd: ${v.quantidade})</span>
-     </div>
-     </div>
-     <button class="btn-sm" style="background:#1e7e48; color:white;" ${v.quantidade <= 0 ? 'disabled style="background:#ccc;"' : ''} onclick="venderImediato('${prod.id}', '${v.cor}', '${v.tamanho}', false)">+ Separar</button>
-     </div>
-     `;
-   });
+    opcoesContainer.innerHTML += `
+    <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; background:#fdfdfd;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        ${fotoEstoque}
+        <div>
+          <b>${v.cor} / Tam: ${v.tamanho}</b><br>
+          ${v.descricao ? `<p style="font-size:11px; color:#666; margin: 2px 0;">${v.descricao}</p>` : ''} <!-- <--- Exibe a descrição aqui -->
+          <small style="color:#888;">Cód: ${v.codigo || 'Sem Código'}</small><br>
+          <span style="font-size:13px; font-weight:bold; color:var(--primary);">R$ ${v.preco.toFixed(2)}</span> 
+          <span style="font-size:11px; color:${v.quantidade > 0 ? 'green' : 'red'}; font-weight:bold;">(Qtd: ${v.quantidade})</span>
+        </div>
+      </div>
+      <button class="btn-sm" style="background:#1e7e48; color:white;" ${v.quantidade <= 0 ? 'disabled style="background:#ccc;"' : ''} onclick="venderImediato('${prod.id}', '${v.cor}', '${v.tamanho}', false)">+ Separar</button>
+    </div>
+    `;
+  });
 
-   mudarTela('venda-direta');
- }
+  mudarTela('venda-direta');
+}
 
  function venderImediato(id, cor, tamanho, redirecionarParaCarrinho = false) {
    const prod = produtos.find(p => p.id === id);
