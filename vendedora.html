@@ -266,23 +266,17 @@
 </div>
 
 <div id="modal-selecao-modelo" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center; padding: 15px;">
-  <div style="background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-    <h3 id="modal-prod-titulo" style="font-size: 16px; color: var(--primary-dark); border-bottom: 1px solid #eee; padding-bottom: 8px;">Escolher Modelo</h3>
-    
-    <div class="form-group">
-      <label style="font-size: 12px; font-weight: bold;">Selecione a Variação / Tamanho:</label>
-      <select id="modal-select-variacao" style="padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 13px; width: 100%; margin-top: 5px;"></select>
+  <div style="background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+      <div>
+        <small style="color: #777; font-size: 12px;">Escolha a variação para venda</small>
+        <h3 id="modal-prod-titulo" style="font-size: 18px; color: var(--primary-dark); margin-top: 2px;">Nome do Produto</h3>
+      </div>
+      <button onclick="fecharModalModelo()" style="background: none; border: none; font-size: 22px; font-weight: bold; cursor: pointer; color: #555;">&times;</button>
     </div>
 
-    <div class="form-group">
-      <label style="font-size: 12px; font-weight: bold;">Quantidade:</label>
-      <input type="number" id="modal-qtd-item" min="1" value="1" style="padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 13px; width: 100%; margin-top: 5px;">
-    </div>
-
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
-      <button onclick="fecharModalModelo()" style="flex: 1; padding: 10px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancelar</button>
-      <button onclick="confirmarAdicaoCarrinho()" style="flex: 1; padding: 10px; border: none; background: var(--primary); color: white; border-radius: 8px; font-weight: bold; cursor: pointer;">Adicionar</button>
-    </div>
+    <!-- Lista com rolagem de variações estilo cards da imagem -->
+    <div id="modal-lista-variacoes" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 60vh; padding-right: 4px;"></div>
   </div>
 </div>
  
@@ -564,7 +558,7 @@ function renderizarCardsVendedora(lista) {
           <img src="${fotoCapa}" width="200" height="120" style="width: 100%; height: 100%; object-fit: cover; background-color: #f0f0f0;" loading="lazy" decoding="async">
         </div>
         <b style="font-size: 13px; color: #333; margin-bottom: 6px;">${p.nome}</b>
-        <button class="btn-action" onclick="abrirModalModelo('${p.id}')">Selecionar Modelo</button>
+        <button class="btn-action" onclick="abrirModalModelo('${p.id}')">Vender</button>
       </div>
     `;
   });
@@ -608,16 +602,38 @@ function abrirModalModelo(pId) {
   prodSelecionadoModal = pId;
   document.getElementById('modal-prod-titulo').innerText = prod.nome;
   
-  const select = document.getElementById('modal-select-variacao');
-  select.innerHTML = '';
+  const containerLista = document.getElementById('modal-lista-variacoes');
+  containerLista.innerHTML = '';
 
   prod.variacoes.forEach((v, idx) => {
     const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : Infinity;
-    const textoEstoque = isFinite(qtdEstoque) ? ` (Estoque: ${qtdEstoque})` : '';
-    select.innerHTML += `<option value="${idx}">${v.cor || '-'} / ${v.tamanho || '-'} - R$ ${Number(v.preco || 0).toFixed(2)}${textoEstoque}</option>`;
+    const fotoVar = v.foto || v.imagem || v.fotoUrl || (prod.fotos && prod.fotos[0]) || 'https://via.placeholder.com/80?text=Sem+Foto';
+    const codigoVar = v.codigo || pId.substring(0, 8) || 'Sem Código';
+    const corTam = `${v.cor || ''} ${v.tamanho ? '/ Tam: ' + v.tamanho : ''}`.trim() || 'Modelo Único';
+    const precoFormatado = Number(v.preco || 0).toFixed(2);
+    const textoQtd = isFinite(qtdEstoque) ? `(Qtd: ${qtdEstoque})` : '';
+
+    containerLista.innerHTML += `
+      <div style="display: flex; align-items: center; justify-content: space-between; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; gap: 10px;">
+        <img src="${fotoVar}" style="width: 55px; height: 55px; border-radius: 8px; object-fit: cover; background: #eee;">
+        
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 13px; font-weight: bold; color: #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${corTam}
+          </div>
+          <div style="font-size: 11px; color: #888; margin-top: 2px;">Cód: ${codigoVar}</div>
+          <div style="font-size: 13px; font-weight: bold; color: var(--primary-dark); margin-top: 2px;">
+            R$ ${precoFormatado} <span style="font-size: 11px; color: #2e7d32; font-weight: normal;">${textoQtd}</span>
+          </div>
+        </div>
+
+        <button onclick="adicionarVariacaoDireta('${pId}', ${idx})" style="background: #1e7e48; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+          + Separar
+        </button>
+      </div>
+    `;
   });
 
-  document.getElementById('modal-qtd-item').value = 1;
   document.getElementById('modal-selecao-modelo').style.display = 'flex';
 }
 
@@ -626,44 +642,40 @@ function fecharModalModelo() {
   prodSelecionadoModal = null;
 }
 
-function confirmarAdicaoCarrinho() {
-  if (!prodSelecionadoModal) return;
+function adicionarVariacaoDireta(pId, idx) {
+  const prod = mapaProdutosVen[pId];
+  if (!prod) return;
 
-  const prod = mapaProdutosVen[prodSelecionadoModal];
-  const selectIdx = document.getElementById('modal-select-variacao').value;
-  const qtdDesejada = parseInt(document.getElementById('modal-qtd-item').value) || 1;
-
-  const vEscolhida = prod.variacoes[selectIdx];
+  const vEscolhida = prod.variacoes[idx];
   if (!vEscolhida) return;
 
   const estoqueDisponivel = (vEscolhida.quantidade !== undefined && vEscolhida.quantidade !== "") ? Number(vEscolhida.quantidade) : 9999;
   
-  const itemNoCarrinho = venCarrinho.find(i => i.idProd === prodSelecionadoModal && i.cor === vEscolhida.cor && i.tamanho === vEscolhida.tamanho);
+  const itemNoCarrinho = venCarrinho.find(i => i.idProd === pId && i.cor === vEscolhida.cor && i.tamanho === vEscolhida.tamanho);
   const qtdAtualNoCarrinho = itemNoCarrinho ? itemNoCarrinho.qtd : 0;
 
-  if (qtdAtualNoCarrinho + qtdDesejada > estoqueDisponivel) {
+  if (qtdAtualNoCarrinho + 1 > estoqueDisponivel) {
     alert(`Estoque insuficiente! Você já possui ${qtdAtualNoCarrinho} no carrinho. Estoque máximo disponível: ${estoqueDisponivel}`);
     return;
   }
 
   if (itemNoCarrinho) {
-    itemNoCarrinho.qtd += qtdDesejada;
+    itemNoCarrinho.qtd += 1;
   } else {
     venCarrinho.push({ 
-      idProd: prodSelecionadoModal, 
+      idProd: pId, 
       nome: prod.nome, 
       cor: vEscolhida.cor, 
       tamanho: vEscolhida.tamanho, 
       preco: Number(vEscolhida.preco) || 0,
-      qtd: qtdDesejada,
+      qtd: 1,
       estoqueMax: estoqueDisponivel
     });
   }
 
   localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
   atualizarBadgeCarrinho();
-  fecharModalModelo();
-  alert("Produto adicionado ao carrinho!");
+  alert("Item adicionado ao carrinho!");
 }
 
 function carregarCarrinhoVendedora() {
