@@ -147,7 +147,21 @@
  <div class="modal-image-caption" id="expanded-caption" onclick="event.stopPropagation()"></div>
  <div class="modal-thumbnails-container" id="modal-thumbs" onclick="event.stopPropagation()"></div>
 </div>
+ <!-- Modal Seleção de Variações com Miniaturas -->
+<div id="modal-selecao-modelo-cat" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center; padding: 15px;">
+  <div style="background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+      <div>
+        <small style="color: #777; font-size: 12px;">Escolha a opção desejada</small>
+        <h3 id="modal-cat-prod-titulo" style="font-size: 18px; color: var(--primary); margin-top: 2px;">Nome do Produto</h3>
+      </div>
+      <button onclick="fecharModalModeloCat()" style="background: none; border: none; font-size: 22px; font-weight: bold; cursor: pointer; color: #555;">&times;</button>
+    </div>
 
+    <!-- Lista com rolagem e miniaturas das variações -->
+    <div id="modal-cat-lista-variacoes" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 60vh; padding-right: 4px;"></div>
+  </div>
+</div>
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -169,7 +183,92 @@
  let produtos = JSON.parse(localStorage.getItem('ti_v4_prod')) || [];
  let carrinhoCliente = [];
  let categoriaAtiva = 'Todas';
+let prodSelecionadoCat = null;
 
+function abrirModalModeloCat(pId) {
+  const prod = produtos.find(p => p.id === pId);
+  if (!prod) return;
+
+  prodSelecionadoCat = pId;
+  document.getElementById('modal-cat-prod-titulo').innerText = prod.nome;
+
+  const containerLista = document.getElementById('modal-cat-lista-variacoes');
+  containerLista.innerHTML = '';
+
+  const variacoesDisponiveis = prod.variacoes.filter(v => Number(v.quantidade) > 0);
+
+  variacoesDisponiveis.forEach((v, idx) => {
+    const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : Infinity;
+    const fotoVar = v.foto || v.imagem || v.fotoUrl || 'https://via.placeholder.com/80?text=Sem+Foto';
+    const codigoVar = v.codigo || pId.substring(0, 8) || 'Sem Código';
+    const corTam = `${v.cor || ''} ${v.tamanho ? '/ Tam: ' + v.tamanho : ''}`.trim() || 'Modelo Único';
+    const precoFormatado = Number(v.preco || 0).toFixed(2);
+    const textoQtd = isFinite(qtdEstoque) ? `(Qtd: ${qtdEstoque})` : '';
+
+    containerLista.innerHTML += `
+      <div style="display: flex; align-items: center; justify-content: space-between; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; gap: 10px;">
+        <img src="${fotoVar}" style="width: 55px; height: 55px; border-radius: 8px; object-fit: cover; background: #eee;">
+        
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 13px; font-weight: bold; color: #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${corTam}
+          </div>
+          <div style="font-size: 11px; color: #888; margin-top: 2px;">Cód: ${codigoVar}</div>
+          <div style="font-size: 13px; font-weight: bold; color: var(--primary); margin-top: 2px;">
+            R$ ${precoFormatado} <span style="font-size: 11px; color: #2e7d32; font-weight: normal;">${textoQtd}</span>
+          </div>
+        </div>
+
+        <button onclick="adicionarVariacaoDiretaCat('${pId}', ${idx})" style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+          <i class="fa-solid fa-cart-plus"></i> Adicionar
+        </button>
+      </div>
+    `;
+  });
+
+  document.getElementById('modal-selecao-modelo-cat').style.display = 'flex';
+}
+
+function fecharModalModeloCat() {
+  document.getElementById('modal-selecao-modelo-cat').style.display = 'none';
+  prodSelecionadoCat = null;
+}
+
+function adicionarVariacaoDiretaCat(pId, idx) {
+  const prod = produtos.find(p => p.id === pId);
+  if (!prod) return;
+
+  const variacoesDisponiveis = prod.variacoes.filter(v => Number(v.quantidade) > 0);
+  const variacao = variacoesDisponiveis[idx];
+
+  if (!variacao) return;
+
+  const estoqueDisponivel = Number(variacao.quantidade) || 9999;
+  const itemExistente = carrinhoCliente.find(i => i.idProd === pId && i.cor === variacao.cor && i.tamanho === variacao.tamanho);
+  const qtdAtual = itemExistente ? itemExistente.quantidade : 0;
+
+  if (qtdAtual + 1 > estoqueDisponivel) {
+    alert(`Quantidade máxima disponível em estoque atingida para esta variação (${estoqueDisponivel} un)!`);
+    return;
+  }
+
+  if (itemExistente) {
+    itemExistente.quantidade++;
+  } else {
+    carrinhoCliente.push({
+      idProd: prod.id,
+      nome: prod.nome,
+      cor: variacao.cor,
+      tamanho: variacao.tamanho,
+      preco: Number(variacao.preco) || 0,
+      quantidade: 1,
+      maxEstoque: estoqueDisponivel
+    });
+  }
+
+  atualizarResumoCarrinho();
+  alert("Item adicionado ao carrinho!");
+}
  const categoriasLista = ["Todas", "Lingerie", "Sutiã", "Body", "Calcinha", "Cueca", "Meia Feminino", "Meia Masculino", "Pijama", "Sexshop", "Perfume"];
 
  function carregarProdutosNuvem() {
@@ -208,54 +307,43 @@
  }
 
  function renderizarGrade() {
-   const grade = document.getElementById('catalogo-grade');
-   grade.innerHTML = '';
+  const grade = document.getElementById('catalogo-grade');
+  grade.innerHTML = '';
 
-   const produtosFiltrados = produtos.filter(p => {
-     const matchCat = (categoriaAtiva === 'Todas' || p.categoria === categoriaAtiva);
-     const temEstoque = p.variacoes && p.variacoes.some(v => v.quantidade > 0);
-     return matchCat && temEstoque;
-   });
+  const produtosFiltrados = produtos.filter(p => {
+    const matchCat = (categoriaAtiva === 'Todas' || p.categoria === categoriaAtiva);
+    const temEstoque = p.variacoes && p.variacoes.some(v => Number(v.quantidade) > 0);
+    return matchCat && temEstoque;
+  });
 
-   if (!produtosFiltrados.length) {
-     grade.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:30px; color:#888;">Nenhum produto disponível nesta categoria no momento.</p>`;
-     return;
-   }
+  if (!produtosFiltrados.length) {
+    grade.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:30px; color:#888;">Nenhum produto disponível nesta categoria no momento.</p>`;
+    return;
+  }
 
-   produtosFiltrados.forEach(p => {
-     const variacoesDisponiveis = p.variacoes.filter(v => v.quantidade > 0);
-     const menorPreco = Math.min(...variacoesDisponiveis.map(v => v.preco));
-     const varComFoto = variacoesDisponiveis.find(v => v.foto) || {};
+  produtosFiltrados.forEach(p => {
+    const variacoesDisponiveis = p.variacoes.filter(v => Number(v.quantidade) > 0);
+    const menorPreco = Math.min(...variacoesDisponiveis.map(v => Number(v.preco) || 0));
+    const varComFoto = variacoesDisponiveis.find(v => v.foto || v.imagem || v.fotoUrl) || {};
 
-     let htmlFoto = `<div class="img-container"><i class="fa-solid fa-image fa-2x"></i></div>`;
-     if (varComFoto.foto) {
-       htmlFoto = `<div class="img-container" onclick="abrirFotoExpandida('${p.id}', '${varComFoto.foto}')">
-                     <img src="${varComFoto.foto}" alt="${p.nome}">
-                   </div>`;
-     }
+    const fotoCapa = varComFoto.foto || varComFoto.imagem || varComFoto.fotoUrl || 'https://via.placeholder.com/150?text=Sem+Foto';
 
-     let opcoesSelect = '';
-     variacoesDisponiveis.forEach((v, index) => {
-       opcoesSelect += `<option value="${index}">${v.cor} (${v.tamanho}) - R$ ${v.preco.toFixed(2)}</option>`;
-     });
-
-     grade.innerHTML += `
-     <div class="card">
-       <div>
-         ${htmlFoto}
-         <span class="prod-title">${p.nome}</span>
-         <div class="prod-price">A partir de R$ ${menorPreco.toFixed(2)}</div>
-         ${p.descricao ? `<button class="btn-ver-descricao" onclick="abrirDescricao('${p.nome}', \`${p.descricao.replace(/`/g, "'")}\`)"><i class="fa-solid fa-circle-info"></i> Ver Detalhes</button>` : ''}
-         <select class="variation-select" id="select-var-${p.id}">
-           ${opcoesSelect}
-         </select>
-       </div>
-       <button class="btn-add-cart" onclick="adicionarAoCarrinho('${p.id}')">
-         <i class="fa-solid fa-cart-plus"></i> Adicionar
-       </button>
-     </div>`;
-   });
- }
+    grade.innerHTML += `
+    <div class="card">
+      <div>
+        <div class="img-container" onclick="abrirFotoExpandida('${p.id}', '${fotoCapa}')">
+          <img src="${fotoCapa}" alt="${p.nome}" loading="lazy">
+        </div>
+        <span class="prod-title">${p.nome}</span>
+        <div class="prod-price">A partir de R$ ${menorPreco.toFixed(2)}</div>
+        ${p.descricao ? `<button class="btn-ver-descricao" onclick="abrirDescricao('${p.nome}', \`${p.descricao.replace(/`/g, "'")}\`)"><i class="fa-solid fa-circle-info"></i> Ver Detalhes</button>` : ''}
+      </div>
+      <button class="btn-add-cart" onclick="abrirModalModeloCat('${p.id}')">
+        <i class="fa-solid fa-cart-plus"></i> Adicionar
+      </button>
+    </div>`;
+  });
+}
 
  function abrirDescricao(nome, desc) {
    document.getElementById('modal-desc-titulo').innerText = nome;
