@@ -114,6 +114,24 @@
  .fin-table th { background: #fdf2f4; color: var(--primary); font-weight: 600; }
  .badge-pago { background: #e8f8f0; color: #1e7e48; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
  .badge-prazo { background: #fff8eb; color: #b57c1e; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+ .badge-notificacao {
+  background-color: #dc3545;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 2px 6px;
+  margin-left: 5px;
+  display: inline-block;
+  vertical-align: middle;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
  </style>
 </head>
 <body>
@@ -178,7 +196,9 @@
  </div>
  <div class="menu-btn" id="btn-pedidos" onclick="mudarTela('pedidos')">
  <div class="icon-wrapper"><i class="fa-solid fa-file-invoice-dollar"></i></div>
- <span>Pedidos</span>
+ <div class="menu-btn" id="btn-pedidos" onclick="mudarTela('pedidos')">
+  <div class="icon-wrapper"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+  <span>Pedidos <span id="badge-pedidos"></span></span>
  </div>
  <div class="menu-btn" id="btn-catalogo" onclick="mudarTela('catalogo')">
  <div class="icon-wrapper" style="background-color: #e6f9ed; color: #25D366;"><i class="fa-brands fa-whatsapp"></i></div>
@@ -615,8 +635,42 @@ function deletarVendedora(id) {
   }
 }
 
+// Controle de primeira carga para não tocar som ao abrir/atualizar a página
+let primeiraCargaPedidos = true;
+
+// Função para emitir som de notificação via Web Audio API
+function tocarSomNotificacao() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(520, audioCtx.currentTime);
+    gain1.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.15);
+
+    setTimeout(() => {
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gain2.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start();
+      osc2.stop(audioCtx.currentTime + 0.25);
+    }, 150);
+  } catch (e) {
+    console.log("Erro ao reproduzir som:", e);
+  }
+} 
+ 
 function carregarPedidos() {
   const container = document.getElementById('lista-pedidos');
+  const badgeElement = document.getElementById('badge-pedidos');
   if (!container) return;
 
   container.innerHTML = '<p style="text-align: center; color: #999;">Carregando solicitações...</p>';
@@ -625,7 +679,30 @@ function carregarPedidos() {
     window.unsubscribePedidos();
   }
 
-  window.unsubscribePedidos = db.collection("pedidos").onSnapshot(async (snapshot) => {
+  window.unsubscribePedidos = db.collection("pedidos").onSnapshot((snapshot) => {
+    // 1. Atualiza a contagem da badge de notificação e aciona o som
+    let pendentesQtd = 0;
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (!data.status || data.status === 'Pendente' || data.status === 'Aguardando Aprovação') {
+        pendentesQtd++;
+      }
+    });
+
+    if (badgeElement) {
+      if (pendentesQtd > 0) {
+        badgeElement.innerHTML = `<span class="badge-notificacao">${pendentesQtd}</span>`;
+      } else {
+        badgeElement.innerHTML = '';
+      }
+    }
+
+    if (!primeiraCargaPedidos && snapshot.docChanges().some(change => change.type === 'added')) {
+      tocarSomNotificacao();
+    }
+    primeiraCargaPedidos = false;
+
+    // 2. Renderização da lista de pedidos no container
     container.innerHTML = '';
 
     if (snapshot.empty) {
@@ -634,11 +711,11 @@ function carregarPedidos() {
     }
 
     const docs = snapshot.docs;
-    
+
     for (const doc of docs) {
       const p = doc.data();
       const id = doc.id;
-      
+
       const vendedoraNome = p.vendedoraNome || p.nomeVendedora || p.vendedora || p.Nome || 'Vendedora';
       const vendedoraCodigo = p.vendedoraCodigo || p.codigoVendedora || p.codigo || '-';
       const vendedoraTel = p.vendedoraTelefone || p.telefoneVendedora || p.clienteTelefone || p.telefone || '';
@@ -653,13 +730,14 @@ function carregarPedidos() {
 
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
+
       if (p.status === 'Aprovado') { badgeCor = '#1e7e48'; badgeBg = '#e8f8f0'; }
       if (p.status === 'Recusado') { badgeCor = '#a8324e'; badgeBg = '#fdf0f2'; }
 
       let itensHtml = '';
       if (p.itens && Array.isArray(p.itens)) {
         p.itens.forEach(item => {
-          itensHtml += `<div style="font-size: 12px; color: #555;">• ${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.quantidade || item.qtd || 1} - R$ ${((item.preco || 0) * (item.quantidade || item.qtd || 1)).toFixed(2)}</div>`;
+          itensHtml += `<div style="font-size: 12px; color: #555;">• ${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'}) x${item.qtd || 1}</div>`;
         });
       }
 
@@ -670,7 +748,7 @@ function carregarPedidos() {
           <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-size: 11px; font-weight: bold; color: #555; white-space: nowrap;">Forma de Pagto:</label>
-              <select id="forma-pagamento-${id}" onchange="toggleDataVencimento('${id}')" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+              <select id="forma-pagamento-${id}" onchange="toggleDataVencimento('${id}')" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
                 <option value="Pix">Pix</option>
                 <option value="Dinheiro">Dinheiro</option>
                 <option value="Cartão de Crédito">Cartão de Crédito</option>
@@ -679,17 +757,16 @@ function carregarPedidos() {
               </select>
             </div>
 
-            <!-- Campo de Vencimento escondido por padrão -->
             <div id="container-vencimento-${id}" style="display: none; align-items: center; gap: 6px;">
               <label style="font-size: 11px; font-weight: bold; color: #b57c1e; white-space: nowrap;">Vencimento:</label>
-              <input type="date" id="data-vencimento-${id}" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+              <input type="date" id="data-vencimento-${id}" style="font-size: 12px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
             </div>
 
             <div style="display: flex; gap: 6px; justify-content: flex-end;">
-              <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNotaPedido('${id}')" style="background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+              <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNotaPedido('${id}')" style="background: #25D366; color: white;">
                 <i class="fa-brands fa-whatsapp"></i> WhatsApp
               </button>
-              <button class="btn-action btn-nota-pdf" onclick="baixarPDFNotaPedido('${id}')" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+              <button class="btn-action btn-nota-pdf" onclick="baixarPDFNotaPedido('${id}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
                 <i class="fa-solid fa-file-pdf"></i> PDF
               </button>
               <button class="btn-action btn-edit" onclick="excluirPedido('${id}')"><i class="fa-solid fa-trash"></i></button>
@@ -710,7 +787,7 @@ function carregarPedidos() {
             <b style="font-size: 14px; color: var(--primary);">${vendedoraNome} (Cód: ${vendedoraCodigo})</b>
             <span style="background: ${badgeBg}; color: ${badgeCor}; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">${p.status || 'Pendente'}</span>
           </div>
-          
+
           <div style="font-size: 12px; color: #777; margin-top: 4px;">
             <b>Data:</b> ${p.data || '-'} | <b>Telefone:</b> ${vendedoraTel || 'Não informado'}
           </div>
@@ -718,7 +795,7 @@ function carregarPedidos() {
           <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
             <b style="color: #856404;">Débito da Vendedora: R$ ${saldoDevedor.toFixed(2)}</b>
             <div style="display: flex; gap: 6px; margin-top: 6px;">
-              <input type="number" id="input-pago-${id}" placeholder="Valor pago (R$)" style="padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
+              <input type="number" id="input-pago-${id}" placeholder="Valor pago (R$)" style="padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
               <button class="btn-action btn-sell-direct" onclick="registrarBaixaVendedora('${vendedoraCodigo}', '${id}')">
                 <i class="fa-solid fa-hand-holding-dollar"></i> Dar Baixa
               </button>
