@@ -325,8 +325,24 @@ function adicionarVariacaoDiretaCat(pId, idx) {
     const variacoesDisponiveis = p.variacoes.filter(v => Number(v.quantidade) > 0);
     const menorPreco = Math.min(...variacoesDisponiveis.map(v => Number(v.preco) || 0));
     const varComFoto = variacoesDisponiveis.find(v => v.foto || v.imagem || v.fotoUrl) || {};
-
     const fotoCapa = varComFoto.foto || varComFoto.imagem || varComFoto.fotoUrl || 'https://via.placeholder.com/150?text=Sem+Foto';
+
+    // Tenta encontrar a descrição em p.descricao, p.detalhes ou dentro da variação
+    const textoDescricao = p.descricao || p.detalhes || (p.variacoes && p.variacoes[0] ? p.variacoes[0].descricao : '') || '';
+
+    let htmlDescricao = '';
+    if (textoDescricao) {
+      // Limpa aspas para não quebrar o código no clique
+      const descLimpa = textoDescricao.replace(/`/g, "'").replace(/"/g, "&quot;");
+      htmlDescricao = `
+        <p style="font-size: 11px; color: #666; margin: 4px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
+          ${textoDescricao}
+        </p>
+        <button class="btn-ver-descricao" onclick="abrirDescricao('${p.nome.replace(/'/g, "\\'")}', \`${descLimpa}\`)">
+          <i class="fa-solid fa-circle-info"></i> Ver Detalhes
+        </button>
+      `;
+    }
 
     grade.innerHTML += `
     <div class="card">
@@ -336,7 +352,7 @@ function adicionarVariacaoDiretaCat(pId, idx) {
         </div>
         <span class="prod-title">${p.nome}</span>
         <div class="prod-price">A partir de R$ ${menorPreco.toFixed(2)}</div>
-        ${p.descricao ? `<button class="btn-ver-descricao" onclick="abrirDescricao('${p.nome}', \`${p.descricao.replace(/`/g, "'")}\`)"><i class="fa-solid fa-circle-info"></i> Ver Detalhes</button>` : ''}
+        ${htmlDescricao}
       </div>
       <button class="btn-add-cart" onclick="abrirModalModeloCat('${p.id}')">
         <i class="fa-solid fa-cart-plus"></i> Adicionar
