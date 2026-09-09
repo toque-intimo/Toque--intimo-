@@ -2079,194 +2079,194 @@ function alterarEstoqueDireto(idProduto, indexVariacao, delta) {
  }
 
 function baixarPDFNota(id) {
-   const elementoNota = document.getElementById(`nota-${id}`);
-   if (!elementoNota) {
-     alert("Nota não encontrada!");
-     return;
-   }
+  const elementoNota = document.getElementById(`nota-${id}`);
+  if (!elementoNota) {
+    alert("Nota não encontrada!");
+    return;
+  }
 
-   const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-   if (!jsPDFLib) {
-     alert("A biblioteca de PDF ainda está sendo carregada. Por favor, aguarde.");
-     return;
-   }
+  const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+  if (!jsPDFLib) {
+    alert("A biblioteca de PDF ainda está sendo carregada. Por favor, aguarde.");
+    return;
+  }
 
-   try {
-     const doc = new jsPDFLib({
-       orientation: 'portrait',
-       unit: 'mm',
-       format: 'a4'
-     });
+  try {
+    const doc = new jsPDFLib({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-     const larguraA4 = 210;
-     let eixoY = 20;
+    const larguraA4 = 210;
+    let eixoY = 20;
 
-     const textoCentralizado = (texto, y, tamanho = 10, estilo = "normal") => {
-       doc.setFont("courier", estilo);
-       doc.setFontSize(tamanho);
-       const larguraTexto = doc.getTextWidth(texto);
-       const x = (larguraA4 - larguraTexto) / 2;
-       doc.text(texto, x, y);
-     };
+    const textoCentralizado = (texto, y, tamanho = 10, estilo = "normal") => {
+      doc.setFont("courier", estilo);
+      doc.setFontSize(tamanho);
+      const larguraTexto = doc.getTextWidth(texto);
+      const x = (larguraA4 - larguraTexto) / 2;
+      doc.text(texto, x, y);
+    };
 
-     textoCentralizado("TOQUE ÍNTIMO GS", eixoY, 16, "bold");
-     eixoY += 6;
-     textoCentralizado("CNPJ: 45.230.643.0001/60", eixoY, 10, "normal");
-     eixoY += 5;
-     textoCentralizado("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", eixoY, 9, "normal");
-     eixoY += 8;
+    textoCentralizado("TOQUE ÍNTIMO GS", eixoY, 16, "bold");
+    eixoY += 6;
+    textoCentralizado("CNPJ: 45.230.643.0001/60", eixoY, 10, "normal");
+    eixoY += 5;
+    textoCentralizado("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", eixoY, 9, "normal");
+    eixoY += 8;
 
-     doc.setLineWidth(0.5);
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
+    doc.setLineWidth(0.5);
+    doc.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
 
-     textoCentralizado("NOTA DE VENDA", eixoY, 12, "bold");
-     eixoY += 8;
+    textoCentralizado("NOTA DE VENDA", eixoY, 12, "bold");
+    eixoY += 8;
 
-     doc.setFont("courier", "normal");
-     doc.setFontSize(10);
+    doc.setFont("courier", "normal");
+    doc.setFontSize(10);
 
-     const textoOriginal = elementoNota.innerText;
-     
-     const extrairCampo = (regex, padrao = "Não informado") => {
-       const matches = textoOriginal.match(regex);
-       return matches ? matches[1].trim() : padrao;
-     };
+    const textoOriginal = elementoNota.innerText;
 
-     const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
-     const dataOriginal = extrairCampo(/Data:\s*([^\s]+)/i, new Date().toLocaleDateString());
-     const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
-     const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
+    const extrairCampo = (regex, padrao = "Não informado") => {
+      const matches = textoOriginal.match(regex);
+      return matches ? matches[1].trim() : padrao;
+    };
 
-     doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
-     doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
-     
-     doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
-     doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
-     
-     eixoY += 6;
-     
-     doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
-     doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
+    const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
+    const dataOriginal = extrairCampo(/Data:\s*([^\n]+)/i, new Date().toLocaleDateString());
+    const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
+    const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
 
-     eixoY += 8;
+    doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
+    doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
 
-     doc.setLineWidth(0.2);
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
+    doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
+    doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
 
-     doc.setFont("courier", "bold");
-     doc.setFontSize(10);
-     doc.text("Produto", 15, eixoY);
-     doc.text("Qtd", 110, eixoY);
-     doc.text("Preço", 130, eixoY);
-     doc.text("Total", 170, eixoY);
-     
-     eixoY += 4;
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
+    eixoY += 6;
 
-     doc.setFont("courier", "normal");
-     
-     const linhasOriginal = textoOriginal.split("\n");
-     let extraindoItens = false;
+    doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
+    doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
 
-     let subtotalStr = "R$ 0,00";
-     let descontoStr = "R$ 0,00";
-     let totalStr = "R$ 0,00";
-     let temParcelas = false;
-     let listaParcelas = [];
+    eixoY += 8;
 
-     linhasOriginal.forEach(linha => {
-         if (linha.includes("-----") && !extraindoItens) {
-             extraindoItens = true;
-             return;
-         }
-         if (linha.includes("-----") && extraindoItens) {
-             extraindoItens = false;
-             return;
-         }
+    doc.setLineWidth(0.2);
+    doc.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
 
-         if (linha.includes("Subtotal:")) {
-             subtotalStr = linha.split("Subtotal:")[1].trim();
-         }
-         if (linha.includes("Desconto:")) {
-             descontoStr = linha.split("Desconto:")[1].trim();
-         }
-         if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
-             totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
-         }
+    doc.setFont("courier", "bold");
+    doc.setFontSize(10);
+    doc.text("Produto", 15, eixoY);
+    doc.text("Qtd", 110, eixoY);
+    doc.text("Preço", 130, eixoY);
+    doc.text("Total", 170, eixoY);
 
-         if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
-             temParcelas = true;
-             listaParcelas.push(linha.trim());
-         }
+    eixoY += 4;
+    doc.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
 
-         if (extraindoItens && linha.trim() !== "") {
-             const partes = linha.split(" - ");
-             const nomeEVar = partes[0].trim();
-             const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-             const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
+    doc.setFont("courier", "normal");
 
-             doc.text(nomeLimitado, 15, eixoY);
-             doc.text("1", 110, eixoY);
-             doc.text(precoStr, 130, eixoY);
-             doc.text(precoStr, 170, eixoY);
-             eixoY += 6;
-         }
-     });
+    const linhasOriginal = textoOriginal.split("\n");
+    let extraindoItens = false;
 
-     eixoY += 2;
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
+    let subtotalStr = "R$ 0,00";
+    let descontoStr = "R$ 0,00";
+    let totalStr = "R$ 0,00";
+    let temParcelas = false;
+    let listaParcelas = [];
 
-     doc.setFont("courier", "normal");
-     doc.text("Subtotal:", 130, eixoY);
-     doc.text(subtotalStr, 170, eixoY);
-     eixoY += 5;
+    linhasOriginal.forEach(linha => {
+      if (linha.includes("------") && !extraindoItens) {
+        extraindoItens = true;
+        return;
+      }
+      if (linha.includes("------") && extraindoItens) {
+        extraindoItens = false;
+        return;
+      }
 
-     doc.text("(-) Desconto:", 130, eixoY);
-     doc.text(descontoStr, 170, eixoY);
-     eixoY += 5;
+      if (linha.includes("Subtotal:")) {
+        subtotalStr = linha.split("Subtotal:")[1].trim();
+      }
+      if (linha.includes("Desconto:")) {
+        descontoStr = linha.split("Desconto:")[1].trim();
+      }
+      if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
+        totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
+      }
 
-     doc.setFont("courier", "bold");
-     doc.setFontSize(11);
-     doc.text("TOTAL:", 130, eixoY);
-     doc.text(totalStr, 170, eixoY);
-     eixoY += 10;
+      if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
+        temParcelas = true;
+        listaParcelas.push(linha.trim());
+      }
 
-     if (temParcelas && listaParcelas.length > 0) {
-       doc.line(15, eixoY, 195, eixoY);
-       eixoY += 6;
-       doc.setFont("courier", "bold");
-       doc.setFontSize(10);
-       doc.text("PARCELAS:", 15, eixoY);
-       eixoY += 6;
+      if (extraindoItens && linha.trim() !== "") {
+        const partes = linha.split(" - ");
+        const nomeEVar = partes[0].trim();
+        const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+        const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
 
-       doc.setFont("courier", "normal");
-       listaParcelas.forEach(parc => {
-         doc.text(parc, 15, eixoY);
-         eixoY += 5;
-       });
-       eixoY += 5;
-     }
+        doc.text(nomeLimitado, 15, eixoY);
+        doc.text("1", 110, eixoY);
+        doc.text(precoStr, 130, eixoY);
+        doc.text(precoStr, 170, eixoY);
+        eixoY += 6;
+      }
+    });
 
-     eixoY = Math.max(eixoY, 265);
-     doc.setLineWidth(0.2);
-     doc.line(15, eixoY, 195, eixoY);
-     eixoY += 6;
+    eixoY += 2;
+    doc.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
 
-     textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
-     eixoY += 5;
-     textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
+    doc.setFont("courier", "normal");
+    doc.text("Subtotal:", 130, eixoY);
+    doc.text(subtotalStr, 170, eixoY);
+    eixoY += 5;
 
-     doc.save(`Nota_Venda_${id}.pdf`);
+    doc.text("(-) Desconto:", 130, eixoY);
+    doc.text(descontoStr, 170, eixoY);
+    eixoY += 5;
 
-   } catch (erro) {
-     console.error("Erro ao gerar PDF profissional:", erro);
-     alert("Ocorreu um erro ao formatar a nota: " + erro.message);
-   }
- } 
+    doc.setFont("courier", "bold");
+    doc.setFontSize(11);
+    doc.text("TOTAL:", 130, eixoY);
+    doc.text(totalStr, 170, eixoY);
+    eixoY += 10;
+
+    if (temParcelas && listaParcelas.length > 0) {
+      doc.line(15, eixoY, 195, eixoY);
+      eixoY += 6;
+      doc.setFont("courier", "bold");
+      doc.setFontSize(10);
+      doc.text("PARCELAS:", 15, eixoY);
+      eixoY += 6;
+
+      doc.setFont("courier", "normal");
+      listaParcelas.forEach(parc => {
+        doc.text(parc, 15, eixoY);
+        eixoY += 5;
+      });
+      eixoY += 5;
+    }
+
+    eixoY = Math.max(eixoY, 265);
+    doc.setLineWidth(0.2);
+    doc.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
+
+    textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
+    eixoY += 5;
+    textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
+
+    doc.save(`Nota_Venda_${id}.pdf`);
+
+  } catch (erro) {
+    console.error("Erro ao gerar PDF profissional:", erro);
+    alert("Ocorreu um erro ao formatar a nota: " + erro.message);
+  }
+}
  
  function excluirVenda(id) {
    if (confirm("Deseja realmente excluir esta venda?")) {
