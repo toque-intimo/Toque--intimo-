@@ -2021,6 +2021,8 @@ function alterarEstoqueDireto(idProduto, indexVariacao, delta) {
    const novaVenda = {
      id: Date.now().toString(),
      data: new Date().toLocaleDateString(),
+     subtotal: subtotalOriginal,
+     desconto: descontoTotal,
      total: total,
      custoTotal: custoTotalVenda,
      formaPagamento: formaPagamento,
@@ -2190,9 +2192,9 @@ function baixarPDFNota(id) {
       if (linha.includes("Subtotal:")) {
         subtotalStr = linha.split("Subtotal:")[1].trim();
       }
-      if (linha.includes("Desconto:")) {
-        descontoStr = linha.split("Desconto:")[1].trim();
-      }
+      if (linha.includes("Desconto")) {
+  descontoStr = linha.split(":")[1].trim();
+}
       if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
         totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
       }
