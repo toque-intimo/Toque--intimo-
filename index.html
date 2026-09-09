@@ -2094,12 +2094,7 @@ function baixarPDFNota(id) {
   }
 
   try {
-    const doc = new jsPDFLib({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
+    const doc = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const larguraA4 = 210;
     let eixoY = 20;
 
@@ -2128,417 +2123,185 @@ function baixarPDFNota(id) {
     doc.setFont("courier", "normal");
     doc.setFontSize(10);
 
-    const textoOriginal = elementoNota.innerText;
-
-    const extrairCampo = (regex, padrao = "Não informado") => {
-      const matches = textoOriginal.match(regex);
-      return matches ? matches[1].trim() : padrao;
-    };
-
-    const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
-    const dataOriginal = extrairCampo(/Data:\s*([^\n]+)/i, new Date().toLocaleDateString());
-    const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
-    const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
-
-    doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
-    doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
-
-    doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
-    doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
-
-    eixoY += 6;
-
-    doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
-    doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
-
-    eixoY += 8;
-
-    doc.setLineWidth(0.2);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "bold");
-   doc.setFontSize(9);
-doc.text("Produto", 15, eixoY);
-doc.text("Qtd", 100, eixoY);
-doc.text("Preço", 120, eixoY);
-doc.text("Desc.", 150, eixoY);
-doc.text("Total", 175, eixoY); 
-
-    eixoY += 4;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "normal");
-
-    const linhasOriginal = textoOriginal.split("\n");
-    let extraindoItens = false;
-
-    let subtotalStr = "R$ 0,00";
-    let descontoStr = "R$ 0,00";
-    let totalStr = "R$ 0,00";
-    let temParcelas = false;
-    let listaParcelas = [];
-
-    linhasOriginal.forEach(linha => {
-      if (linha.includes("------") && !extraindoItens) {
-        extraindoItens = true;
-        return;
+    const linhas = elementoNota.innerText.split('\n');
+    linhas.forEach(linha => {
+      if (eixoY > 270) {
+        doc.addPage();
+        eixoY = 20;
       }
-      if (linha.includes("------") && extraindoItens) {
-        extraindoItens = false;
-        return;
-      }
-
-      if (linha.includes("Subtotal:")) {
-        subtotalStr = linha.split("Subtotal:")[1].trim();
-      }
-      if (linha.includes("Desconto")) {
-  descontoStr = linha.split(":")[1].trim();
-}
-      if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
-        totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
-      }
-
-      if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
-        temParcelas = true;
-        listaParcelas.push(linha.trim());
-      }
-
-      if (extraindoItens && linha.trim() !== "") {
-    const partes = linha.split(" - ");
-    const nomeEVar = partes[0].trim();
-    
-    // Extrai o preço unitário/bruto (se houver) e limpa o texto do nome
-    let precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-    let descStr = "R$ 0,00";
-    
-    // Identifica e extrai o valor do desconto da linha do item se existir
-    if (linha.includes("(Desc:")) {
-        const descMatch = linha.match(/\(Desc:\s*R\$\s*([\d,.]+)\)/i);
-        if (descMatch) {
-            descStr = `R$ ${descMatch[1]}`;
-        }
-    }
-
-    // Calcula o valor total com o desconto abatido
-    const precoNum = parseFloat(precoStr.replace("R$", "").replace(".", "").replace(",", ".").trim()) || 0;
-    const descNum = parseFloat(descStr.replace("R$", "").replace(".", "").replace(",", ".").trim()) || 0;
-    const totalItemNum = Math.max(0, precoNum - descNum);
-    const totalItemStr = `R$ ${totalItemNum.toFixed(2).replace(".", ",")}`;
-
-    const nomeLimitado = nomeEVar.length > 30 ? nomeEVar.substring(0, 27) + "..." : nomeEVar;
-
-    // Imprime a linha com todas as colunas alinhadas
-    doc.text(nomeLimitado, 15, eixoY);
-    doc.text("1", 102, eixoY);
-    doc.text(precoStr, 120, eixoY);
-    doc.text(descStr, 150, eixoY);
-    doc.text(totalItemStr, 175, eixoY);
-    
-    eixoY += 6;
-}
-    // Se o item tiver informação de desconto descrita no texto "(Desc: R$...)"
-    if (linha.includes("(Desc:")) {
-        const descMatch = linha.match(/\(Desc:.*?\)/);
-        if (descMatch) {
-            doc.setFontSize(8);
-            doc.text(`   ↳ ${descMatch[0]}`, 18, eixoY);
-            doc.setFontSize(10);
-            eixoY += 4;
-        }
-    }
-}
+      doc.text(linha, 15, eixoY);
+      eixoY += 6;
     });
 
-    eixoY += 2;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "normal");
-    doc.text("Subtotal:", 130, eixoY);
-    doc.text(subtotalStr, 170, eixoY);
-    eixoY += 5;
-
-    doc.text("(-) Desconto:", 130, eixoY);
-    doc.text(descontoStr, 170, eixoY);
-    eixoY += 5;
-
-    doc.setFont("courier", "bold");
-    doc.setFontSize(11);
-    doc.text("TOTAL:", 130, eixoY);
-    doc.text(totalStr, 170, eixoY);
-    eixoY += 10;
-
-    if (temParcelas && listaParcelas.length > 0) {
-      doc.line(15, eixoY, 195, eixoY);
-      eixoY += 6;
-      doc.setFont("courier", "bold");
-      doc.setFontSize(10);
-      doc.text("PARCELAS:", 15, eixoY);
-      eixoY += 6;
-
-      doc.setFont("courier", "normal");
-      listaParcelas.forEach(parc => {
-        doc.text(parc, 15, eixoY);
-        eixoY += 5;
-      });
-      eixoY += 5;
-    }
-
-    eixoY = Math.max(eixoY, 265);
-    doc.setLineWidth(0.2);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
-    eixoY += 5;
-    textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
-
     doc.save(`Nota_Venda_${id}.pdf`);
-
-  } catch (erro) {
-    console.error("Erro ao gerar PDF profissional:", erro);
-    alert("Ocorreu um erro ao formatar a nota: " + erro.message);
+  } catch (err) {
+    console.error("Erro ao gerar PDF:", err);
+    alert("Ocorreu um erro ao gerar o arquivo PDF.");
   }
 }
- 
- function excluirVenda(id) {
-   if (confirm("Deseja realmente excluir esta venda?")) {
-     vendas = vendas.filter(v => v.id !== id);
-     localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-     excluirVendaFirebase(id);
-     carregarVendas();
-     atualizarDash();
-   }
- }
 
- /* --- MÓDULO CLIENTES --- */
- function renderizarClientes() {
-   const container = document.getElementById('lista-clientes-container');
-   const busca = document.getElementById('buscaCliente') ? document.getElementById('buscaCliente').value.toLowerCase() : '';
-   if (!container) return;
-
-   container.innerHTML = '';
-   const filtrados = clientes.filter(c => 
-     c.nome.toLowerCase().includes(busca) || 
-     (c.telefone && c.telefone.includes(busca)) ||
-     (c.codigo && c.codigo.toLowerCase().includes(busca))
-   );
-
-   if (!filtrados.length) {
-     container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhum cliente encontrado.</p>';
-     return;
-   }
-
-   filtrados.forEach(c => {
-     container.innerHTML += `
-       <div class="client-list-card">
-         <div class="item-row">
-           <b style="color:var(--primary);">${c.nome}</b>
-           <small style="color:#888;">Cód: ${c.codigo || '-'}</small>
-         </div>
-         <div style="font-size:12px; color:#555;">
-           <i class="fa-solid fa-phone"></i> ${c.telefone || 'Não informado'}<br>
-           <i class="fa-solid fa-envelope"></i> ${c.email || 'Não informado'}<br>
-           <i class="fa-solid fa-location-dot"></i> ${c.endereco || 'Não informado'}
-         </div>
-         <div class="actions-row">
-           <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-           <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
-         </div>
-       </div>
-     `;
-   });
- }
-
- function abrirCadastroCliente() {
-   document.getElementById('formCliente').reset();
-   document.getElementById('cli-id').value = '';
-   document.getElementById('cli-data').value = new Date().toISOString().split('T')[0];
-   document.getElementById('titulo-cadastro-cliente').innerText = 'Novo Cliente';
-   mudarTela('cadastro-cliente');
- }
-
- document.getElementById('formCliente').addEventListener('submit', function(e) {
-   e.preventDefault();
-   const id = document.getElementById('cli-id').value;
-   const nome = document.getElementById('cli-nome').value;
-   const telefone = document.getElementById('cli-telefone').value;
-   const email = document.getElementById('cli-email').value;
-   const endereco = document.getElementById('cli-endereco').value;
-   const data = document.getElementById('cli-data').value;
-
-   const clienteData = {
-     id: id || Date.now().toString(),
-     codigo: 'CLI' + Math.floor(1000 + Math.random() * 9000),
-     nome, telefone, email, endereco, data
-   };
-
-   if (id) {
-     const idx = clientes.findIndex(c => c.id === id);
-     if (idx !== -1) clientes[idx] = clienteData;
-   } else {
-     clientes.push(clienteData);
-   }
-
-   localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-   if (typeof firebase !== 'undefined' && firebase.apps.length) {
-     db.collection("clientes").doc(clienteData.id).set(clienteData);
-   }
-
-   alert("Cliente salvo com sucesso!");
-   mudarTela('clientes');
- });
-
- function editarCliente(id) {
-   const c = clientes.find(item => item.id === id);
-   if (!c) return;
-
-   document.getElementById('cli-id').value = c.id;
-   document.getElementById('cli-nome').value = c.nome;
-   document.getElementById('cli-telefone').value = c.telefone;
-   document.getElementById('cli-email').value = c.email || '';
-   document.getElementById('cli-endereco').value = c.endereco || '';
-   document.getElementById('cli-data').value = c.data || new Date().toISOString().split('T')[0];
-
-   document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
-   mudarTela('cadastro-cliente');
- }
-
- function excluirCliente(id) {
-   if (confirm("Excluir este cliente?")) {
-     clientes = clientes.filter(c => c.id !== id);
-     localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-     if (typeof firebase !== 'undefined' && firebase.apps.length) {
-       db.collection("clientes").doc(id).delete();
-     }
-     renderizarClientes();
-     atualizarDash();
-   }
- }
-
- /* --- MÓDULO FINANCEIRO --- */
- function carregarFinanceiro() {
-   let faturamento = 0;
-   let custoTotalEstoque = 0;
-   let lucroLiquido = 0;
-   let aReceber = 0;
-
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       faturamento += (v.preco * v.quantidade);
-       custoTotalEstoque += (v.custo * v.quantidade);
-     });
-   });
-
-   vendas.forEach(v => {
-     if (v.formaPagamento === 'A prazo') {
-       aReceber += (v.total - (v.valorEntrada || 0));
-     }
-   });
-
-   lucroLiquido = faturamento - custoTotalEstoque;
-
-   document.getElementById('fin-card-faturamento').innerText = `R$ ${faturamento.toFixed(2)}`;
-   document.getElementById('fin-card-custo').innerText = `R$ ${custoTotalEstoque.toFixed(2)}`;
-   document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquido.toFixed(2)}`;
-   document.getElementById('fin-card-receber').innerText = `R$ ${aReceber.toFixed(2)}`;
-
-   const tabelaCorpo = document.getElementById('fin-tabela-corpo');
-   if (!tabelaCorpo) return;
-
-   tabelaCorpo.innerHTML = '';
-   if (!vendas.length) {
-     tabelaCorpo.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Sem registros.</td></tr>';
-     return;
-   }
-
-   [...vendas].reverse().forEach(v => {
-     const statusBadge = v.formaPagamento === 'A prazo' 
-       ? `<span class="badge-prazo">A prazo</span>` 
-       : `<span class="badge-pago">Pago</span>`;
-
-     // Botão de dar baixa se for "A prazo"
-     const botaoAcao = v.formaPagamento === 'A prazo' 
-       ? `<button class="btn-action btn-sell-direct" onclick="darBaixaVenda('${v.id}')"><i class="fa-solid fa-check"></i> Dar Baixa</button>` 
-       : `<span style="color:#aaa; font-size:11px;">Quitado</span>`;
-
-     tabelaCorpo.innerHTML += `
-       <tr>
-         <td>${v.data || '-'}</td>
-         <td>${v.clienteNome || 'Consumidor Final'}</td>
-         <td>${statusBadge}</td>
-         <td><b>R$ ${v.total.toFixed(2)}</b></td>
-         <td>${botaoAcao}</td>
-       </tr>
-     `;
-   });
- }
- 
- function darBaixaVenda(idVenda) {
-  const venda = vendas.find(v => v.id === idVenda);
-  if (!venda) return;
-
-  if (confirm(`Deseja dar baixa no pagamento da venda de R$ ${venda.total.toFixed(2)} de ${venda.clienteNome || 'Consumidor Final'}?`)) {
-    // Altera o status da forma de pagamento localmente
-    venda.formaPagamento = 'Pago';
-    venda.valorEntrada = venda.total; // Atualiza o valor recebido
-
-    // Atualiza a nota/cupom com o status quitado
-    if (venda.notaCompleta) {
-      venda.notaCompleta = venda.notaCompleta.replace(/Pagamento: Forma: A prazo.*/, "Pagamento: Forma: Pago (Quitado)");
-    }
-
-    // Salva no LocalStorage
+function excluirVenda(id) {
+  if (confirm("Deseja realmente excluir esta venda do histórico?")) {
+    vendas = vendas.filter(v => v.id !== id);
     localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-
-    // Atualiza no Firebase Firestore
-    if (typeof firebase !== 'undefined' && firebase.apps.length) {
-      db.collection("vendas").doc(idVenda.toString()).update({
-        formaPagamento: 'Pago',
-        valorEntrada: venda.total,
-        notaCompleta: venda.notaCompleta || ''
-      }).then(() => {
-        console.log("Venda quitada no Firebase");
-      }).catch(err => {
-        console.error("Erro ao atualizar no Firebase:", err);
-      });
-    }
-
-    alert("Pagamento registrado e nota quitada com sucesso!");
-    carregarFinanceiro();
+    excluirVendaFirebase(id);
+    carregarVendas();
     atualizarDash();
   }
 }
 
- function atualizarDash() {
-   let totalProdutos = produtos.length;
-   let valorEstoque = 0;
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       valorEstoque += (v.preco * v.quantidade);
-     });
-   });
+function renderizarClientes() {
+  const container = document.getElementById('lista-clientes-container');
+  if (!container) return;
+  const busca = document.getElementById('buscaCliente').value.toLowerCase();
+  container.innerHTML = '';
 
-   let totalVendas = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
-   let totalClientes = clientes.length;
+  const clientesFiltrados = clientes.filter(c => 
+    c.nome.toLowerCase().includes(busca) || 
+    (c.telefone && c.telefone.includes(busca)) ||
+    (c.codigo && c.codigo.toLowerCase().includes(busca))
+  );
 
-   document.getElementById('dash-produtos-qtd').innerText = totalProdutos;
-   document.getElementById('dash-estoque-val').innerText = `R$ ${valorEstoque.toFixed(2)}`;
-   document.getElementById('dash-vendas-val').innerText = `R$ ${totalVendas.toFixed(2)}`;
-   document.getElementById('dash-clientes-qtd').innerText = totalClientes;
- }
+  if (!clientesFiltrados.length) {
+    container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum cliente encontrado.</p>';
+    return;
+  }
 
- window.onload = function() {
-   carregarProdutosDoFirebase();
-   carregarClientesDoFirebase();
-   carregarVendasDoFirebase();
-   carregarVendedoras();
-   carregarPedidos();
-   atualizarDash();
- };
+  clientesFiltrados.forEach(c => {
+    container.innerHTML += `
+      <div class="client-list-card">
+        <div class="item-row">
+          <b style="color: var(--primary);">${c.nome}</b>
+          <span style="font-size: 11px; background: #eee; padding: 2px 6px; border-radius: 4px;">Cód: ${c.codigo || '-'}</span>
+        </div>
+        <div style="font-size: 12px; color: #555;">
+          <i class="fa-solid fa-phone"></i> ${c.telefone || 'Sem telefone'}<br>
+          <i class="fa-solid fa-location-dot"></i> ${c.endereco || 'Sem endereço'}
+        </div>
+        <div class="actions-row">
+          <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function abrirCadastroCliente() {
+  document.getElementById('formCliente').reset();
+  document.getElementById('cli-id').value = '';
+  document.getElementById('cli-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('titulo-cadastro-cliente').innerText = 'Novo Cliente';
+  mudarTela('cadastro-cliente');
+}
+
+document.getElementById('formCliente').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const id = document.getElementById('cli-id').value || Date.now().toString();
+  const nome = document.getElementById('cli-nome').value;
+  const telefone = document.getElementById('cli-telefone').value;
+  const email = document.getElementById('cli-email').value;
+  const endereco = document.getElementById('cli-endereco').value;
+  const data = document.getElementById('cli-data').value;
+  const codigo = 'CLI' + Math.floor(1000 + Math.random() * 9000);
+
+  const clienteData = { id, nome, telefone, email, endereco, data, codigo };
+
+  const idx = clientes.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    clientes[idx] = clienteData;
+  } else {
+    clientes.push(clienteData);
+  }
+
+  localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
+  db.collection("clientes").doc(id).set(clienteData);
+
+  mudarTela('clientes');
+});
+
+function editarCliente(id) {
+  const cli = clientes.find(c => c.id === id);
+  if (!cli) return;
+  document.getElementById('cli-id').value = cli.id;
+  document.getElementById('cli-nome').value = cli.nome;
+  document.getElementById('cli-telefone').value = cli.telefone;
+  document.getElementById('cli-email').value = cli.email || '';
+  document.getElementById('cli-endereco').value = cli.endereco || '';
+  document.getElementById('cli-data').value = cli.data || new Date().toISOString().split('T')[0];
+  document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
+  mudarTela('cadastro-cliente');
+}
+
+function excluirCliente(id) {
+  if (confirm("Excluir este cliente?")) {
+    clientes = clientes.filter(c => c.id !== id);
+    localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
+    db.collection("clientes").doc(id).delete();
+    renderizarClientes();
+  }
+}
+
+function carregarFinanceiro() {
+  const faturamentoEl = document.getElementById('fin-card-faturamento');
+  const custoEl = document.getElementById('fin-card-custo');
+  const lucroEl = document.getElementById('fin-card-lucro');
+  const tabelaCorpo = document.getElementById('fin-tabela-corpo');
+
+  let totalVendas = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
+  let totalCusto = vendas.reduce((acc, v) => acc + (v.custoTotal || 0), 0);
+  let lucroLiquido = totalVendas - totalCusto;
+
+  if (faturamentoEl) faturamentoEl.innerText = `R$ ${totalVendas.toFixed(2)}`;
+  if (custoEl) custoEl.innerText = `R$ ${totalCusto.toFixed(2)}`;
+  if (lucroEl) lucroEl.innerText = `R$ ${lucroLiquido.toFixed(2)}`;
+
+  if (tabelaCorpo) {
+    tabelaCorpo.innerHTML = '';
+    vendas.forEach(v => {
+      tabelaCorpo.innerHTML += `
+        <tr>
+          <td>${v.data}</td>
+          <td>${v.clienteNome || 'Consumidor'}</td>
+          <td><span class="badge-pago">${v.formaPagamento || 'Pix'}</span></td>
+          <td>R$ ${(v.total || 0).toFixed(2)}</td>
+          <td><button class="btn-action btn-delete" onclick="excluirVenda('${v.id}')"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+      `;
+    });
+  }
+}
+
+function atualizarDash() {
+  const qtdProdEl = document.getElementById('dash-produtos-qtd');
+  const valEstoqueEl = document.getElementById('dash-estoque-val');
+  const valVendasEl = document.getElementById('dash-vendas-val');
+  const qtdClientesEl = document.getElementById('dash-clientes-qtd');
+
+  let totalPecas = 0;
+  let valorTotalEstoque = 0;
+
+  produtos.forEach(p => {
+    p.variacoes.forEach(v => {
+      totalPecas += Number(v.quantidade || 0);
+      valorTotalEstoque += Number(v.quantidade || 0) * Number(v.preco || 0);
+    });
+  });
+
+  let totalVendas = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
+
+  if (qtdProdEl) qtdProdEl.innerText = totalPecas;
+  if (valEstoqueEl) valEstoqueEl.innerText = `R$ ${valorTotalEstoque.toFixed(2)}`;
+  if (valVendasEl) valVendasEl.innerText = `R$ ${totalVendas.toFixed(2)}`;
+  if (qtdClientesEl) qtdClientesEl.innerText = clientes.length;
+}
+
+window.onload = function() {
+  carregarProdutosDoFirebase();
+  carregarClientesDoFirebase();
+  carregarVendasDoFirebase();
+  atualizarDash();
+};
 </script>
-
 </body>
 </html>
