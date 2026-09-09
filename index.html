@@ -456,6 +456,7 @@
  <th>Cliente</th>
  <th>Tipo</th>
  <th>Total</th>
+ <th>Ação</th>
  </tr>
  </thead>
  <tbody id="fin-tabela-corpo"></tbody>
@@ -2200,7 +2201,7 @@ function renderizarCatalogoVisual() {
 
    tabelaCorpo.innerHTML = '';
    if (!vendas.length) {
-     tabelaCorpo.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Sem registros.</td></tr>';
+     tabelaCorpo.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Sem registros.</td></tr>';
      return;
    }
 
@@ -2209,16 +2210,58 @@ function renderizarCatalogoVisual() {
        ? `<span class="badge-prazo">A prazo</span>` 
        : `<span class="badge-pago">Pago</span>`;
 
+     // Botão de dar baixa se for "A prazo"
+     const botaoAcao = v.formaPagamento === 'A prazo' 
+       ? `<button class="btn-action btn-sell-direct" onclick="darBaixaVenda('${v.id}')"><i class="fa-solid fa-check"></i> Dar Baixa</button>` 
+       : `<span style="color:#aaa; font-size:11px;">Quitado</span>`;
+
      tabelaCorpo.innerHTML += `
        <tr>
          <td>${v.data || '-'}</td>
          <td>${v.clienteNome || 'Consumidor Final'}</td>
          <td>${statusBadge}</td>
          <td><b>R$ ${v.total.toFixed(2)}</b></td>
+         <td>${botaoAcao}</td>
        </tr>
      `;
    });
  }
+ 
+ function darBaixaVenda(idVenda) {
+  const venda = vendas.find(v => v.id === idVenda);
+  if (!venda) return;
+
+  if (confirm(`Deseja dar baixa no pagamento da venda de R$ ${venda.total.toFixed(2)} de ${venda.clienteNome || 'Consumidor Final'}?`)) {
+    // Altera o status da forma de pagamento localmente
+    venda.formaPagamento = 'Pago';
+    venda.valorEntrada = venda.total; // Atualiza o valor recebido
+
+    // Atualiza a nota/cupom com o status quitado
+    if (venda.notaCompleta) {
+      venda.notaCompleta = venda.notaCompleta.replace(/Pagamento: Forma: A prazo.*/, "Pagamento: Forma: Pago (Quitado)");
+    }
+
+    // Salva no LocalStorage
+    localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+
+    // Atualiza no Firebase Firestore
+    if (typeof firebase !== 'undefined' && firebase.apps.length) {
+      db.collection("vendas").doc(idVenda.toString()).update({
+        formaPagamento: 'Pago',
+        valorEntrada: venda.total,
+        notaCompleta: venda.notaCompleta || ''
+      }).then(() => {
+        console.log("Venda quitada no Firebase");
+      }).catch(err => {
+        console.error("Erro ao atualizar no Firebase:", err);
+      });
+    }
+
+    alert("Pagamento registrado e nota quitada com sucesso!");
+    carregarFinanceiro();
+    atualizarDash();
+  }
+}
 
  function atualizarDash() {
    let totalProdutos = produtos.length;
