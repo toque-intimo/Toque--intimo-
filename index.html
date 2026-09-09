@@ -2030,69 +2030,195 @@ function renderizarCatalogoVisual() {
    window.open(url, '_blank');
  }
 
- function baixarPDFNota(id) {
-  const v = vendas.find(item => item.id === id);
-  if (!v) return;
+function baixarPDFNota(id) {
+   const elementoNota = document.getElementById(`nota-${id}`);
+   if (!elementoNota) {
+     alert("Nota não encontrada!");
+     return;
+   }
 
-  const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-  if (!jsPDFLib) {
-    alert("Biblioteca jsPDF indisponível.");
-    return;
-  }
+   const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+   if (!jsPDFLib) {
+     alert("A biblioteca de PDF ainda está sendo carregada. Por favor, aguarde.");
+     return;
+   }
 
-  const pdf = new jsPDFLib();
-  pdf.setFont("courier", "normal");
-  pdf.setFontSize(10);
+   try {
+     const doc = new jsPDFLib({
+       orientation: 'portrait',
+       unit: 'mm',
+       format: 'a4'
+     });
 
-  let textoNota = v.notaCompleta || "";
+     const larguraA4 = 210;
+     let eixoY = 20;
 
-  // 1. Injeta Entrega abaixo da Data se não existir no texto salvo
-  if (textoNota.includes("Data:") && !textoNota.includes("Entrega:")) {
-    const tipoEntrega = v.tipoEntrega || v.formaEntrega || "Retirada Física";
-    textoNota = textoNota.replace(
-      /Data:\s+([^\n]+)/,
-      `Data:          $1\nEntrega:       ${tipoEntrega}`
-    );
-  }
+     const textoCentralizado = (texto, y, tamanho = 10, estilo = "normal") => {
+       doc.setFont("courier", estilo);
+       doc.setFontSize(tamanho);
+       const larguraTexto = doc.getTextWidth(texto);
+       const x = (larguraA4 - larguraTexto) / 2;
+       doc.text(texto, x, y);
+     };
 
-  // 2. Injeta Pagamento abaixo de Cliente se não existir no texto salvo
-  if (textoNota.includes("Cliente:") && !textoNota.includes("Pagamento:")) {
-    const formaPag = v.formaPagamento || v.pagamento || "Não informado";
-    textoNota = textoNota.replace(
-      /Cliente:\s+([^\n]+)/,
-      `Cliente:       $1\nPagamento:     ${formaPag}`
-    );
-  }
+     textoCentralizado("TOQUE ÍNTIMO GS", eixoY, 16, "bold");
+     eixoY += 6;
+     textoCentralizado("CNPJ: 45.230.643.0001/60", eixoY, 10, "normal");
+     eixoY += 5;
+     textoCentralizado("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", eixoY, 9, "normal");
+     eixoY += 8;
 
-  // 3. Adiciona a coluna "Desc." no cabeçalho da tabela se ainda não existir
-  if (textoNota.includes("Qtd") && textoNota.includes("Preço") && !textoNota.includes("Desc.")) {
-    textoNota = textoNota.replace("Qtd   Preço        Total", "Qtd   Preço    Desc.     Total");
-    textoNota = textoNota.replace("Qtd   Preco        Total", "Qtd   Preço    Desc.     Total");
-  }
+     doc.setLineWidth(0.5);
+     doc.line(15, eixoY, 195, eixoY);
+     eixoY += 6;
 
-  // 4. Formata a seção de PARCELAS exatamente como no modelo (a prazo)
-  if ((v.formaPagamento === "A Prazo" || v.formaPagamento === "A prazo" || v.formaPagamento === "A Prazo / Crediário") && !textoNota.includes("PARCELAS:")) {
-    const dataVenc = v.vencimento || v.dataVencimento || "A combinar";
-    const entrada = Number(v.entrada || 0).toFixed(2);
-    const textoParcela = `\n-------------------------------------------------------------------\n\nPARCELAS:\nPagamento: Forma: A prazo (1x | Entrada: R$ ${entrada} | 1ª Parc: ${dataVenc})`;
-    
-    textoNota += textoParcela;
-  }
+     textoCentralizado("NOTA DE VENDA", eixoY, 12, "bold");
+     eixoY += 8;
 
-  const linhas = textoNota.split('\n');
-  let y = 15;
+     doc.setFont("courier", "normal");
+     doc.setFontSize(10);
 
-  linhas.forEach(linha => {
-    if (y > 280) {
-      pdf.addPage();
-      y = 15;
-    }
-    pdf.text(linha, 15, y);
-    y += 6;
-  });
+     const textoOriginal = elementoNota.innerText;
+     
+     const extrairCampo = (regex, padrao = "Não informado") => {
+       const matches = textoOriginal.match(regex);
+       return matches ? matches[1].trim() : padrao;
+     };
 
-  pdf.save(`Nota_Venda_${v.id}.pdf`);
-}
+     const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
+     const dataOriginal = extrairCampo(/Data:\s*([^\s]+)/i, new Date().toLocaleDateString());
+     const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
+     const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
+
+     doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
+     doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
+     
+     doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
+     doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
+     
+     eixoY += 6;
+     
+     doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
+     doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
+
+     eixoY += 8;
+
+     doc.setLineWidth(0.2);
+     doc.line(15, eixoY, 195, eixoY);
+     eixoY += 6;
+
+     doc.setFont("courier", "bold");
+     doc.setFontSize(10);
+     doc.text("Produto", 15, eixoY);
+     doc.text("Qtd", 110, eixoY);
+     doc.text("Preço", 130, eixoY);
+     doc.text("Total", 170, eixoY);
+     
+     eixoY += 4;
+     doc.line(15, eixoY, 195, eixoY);
+     eixoY += 6;
+
+     doc.setFont("courier", "normal");
+     
+     const linhasOriginal = textoOriginal.split("\n");
+     let extraindoItens = false;
+
+     let subtotalStr = "R$ 0,00";
+     let descontoStr = "R$ 0,00";
+     let totalStr = "R$ 0,00";
+     let temParcelas = false;
+     let listaParcelas = [];
+
+     linhasOriginal.forEach(linha => {
+         if (linha.includes("-----") && !extraindoItens) {
+             extraindoItens = true;
+             return;
+         }
+         if (linha.includes("-----") && extraindoItens) {
+             extraindoItens = false;
+             return;
+         }
+
+         if (linha.includes("Subtotal:")) {
+             subtotalStr = linha.split("Subtotal:")[1].trim();
+         }
+         if (linha.includes("Desconto:")) {
+             descontoStr = linha.split("Desconto:")[1].trim();
+         }
+         if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
+             totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
+         }
+
+         if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
+             temParcelas = true;
+             listaParcelas.push(linha.trim());
+         }
+
+         if (extraindoItens && linha.trim() !== "") {
+             const partes = linha.split(" - ");
+             const nomeEVar = partes[0].trim();
+             const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+             const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
+
+             doc.text(nomeLimitado, 15, eixoY);
+             doc.text("1", 110, eixoY);
+             doc.text(precoStr, 130, eixoY);
+             doc.text(precoStr, 170, eixoY);
+             eixoY += 6;
+         }
+     });
+
+     eixoY += 2;
+     doc.line(15, eixoY, 195, eixoY);
+     eixoY += 6;
+
+     doc.setFont("courier", "normal");
+     doc.text("Subtotal:", 130, eixoY);
+     doc.text(subtotalStr, 170, eixoY);
+     eixoY += 5;
+
+     doc.text("(-) Desconto:", 130, eixoY);
+     doc.text(descontoStr, 170, eixoY);
+     eixoY += 5;
+
+     doc.setFont("courier", "bold");
+     doc.setFontSize(11);
+     doc.text("TOTAL:", 130, eixoY);
+     doc.text(totalStr, 170, eixoY);
+     eixoY += 10;
+
+     if (temParcelas && listaParcelas.length > 0) {
+       doc.line(15, eixoY, 195, eixoY);
+       eixoY += 6;
+       doc.setFont("courier", "bold");
+       doc.setFontSize(10);
+       doc.text("PARCELAS:", 15, eixoY);
+       eixoY += 6;
+
+       doc.setFont("courier", "normal");
+       listaParcelas.forEach(parc => {
+         doc.text(parc, 15, eixoY);
+         eixoY += 5;
+       });
+       eixoY += 5;
+     }
+
+     eixoY = Math.max(eixoY, 265);
+     doc.setLineWidth(0.2);
+     doc.line(15, eixoY, 195, eixoY);
+     eixoY += 6;
+
+     textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
+     eixoY += 5;
+     textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
+
+     doc.save(`Nota_Venda_${id}.pdf`);
+
+   } catch (erro) {
+     console.error("Erro ao gerar PDF profissional:", erro);
+     alert("Ocorreu um erro ao formatar a nota: " + erro.message);
+   }
+ } 
  
  function excluirVenda(id) {
    if (confirm("Deseja realmente excluir esta venda?")) {
