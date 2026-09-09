@@ -2158,11 +2158,12 @@ function baixarPDFNota(id) {
     eixoY += 6;
 
     doc.setFont("courier", "bold");
-    doc.setFontSize(10);
-    doc.text("Produto", 15, eixoY);
-    doc.text("Qtd", 110, eixoY);
-    doc.text("Preço", 130, eixoY);
-    doc.text("Total", 170, eixoY);
+   doc.setFontSize(9);
+doc.text("Produto", 15, eixoY);
+doc.text("Qtd", 100, eixoY);
+doc.text("Preço", 120, eixoY);
+doc.text("Desc.", 150, eixoY);
+doc.text("Total", 175, eixoY); 
 
     eixoY += 4;
     doc.line(15, eixoY, 195, eixoY);
@@ -2205,17 +2206,49 @@ function baixarPDFNota(id) {
       }
 
       if (extraindoItens && linha.trim() !== "") {
-        const partes = linha.split(" - ");
-        const nomeEVar = partes[0].trim();
-        const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-        const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
+    const partes = linha.split(" - ");
+    const nomeEVar = partes[0].trim();
+    
+    // Extrai o preço unitário/bruto (se houver) e limpa o texto do nome
+    let precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+    let descStr = "R$ 0,00";
+    
+    // Identifica e extrai o valor do desconto da linha do item se existir
+    if (linha.includes("(Desc:")) {
+        const descMatch = linha.match(/\(Desc:\s*R\$\s*([\d,.]+)\)/i);
+        if (descMatch) {
+            descStr = `R$ ${descMatch[1]}`;
+        }
+    }
 
-        doc.text(nomeLimitado, 15, eixoY);
-        doc.text("1", 110, eixoY);
-        doc.text(precoStr, 130, eixoY);
-        doc.text(precoStr, 170, eixoY);
-        eixoY += 6;
-      }
+    // Calcula o valor total com o desconto abatido
+    const precoNum = parseFloat(precoStr.replace("R$", "").replace(".", "").replace(",", ".").trim()) || 0;
+    const descNum = parseFloat(descStr.replace("R$", "").replace(".", "").replace(",", ".").trim()) || 0;
+    const totalItemNum = Math.max(0, precoNum - descNum);
+    const totalItemStr = `R$ ${totalItemNum.toFixed(2).replace(".", ",")}`;
+
+    const nomeLimitado = nomeEVar.length > 30 ? nomeEVar.substring(0, 27) + "..." : nomeEVar;
+
+    // Imprime a linha com todas as colunas alinhadas
+    doc.text(nomeLimitado, 15, eixoY);
+    doc.text("1", 102, eixoY);
+    doc.text(precoStr, 120, eixoY);
+    doc.text(descStr, 150, eixoY);
+    doc.text(totalItemStr, 175, eixoY);
+    
+    eixoY += 6;
+}
+    // Se o item tiver informação de desconto descrita no texto "(Desc: R$...)"
+    if (linha.includes("(Desc:")) {
+        const descMatch = linha.match(/\(Desc:.*?\)/);
+        if (descMatch) {
+            doc.setFontSize(8);
+            doc.text(`   ↳ ${descMatch[0]}`, 18, eixoY);
+            doc.setFontSize(10);
+            eixoY += 4;
+        }
+    }
+}
     });
 
     eixoY += 2;
