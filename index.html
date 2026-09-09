@@ -2078,194 +2078,158 @@ function alterarEstoqueDireto(idProduto, indexVariacao, delta) {
    window.open(url, '_blank');
  }
 
-function baixarPDFNota(id) {
-  const elementoNota = document.getElementById(`nota-${id}`);
-  if (!elementoNota) {
-    alert("Nota não encontrada!");
+function baixarPDFNotaVenda(vendaId) {
+  const v = vendas.find(item => item.id === vendaId);
+  if (!v) {
+    alert("Nota não encontrada.");
     return;
   }
 
   const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
   if (!jsPDFLib) {
-    alert("A biblioteca de PDF ainda está sendo carregada. Por favor, aguarde.");
+    alert("Biblioteca jsPDF indisponível.");
     return;
   }
 
-  try {
-    const doc = new jsPDFLib({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
+  const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  let y = 15;
+
+  // Cabeçalho da Nota
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(16);
+  pdf.text("TOQUE ÍNTIMO GS", 105, y, { align: "center" });
+  
+  y += 6;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.text("CNPJ: 45.230.643/0001-60", 105, y, { align: "center" });
+  
+  y += 5;
+  pdf.text("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", 105, y, { align: "center" });
+
+  y += 7;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text("COMPROVANTE DE VENDA", 105, y, { align: "center" });
+
+  y += 5;
+  pdf.setLineWidth(0.3);
+  pdf.line(15, y, 195, y);
+
+  // Informações do Cliente e Venda
+  y += 6;
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Cliente: ", 15, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(v.clienteNome || "Consumidor Final", 32, y);
+
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Data: ", 145, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(v.data || new Date().toLocaleDateString('pt-BR'), 157, y);
+
+  y += 5;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Entrega: ", 15, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(v.tipoEntrega || 'Retirada Física', 32, y);
+
+  y += 4;
+  pdf.line(15, y, 195, y);
+
+  // CABEÇALHO DA TABELA DE ITENS (Com a nova coluna de Desconto Unitário)
+  y += 6;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9);
+  pdf.text("Produto", 15, y);
+  pdf.text("Qtd", 110, y, { align: "center" });
+  pdf.text("Preço", 135, y, { align: "right" });
+  pdf.text("Desc. Un.", 165, y, { align: "right" }); // Coluna Inserida após Preço
+  pdf.text("Total", 195, y, { align: "right" });
+
+  y += 2;
+  pdf.line(15, y, 195, y);
+
+  // LINHAS DOS PRODUTOS
+  let subtotal = 0;
+  pdf.setFont("helvetica", "normal");
+
+  if (v.itens && Array.isArray(v.itens)) {
+    v.itens.forEach(item => {
+      y += 6;
+      const qtd = Number(item.quantidade || item.qtd || 1);
+      const precoUnit = Number(item.preco || 0);
+      const descUnit = Number(item.descontoItem || 0) / qtd; // Calcula o desconto individual por peça
+      const totalItem = (precoUnit * qtd) - Number(item.descontoItem || 0);
+      subtotal += totalItem;
+
+      const nomeProd = `${item.nome || 'Produto'} (${item.cor || '-'}/${item.tamanho || '-'})`;
+      const nomeFormatado = nomeProd.length > 42 ? nomeProd.substring(0, 39) + '...' : nomeProd;
+
+      pdf.text(nomeFormatado, 15, y);
+      pdf.text(qtd.toString(), 110, y, { align: "center" });
+      pdf.text(`R$ ${precoUnit.toFixed(2)}`, 135, y, { align: "right" });
+      pdf.text(`R$ ${descUnit.toFixed(2)}`, 165, y, { align: "right" }); // Exibe o valor do Desconto Unitário
+      pdf.text(`R$ ${totalItem.toFixed(2)}`, 195, y, { align: "right" });
     });
-
-    const larguraA4 = 210;
-    let eixoY = 20;
-
-    const textoCentralizado = (texto, y, tamanho = 10, estilo = "normal") => {
-      doc.setFont("courier", estilo);
-      doc.setFontSize(tamanho);
-      const larguraTexto = doc.getTextWidth(texto);
-      const x = (larguraA4 - larguraTexto) / 2;
-      doc.text(texto, x, y);
-    };
-
-    textoCentralizado("TOQUE ÍNTIMO GS", eixoY, 16, "bold");
-    eixoY += 6;
-    textoCentralizado("CNPJ: 45.230.643.0001/60", eixoY, 10, "normal");
-    eixoY += 5;
-    textoCentralizado("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", eixoY, 9, "normal");
-    eixoY += 8;
-
-    doc.setLineWidth(0.5);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    textoCentralizado("NOTA DE VENDA", eixoY, 12, "bold");
-    eixoY += 8;
-
-    doc.setFont("courier", "normal");
-    doc.setFontSize(10);
-
-    const textoOriginal = elementoNota.innerText;
-
-    const extrairCampo = (regex, padrao = "Não informado") => {
-      const matches = textoOriginal.match(regex);
-      return matches ? matches[1].trim() : padrao;
-    };
-
-    const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
-    const dataOriginal = extrairCampo(/Data:\s*([^\n]+)/i, new Date().toLocaleDateString());
-    const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
-    const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
-
-    doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
-    doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
-
-    doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
-    doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
-
-    eixoY += 6;
-
-    doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
-    doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
-
-    eixoY += 8;
-
-    doc.setLineWidth(0.2);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "bold");
-    doc.setFontSize(10);
-    doc.text("Produto", 15, eixoY);
-    doc.text("Qtd", 110, eixoY);
-    doc.text("Preço", 130, eixoY);
-    doc.text("Total", 170, eixoY);
-
-    eixoY += 4;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "normal");
-
-    const linhasOriginal = textoOriginal.split("\n");
-    let extraindoItens = false;
-
-    let subtotalStr = "R$ 0,00";
-    let descontoStr = "R$ 0,00";
-    let totalStr = "R$ 0,00";
-    let temParcelas = false;
-    let listaParcelas = [];
-
-    linhasOriginal.forEach(linha => {
-      if (linha.includes("------") && !extraindoItens) {
-        extraindoItens = true;
-        return;
-      }
-      if (linha.includes("------") && extraindoItens) {
-        extraindoItens = false;
-        return;
-      }
-
-      if (linha.includes("Subtotal:")) {
-        subtotalStr = linha.split("Subtotal:")[1].trim();
-      }
-      if (linha.includes("Desconto:")) {
-        descontoStr = linha.split("Desconto:")[1].trim();
-      }
-      if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
-        totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
-      }
-
-      if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
-        temParcelas = true;
-        listaParcelas.push(linha.trim());
-      }
-
-      if (extraindoItens && linha.trim() !== "") {
-        const partes = linha.split(" - ");
-        const nomeEVar = partes[0].trim();
-        const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-        const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
-
-        doc.text(nomeLimitado, 15, eixoY);
-        doc.text("1", 110, eixoY);
-        doc.text(precoStr, 130, eixoY);
-        doc.text(precoStr, 170, eixoY);
-        eixoY += 6;
-      }
-    });
-
-    eixoY += 2;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "normal");
-    doc.text("Subtotal:", 130, eixoY);
-    doc.text(subtotalStr, 170, eixoY);
-    eixoY += 5;
-
-    doc.text("(-) Desconto:", 130, eixoY);
-    doc.text(descontoStr, 170, eixoY);
-    eixoY += 5;
-
-    doc.setFont("courier", "bold");
-    doc.setFontSize(11);
-    doc.text("TOTAL:", 130, eixoY);
-    doc.text(totalStr, 170, eixoY);
-    eixoY += 10;
-
-    if (temParcelas && listaParcelas.length > 0) {
-      doc.line(15, eixoY, 195, eixoY);
-      eixoY += 6;
-      doc.setFont("courier", "bold");
-      doc.setFontSize(10);
-      doc.text("PARCELAS:", 15, eixoY);
-      eixoY += 6;
-
-      doc.setFont("courier", "normal");
-      listaParcelas.forEach(parc => {
-        doc.text(parc, 15, eixoY);
-        eixoY += 5;
-      });
-      eixoY += 5;
-    }
-
-    eixoY = Math.max(eixoY, 265);
-    doc.setLineWidth(0.2);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
-    eixoY += 5;
-    textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
-
-    doc.save(`Nota_Venda_${id}.pdf`);
-
-  } catch (erro) {
-    console.error("Erro ao gerar PDF profissional:", erro);
-    alert("Ocorreu um erro ao formatar a nota: " + erro.message);
   }
+
+  y += 4;
+  pdf.line(15, y, 195, y);
+
+  // RESUMO DOS VALORES
+  const frete = Number(v.frete || 0);
+  const descontoGeral = Number(v.descontoGeral || 0);
+  const totalGeral = subtotal + frete - descontoGeral;
+
+  y += 6;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Subtotal:", 140, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(`R$ ${subtotal.toFixed(2)}`, 195, y, { align: "right" });
+
+  if (descontoGeral > 0) {
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("(-) Desc. Geral:", 140, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`R$ ${descontoGeral.toFixed(2)}`, 195, y, { align: "right" });
+  }
+
+  if (frete > 0) {
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("(+) Frete:", 140, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`R$ ${frete.toFixed(2)}`, 195, y, { align: "right" });
+  }
+
+  y += 6;
+  pdf.setFontSize(11);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("TOTAL:", 140, y);
+  pdf.text(`R$ ${totalGeral.toFixed(2)}`, 195, y, { align: "right" });
+
+  y += 4;
+  pdf.line(15, y, 195, y);
+
+  // FORMA DE PAGAMENTO
+  y += 6;
+  pdf.setFontSize(9);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("FORMA DE PAGAMENTO:", 15, y);
+
+  y += 5;
+  pdf.setFont("helvetica", "normal");
+  pdf.text(`${v.formaPagamento || 'Não informada'}`, 15, y);
+
+  y += 12;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10);
+  pdf.text("Obrigado pela preferência!", 105, y, { align: "center" });
+
+  pdf.save(`Nota_Venda_${v.id}.pdf`);
 }
  
  function excluirVenda(id) {
