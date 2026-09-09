@@ -2243,32 +2243,106 @@ function excluirCliente(id) {
 }
 
 function carregarFinanceiro() {
-  const faturamentoEl = document.getElementById('fin-card-faturamento');
-  const custoEl = document.getElementById('fin-card-custo');
-  const lucroEl = document.getElementById('fin-card-lucro');
+  const filtro = document.getElementById('fin-filtro-periodo').value;
   const tabelaCorpo = document.getElementById('fin-tabela-corpo');
+  if (!tabelaCorpo) return;
 
-  let totalVendas = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
-  let totalCusto = vendas.reduce((acc, v) => acc + (v.custoTotal || 0), 0);
-  let lucroLiquido = totalVendas - totalCusto;
+  tabelaCorpo.innerHTML = '';
 
-  if (faturamentoEl) faturamentoEl.innerText = `R$ ${totalVendas.toFixed(2)}`;
-  if (custoEl) custoEl.innerText = `R$ ${totalCusto.toFixed(2)}`;
-  if (lucroEl) lucroEl.innerText = `R$ ${lucroLiquido.toFixed(2)}`;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const mesAtual = new Date().getMonth();
+  const anoAtual = new Date().getFullYear();
 
-  if (tabelaCorpo) {
-    tabelaCorpo.innerHTML = '';
-    vendas.forEach(v => {
+  // Filtragem das vendas
+  let vendasFiltradas = vendas.filter(v => {
+    if (filtro === 'hoje') {
+      return v.data === hoje;
+    } else if (filtro === 'mes') {
+      const partes = v.data.split('/');
+      if (partes.length === 3) {
+        const mesVenda = parseInt(partes[1], 10) - 1;
+        const anoVenda = parseInt(partes[2], 10);
+        return mesVenda === mesAtual && anoVenda === anoAtual;
+      }
+      return false;
+    }
+    return true; // 'todos'
+  });
+
+  let totalLucroEstoque = 0;
+  let totalInvestimentoEstoque = 0;
+  let totalLucroLiquido = 0;
+  let totalAReceber = 0;
+
+  // Cálculo dos cards de estoque geral
+  produtos.forEach(p => {
+    if (p.variacoes && Array.isArray(p.variacoes)) {
+      p.variacoes.forEach(v => {
+        const qtd = Number(v.quantidade || 0);
+        const custo = Number(v.custo || 0);
+        const preco = Number(v.preco || 0);
+
+        totalInvestimentoEstoque += custo * qtd;
+        totalLucroEstoque += (preco - custo) * qtd;
+      });
+    }
+  });
+
+  // Renderização da tabela e cálculos de faturamento líquido / a receber
+  if (vendasFiltradas.length === 0) {
+    tabelaCorpo.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#999;">Nenhum registro financeiro encontrado.</td></tr>';
+  } else {
+    [...vendasFiltradas].reverse().forEach(v => {
+      const totalVenda = Number(v.total || 0);
+      const custoVenda = Number(v.custoTotal || 0);
+      const entrada = Number(v.valorEntrada || 0);
+      const eAPrazo = v.formaPagamento === 'A prazo';
+
+      const lucroVenda = totalVenda - custoVenda;
+      totalLucroLiquido += lucroVenda;
+
+      if (eAPrazo) {
+        const saldoDevedor = Math.max(0, totalVenda - entrada);
+        totalAReceber += saldoDevedor;
+      }
+
+      const badgeStatus = eAPrazo 
+        ? `<span class="badge-prazo">A prazo</span>` 
+        : `<span class="badge-pago">${v.formaPagamento || 'Pago'}</span>`;
+
       tabelaCorpo.innerHTML += `
         <tr>
-          <td>${v.data}</td>
-          <td>${v.clienteNome || 'Consumidor'}</td>
-          <td><span class="badge-pago">${v.formaPagamento || 'Pix'}</span></td>
-          <td>R$ ${(v.total || 0).toFixed(2)}</td>
-          <td><button class="btn-action btn-delete" onclick="excluirVenda('${v.id}')"><i class="fa-solid fa-trash"></i></button></td>
+          <td>${v.data || '-'}</td>
+          <td><b>${v.clienteNome || 'Consumidor Final'}</b></td>
+          <td>${badgeStatus}</td>
+          <td><b>R$ ${totalVenda.toFixed(2)}</b></td>
+          <td>
+            <button class="btn-action btn-delete" onclick="excluirVenda('${v.id}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
         </tr>
       `;
     });
+  }
+
+  // Atualiza os valores nos cards da tela
+  document.getElementById('fin-card-faturamento').innerText = `R$ ${totalLucroEstoque.toFixed(2)}`;
+  document.getElementById('fin-card-custo').innerText = `R$ ${totalInvestimentoEstoque.toFixed(2)}`;
+  document.getElementById('fin-card-lucro').innerText = `R$ ${totalLucroLiquido.toFixed(2)}`;
+  document.getElementById('fin-card-receber').innerText = `R$ ${totalAReceber.toFixed(2)}`;
+}
+
+function excluirVenda(id) {
+  if (confirm("Tem certeza que deseja excluir este registro de venda?")) {
+    vendas = vendas.filter(v => v.id !== id);
+    localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+    if (typeof excluirVendaFirebase === 'function') {
+      excluirVendaFirebase(id);
+    }
+    carregarVendas();
+    carregarFinanceiro();
+    atualizarDash();
   }
 }
 
