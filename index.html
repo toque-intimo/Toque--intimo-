@@ -1665,6 +1665,9 @@ function renderizarCatalogoVisual() {
      return matchesCategoria && matchesBusca && totalEstoque > 0;
    });
 
+   // Ordena os produtos por Categoria em ordem alfabética
+   produtosFiltrados.sort((a, b) => a.categoria.localeCompare(b.categoria));
+
    if (!produtosFiltrados.length) {
      grade.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:20px; color:#999;">Nenhum produto disponível em estoque.</p>';
      return;
@@ -1699,7 +1702,7 @@ function renderizarCatalogoVisual() {
      </div>`;
    });
  }
-
+ 
  function carregarEstoque() {
   const container = document.getElementById('lista-estoque-produtos');
   const resumoEl = document.getElementById('total-produtos-estoque');
@@ -1714,10 +1717,15 @@ function renderizarCatalogoVisual() {
     return;
   }
 
-  produtos.forEach((p, indexProd) => {
+  // Cria uma cópia da lista de produtos ordenada por categoria
+  const produtosOrdenados = [...produtos].sort((a, b) => a.categoria.localeCompare(b.categoria));
+
+  produtosOrdenados.forEach((p) => {
     let htmlVariacoes = '';
     
     p.variacoes.forEach((v, indexVar) => {
+      // Encontra o índice real da variação no array original do produto
+      const indexReal = p.variacoes.findIndex(item => item === v);
       totalPecas += Number(v.quantidade || 0);
       
       let fotoVar = v.foto 
@@ -1735,9 +1743,9 @@ function renderizarCatalogoVisual() {
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
             <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 6px; overflow: hidden;">
-              <button type="button" onclick="alterarEstoqueDireto('${p.id}', ${indexVar}, -1)" style="padding: 2px 8px; background: #f0f0f0; border: none; cursor: pointer; font-weight: bold;">-</button>
+              <button type="button" onclick="alterarEstoqueDireto('${p.id}', ${indexReal}, -1)" style="padding: 2px 8px; background: #f0f0f0; border: none; cursor: pointer; font-weight: bold;">-</button>
               <span style="padding: 2px 6px; font-size: 12px; font-weight: bold; min-width: 20px; text-align: center;">${v.quantidade}</span>
-              <button type="button" onclick="alterarEstoqueDireto('${p.id}', ${indexVar}, 1)" style="padding: 2px 8px; background: #f0f0f0; border: none; cursor: pointer; font-weight: bold;">+</button>
+              <button type="button" onclick="alterarEstoqueDireto('${p.id}', ${indexReal}, 1)" style="padding: 2px 8px; background: #f0f0f0; border: none; cursor: pointer; font-weight: bold;">+</button>
             </div>
           </div>
         </div>
