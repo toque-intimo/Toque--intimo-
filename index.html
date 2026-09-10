@@ -2286,44 +2286,52 @@ function baixarPDFNota(id) {
    }
  }
 
- /* --- MÓDULO CLIENTES --- */
  function renderizarClientes() {
-   const container = document.getElementById('lista-clientes-container');
-   const busca = document.getElementById('buscaCliente') ? document.getElementById('buscaCliente').value.toLowerCase() : '';
-   if (!container) return;
+  const container = document.getElementById('lista-clientes-container');
+  const busca = document.getElementById('buscaCliente').value.toLowerCase();
+  if (!container) return;
 
-   container.innerHTML = '';
-   const filtrados = clientes.filter(c => 
-     c.nome.toLowerCase().includes(busca) || 
-     (c.telefone && c.telefone.includes(busca)) ||
-     (c.codigo && c.codigo.toLowerCase().includes(busca))
-   );
+  container.innerHTML = '';
 
-   if (!filtrados.length) {
-     container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhum cliente encontrado.</p>';
-     return;
-   }
+  // Ordena os clientes em ordem alfabética pelo nome
+  const clientesOrdenados = [...clientes].sort((a, b) => {
+    const nomeA = (a.nome || '').toLowerCase();
+    const nomeB = (b.nome || '').toLowerCase();
+    return nomeA.localeCompare(nomeB, 'pt-BR');
+  });
 
-   filtrados.forEach(c => {
-     container.innerHTML += `
-       <div class="client-list-card">
-         <div class="item-row">
-           <b style="color:var(--primary);">${c.nome}</b>
-           <small style="color:#888;">Cód: ${c.codigo || '-'}</small>
-         </div>
-         <div style="font-size:12px; color:#555;">
-           <i class="fa-solid fa-phone"></i> ${c.telefone || 'Não informado'}<br>
-           <i class="fa-solid fa-envelope"></i> ${c.email || 'Não informado'}<br>
-           <i class="fa-solid fa-location-dot"></i> ${c.endereco || 'Não informado'}
-         </div>
-         <div class="actions-row">
-           <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-           <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
-         </div>
-       </div>
-     `;
-   });
- }
+  // Filtra com base na busca (se houver texto digitado)
+  const clientesFiltrados = clientesOrdenados.filter(c => 
+    (c.nome && c.nome.toLowerCase().includes(busca)) ||
+    (c.telefone && c.telefone.toLowerCase().includes(busca)) ||
+    (c.id && c.id.toString().toLowerCase().includes(busca))
+  );
+
+  if (clientesFiltrados.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum cliente encontrado.</p>';
+    return;
+  }
+
+  clientesFiltrados.forEach(c => {
+    container.innerHTML += `
+      <div class="client-list-card">
+        <div class="item-row">
+          <div>
+            <b style="font-size: 15px; color: var(--primary);">${c.nome}</b>
+            <div style="font-size: 13px; color: #555; margin-top: 3px;">
+              <i class="fa-solid fa-phone" style="font-size: 11px; color: #888;"></i> ${c.telefone || 'Não informado'}
+            </div>
+            ${c.endereco ? `<div style="font-size: 12px; color: #777; margin-top: 2px;"><i class="fa-solid fa-location-dot" style="font-size: 11px; color: #888;"></i> ${c.endereco}</div>` : ''}
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="btn-action btn-delete" onclick="deletarCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
+        </div>
+      </div>
+    `;
+  });
+}
 
  function abrirCadastroCliente() {
    document.getElementById('formCliente').reset();
