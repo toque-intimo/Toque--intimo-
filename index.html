@@ -2383,63 +2383,90 @@ function baixarPDFNota(id) {
    }
  }
 
- /* --- MÓDULO FINANCEIRO --- */
  function carregarFinanceiro() {
-   let faturamento = 0;
-   let custoTotalEstoque = 0;
-   let lucroLiquido = 0;
-   let aReceber = 0;
+  const filtro = document.getElementById('fin-filtro-periodo') ? document.getElementById('fin-filtro-periodo').value : 'todos';
+  
+  let totalFaturamentoGeral = 0;
+  let totalCustoGeral = 0;
 
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       faturamento += (v.preco * v.quantidade);
-       custoTotalEstoque += (v.custo * v.quantidade);
-     });
-   });
+  // 1. Calcula o Valor e Custo Total do Estoque Ativo
+  produtos.forEach(p => {
+    p.variacoes.forEach(v => {
+      totalFaturamentoGeral += (v.preco * v.quantidade);
+      totalCustoGeral += (v.custo * v.quantidade);
+    });
+  });
 
-   vendas.forEach(v => {
-     if (v.formaPagamento === 'A prazo') {
-       aReceber += (v.total - (v.valorEntrada || 0));
-     }
-   });
+  const lucroTotalEstoque = totalFaturamentoGeral - totalCustoGeral;
 
-   lucroLiquido = faturamento - custoTotalEstoque;
+  // Atualiza os cards de estoque
+  if(document.getElementById('fin-card-faturamento')) {
+    document.getElementById('fin-card-faturamento').innerText = `R$ ${lucroTotalEstoque.toFixed(2)}`;
+  }
+  if(document.getElementById('fin-card-custo')) {
+    document.getElementById('fin-card-custo').innerText = `R$ ${totalCustoGeral.toFixed(2)}`;
+  }
 
-   document.getElementById('fin-card-faturamento').innerText = `R$ ${faturamento.toFixed(2)}`;
-   document.getElementById('fin-card-custo').innerText = `R$ ${custoTotalEstoque.toFixed(2)}`;
-   document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquido.toFixed(2)}`;
-   document.getElementById('fin-card-receber').innerText = `R$ ${aReceber.toFixed(2)}`;
+  // 2. Filtra as vendas finalizadas conforme o período selecionado
+  const hojeStr = new Date().toLocaleDateString();
+  const mesAtual = new Date().getMonth();
+  const anoAtual = new Date().getFullYear();
 
-   const tabelaCorpo = document.getElementById('fin-tabela-corpo');
-   if (!tabelaCorpo) return;
+  const vendasFiltradas = vendas.filter(v => {
+    if (filtro === 'hoje') {
+      return v.data.includes(hojeStr);
+    } else if (filtro === 'mes') {
+      const partes = v.data.split('/');
+      if (partes.length === 3) {
+        const mesVenda = parseInt(partes[1]) - 1;
+        const anoVenda = parseInt(partes[2]);
+        return mesVenda === mesAtual && anoVenda === anoAtual;
+      }
+    }
+    return true; // 'todos'
+  });
 
-   tabelaCorpo.innerHTML = '';
-   if (!vendas.length) {
-     tabelaCorpo.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Sem registros.</td></tr>';
-     return;
-   }
+  let lucroLiquidoVendas = 0;
+  let totalAReceber = 0;
 
-   [...vendas].reverse().forEach(v => {
-     const statusBadge = v.formaPagamento === 'A prazo' 
-       ? `<span class="badge-prazo">A prazo</span>` 
-       : `<span class="badge-pago">Pago</span>`;
+  vendasFiltradas.forEach(v => {
+    const lucroVenda = (v.total || 0) - (v.custoTotal || 0);
+    lucroLiquidoVendas += lucroVenda;
 
-     // Botão de dar baixa se for "A prazo"
-     const botaoAcao = v.formaPagamento === 'A prazo' 
-       ? `<button class="btn-action btn-sell-direct" onclick="darBaixaVenda('${v.id}')"><i class="fa-solid fa-check"></i> Dar Baixa</button>` 
-       : `<span style="color:#aaa; font-size:11px;">Quitado</span>`;
+    if (v.formaPagamento === 'A prazo') {
+      const entrada = v.valorEntrada || 0;
+      totalAReceber += Math.max(0, (v.total || 0) - entrada);
+    }
+  });
 
-     tabelaCorpo.innerHTML += `
-       <tr>
-         <td>${v.data || '-'}</td>
-         <td>${v.clienteNome || 'Consumidor Final'}</td>
-         <td>${statusBadge}</td>
-         <td><b>R$ ${v.total.toFixed(2)}</b></td>
-         <td>${botaoAcao}</td>
-       </tr>
-     `;
-   });
- }
+  // Atualiza os cards de Vendas/A Receber
+  if(document.getElementById('fin-card-lucro')) {
+    document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquidoVendas.toFixed(2)}`;
+  }
+  if(document.getElementById('fin-card-receber')) {
+    document.getElementById('fin-card-receber').innerText = `R$ ${totalAReceber.toFixed(2)}`;
+  }
+
+  // 3. Renderiza a tabela de histórico de transações
+  const tbody = document.getElementById('fin-tabela-corpo');
+  if (tbody) {
+    tbody.innerHTML = vendasFiltradas.length ? '' : '<tr><td colspan="4" style="text-align:center; padding:10px; color:#999;">Nenhum registro encontrado.</td></tr>';
+    
+    [...vendasFiltradas].reverse().forEach(v => {
+      const isPrazo = v.formaPagamento === 'A prazo';
+      const badge = isPrazo ? `<span class="badge-prazo">A Prazo</span>` : `<span class="badge-pago">${v.formaPagamento || 'Pago'}</span>`;
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${v.data}</td>
+          <td>${v.clienteNome || 'Consumidor'}</td>
+          <td>${badge}</td>
+          <td><b>R$ ${(v.total || 0).toFixed(2)}</b></td>
+        </tr>
+      `;
+    });
+  }
+}
  
  function darBaixaVenda(idVenda) {
   const venda = vendas.find(v => v.id === idVenda);
