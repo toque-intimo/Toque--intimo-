@@ -198,14 +198,12 @@ function abrirModalModeloCat(pId) {
   const variacoesDisponiveis = prod.variacoes.filter(v => Number(v.quantidade) > 0);
 
   variacoesDisponiveis.forEach((v, idx) => {
-    const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : 0;
+    const qtdEstoque = (v.quantidade !== undefined && v.quantidade !== "") ? Number(v.quantidade) : Infinity;
     const fotoVar = v.foto || v.imagem || v.fotoUrl || 'https://via.placeholder.com/80?text=Sem+Foto';
     const codigoVar = v.codigo || pId.substring(0, 8) || 'Sem Código';
     const corTam = `${v.cor || ''} ${v.tamanho ? '/ Tam: ' + v.tamanho : ''}`.trim() || 'Modelo Único';
     const precoFormatado = Number(v.preco || 0).toFixed(2);
-    
-    // Exibição clara e limpa da quantidade em estoque sem alterar o layout
-    const textoQtd = `Estoque: ${qtdEstoque} un.`;
+    const textoQtd = isFinite(qtdEstoque) ? `(Qtd: ${qtdEstoque})` : '';
 
     containerLista.innerHTML += `
       <div style="display: flex; align-items: center; justify-content: space-between; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; gap: 10px;">
@@ -217,7 +215,7 @@ function abrirModalModeloCat(pId) {
           </div>
           <div style="font-size: 11px; color: #888; margin-top: 2px;">Cód: ${codigoVar}</div>
           <div style="font-size: 13px; font-weight: bold; color: var(--primary); margin-top: 2px;">
-            R$ ${precoFormatado} <span style="font-size: 11px; color: #2e7d32; font-weight: 600; margin-left: 6px;">(${textoQtd})</span>
+            R$ ${precoFormatado} <span style="font-size: 11px; color: #2e7d32; font-weight: normal;">${textoQtd}</span>
           </div>
         </div>
 
@@ -245,7 +243,7 @@ function adicionarVariacaoDiretaCat(pId, idx) {
 
   if (!variacao) return;
 
-  const estoqueDisponivel = Number(variacao.quantidade) || 0;
+  const estoqueDisponivel = Number(variacao.quantidade) || 9999;
   const itemExistente = carrinhoCliente.find(i => i.idProd === pId && i.cor === variacao.cor && i.tamanho === variacao.tamanho);
   const qtdAtual = itemExistente ? itemExistente.quantidade : 0;
 
