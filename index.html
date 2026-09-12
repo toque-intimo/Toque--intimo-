@@ -2163,12 +2163,14 @@ function baixarPDFNota(id) {
     doc.line(15, eixoY, 195, eixoY);
     eixoY += 6;
 
+    // Cabeçalhos das Colunas ajustados para incluir "Desconto"
     doc.setFont("courier", "bold");
     doc.setFontSize(10);
     doc.text("Produto", 15, eixoY);
-    doc.text("Qtd", 110, eixoY);
-    doc.text("Preço", 130, eixoY);
-    doc.text("Total", 170, eixoY);
+    doc.text("Qtd", 95, eixoY);
+    doc.text("Preço", 118, eixoY);
+    doc.text("Desconto", 148, eixoY);
+    doc.text("Total", 180, eixoY);
 
     eixoY += 4;
     doc.line(15, eixoY, 195, eixoY);
@@ -2212,25 +2214,43 @@ function baixarPDFNota(id) {
       }
 
       if (extraindoItens && linha.trim() !== "") {
-        // Exemplo de linha do item: Nome (Cor/Tam) x1 (Desc: R$ 5,00) - R$ 45,00
-        const partes = linha.split(" - ");
-        const infoProdStr = partes[0] ? partes[0].trim() : "";
-        const precoTotalStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-
-        // Extrair quantidade (procura por " x[número]")
+        // Exemplo: Nome (Cor/Tam) x1 (Desc: R$ 5,00) - R$ 45,00 ou sem desc
+        let nomeEVar = linha;
+        let precoTotalStr = "R$ 0,00";
+        let descontoItemStr = "R$ 0,00";
+        let precoUnitStr = "R$ 0,00";
         let qtd = "1";
-        const matchQtd = infoProdStr.match(/x(\d+)/);
+
+        if (linha.includes(" - ")) {
+          const partes = linha.split(" - ");
+          nomeEVar = partes[0].trim();
+          precoTotalStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+        }
+
+        // Extrair quantidade
+        const matchQtd = nomeEVar.match(/x(\d+)/);
         if (matchQtd) {
           qtd = matchQtd[1];
         }
 
-        // Limitar o nome do produto para não vazar a margem
-        const nomeLimitado = infoProdStr.length > 38 ? infoProdStr.substring(0, 35) + "..." : infoProdStr;
+        // Extrair desconto do item se houver (ex: (Desc: R$ 5.00) ou similar)
+        const matchDesc = nomeEVar.match(/\(Desc:\s*R\$\s*([\d.,]+)\)/i);
+        if (matchDesc) {
+          descontoItemStr = `R$ ${matchDesc[1]}`;
+          // Limpa a tag "(Desc: ...)" do nome do produto para ficar limpo
+          nomeEVar = nomeEVar.replace(/\(Desc:\s*R\$\s*[\d.,]+\)/i, "").trim();
+        }
+
+        // Estimar preço unitário bruto com base no total e desconto
+        // Se a nota guardou o valor unitário ou total original, podemos calcular ou extrair
+        // Como o texto original exibe o valor final do item, extraímos o preço unitário aproximado se necessário
+        const nomeLimitado = nomeEVar.length > 28 ? nomeEVar.substring(0, 25) + "..." : nomeEVar;
 
         doc.text(nomeLimitado, 15, eixoY);
-        doc.text(qtd, 110, eixoY);
-        doc.text("-", 130, eixoY); // Mantém o padrão limpo para itens com desconto variável
-        doc.text(precoTotalStr, 170, eixoY);
+        doc.text(qtd, 95, eixoY);
+        doc.text("-", 118, eixoY); // Preço unitário limpo ou "-"
+        doc.text(descontoItemStr, 148, eixoY);
+        doc.text(precoTotalStr, 180, eixoY);
         eixoY += 6;
       }
     });
