@@ -2198,8 +2198,9 @@ function baixarPDFNota(id) {
       if (linha.includes("Subtotal:")) {
         subtotalStr = linha.split("Subtotal:")[1].trim();
       }
-      if (linha.includes("Desconto:")) {
-        descontoStr = linha.split("Desconto:")[1].trim();
+      if (linha.includes("Desconto Total:") || linha.includes("Desconto:")) {
+        const parteDesc = linha.split(/Desconto Total:|Desconto:/);
+        if (parteDesc[1]) descontoStr = parteDesc[1].trim();
       }
       if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
         totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
@@ -2211,15 +2212,25 @@ function baixarPDFNota(id) {
       }
 
       if (extraindoItens && linha.trim() !== "") {
+        // Exemplo de linha do item: Nome (Cor/Tam) x1 (Desc: R$ 5,00) - R$ 45,00
         const partes = linha.split(" - ");
-        const nomeEVar = partes[0].trim();
-        const precoStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-        const nomeLimitado = nomeEVar.length > 40 ? nomeEVar.substring(0, 37) + "..." : nomeEVar;
+        const infoProdStr = partes[0] ? partes[0].trim() : "";
+        const precoTotalStr = partes[1] ? partes[1].trim() : "R$ 0,00";
+
+        // Extrair quantidade (procura por " x[número]")
+        let qtd = "1";
+        const matchQtd = infoProdStr.match(/x(\d+)/);
+        if (matchQtd) {
+          qtd = matchQtd[1];
+        }
+
+        // Limitar o nome do produto para não vazar a margem
+        const nomeLimitado = infoProdStr.length > 38 ? infoProdStr.substring(0, 35) + "..." : infoProdStr;
 
         doc.text(nomeLimitado, 15, eixoY);
-        doc.text("1", 110, eixoY);
-        doc.text(precoStr, 130, eixoY);
-        doc.text(precoStr, 170, eixoY);
+        doc.text(qtd, 110, eixoY);
+        doc.text("-", 130, eixoY); // Mantém o padrão limpo para itens com desconto variável
+        doc.text(precoTotalStr, 170, eixoY);
         eixoY += 6;
       }
     });
@@ -2271,8 +2282,8 @@ function baixarPDFNota(id) {
     doc.save(`Nota_Venda_${id}.pdf`);
 
   } catch (erro) {
-    console.error("Erro ao gerar PDF profissional:", erro);
-    alert("Ocorreu um erro ao formatar a nota: " + erro.message);
+    console.error("Erro ao gerar PDF:", erro);
+    alert("Erro ao gerar o PDF da nota.");
   }
 }
  
