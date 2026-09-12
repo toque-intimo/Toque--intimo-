@@ -2087,9 +2087,10 @@ function alterarEstoqueDireto(idProduto, indexVariacao, delta) {
  }
 
 function baixarPDFNota(id) {
+  const venda = vendas.find(v => v.id === id);
   const elementoNota = document.getElementById(`nota-${id}`);
-  if (!elementoNota) {
-    alert("Nota não encontrada!");
+  if (!elementoNota || !venda) {
+    alert("Nota ou dados da venda não encontrados!");
     return;
   }
 
@@ -2141,9 +2142,8 @@ function baixarPDFNota(id) {
       return matches ? matches[1].trim() : padrao;
     };
 
-    const cliente = extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
-    const dataOriginal = extrairCampo(/Data:\s*([^\n]+)/i, new Date().toLocaleDateString());
-    const pagamento = extrairCampo(/Pagamento:\s*(.*)/i, "À Vista");
+    const cliente = venda.clienteNome || extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
+    const dataOriginal = venda.data || extrairCampo(/Data:\s*([^\n]+)/i, new Date().toLocaleDateString());
     const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
 
     doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
@@ -2163,7 +2163,7 @@ function baixarPDFNota(id) {
     doc.line(15, eixoY, 195, eixoY);
     eixoY += 6;
 
-    // Cabeçalhos das Colunas ajustados para incluir "Desconto"
+    // Cabeçalhos das Colunas com a coluna de Desconto
     doc.setFont("courier", "bold");
     doc.setFontSize(10);
     doc.text("Produto", 15, eixoY);
@@ -2178,25 +2178,56 @@ function baixarPDFNota(id) {
 
     doc.setFont("courier", "normal");
 
-    const linhasOriginal = textoOriginal.split("\n");
-    let extraindoItens = false;
+    let subtotalCalculado = 0;
+    let descontoItensTotal = 0;
 
-    let subtotalStr = "R$ 0,00";
-    let descontoStr = "R$ 0,00";
-    let totalStr = "R$ 0,00";
+    if (venda.itens && Array.isArray(venda.itens) && venda.itens.length > 0) {
+      venda.itens.forEach(item => {
+        const qtd = Number(item.quantidade || 1);
+        const precoUnit = Number(item.preco || 0);
+        const descItem = Number(item.descontoItem || 0);
+        const totalItem = Math.max(0, (precoUnit * qtd) - descItem);
+
+        subtotalCalculado += (precoUnit * qtd);
+        descontoItensTotal += descItem;
+
+        // Nome completo do produto com variação (cor/tamanho) sem abreviações
+        const nomeCompleto = `${item.nome} (${item.cor || '-'}/${item.tamanho || '-'})`;
+
+        // Se o nome for muito longo, quebra automaticamente em linhas para não truncar nem cortar
+        const linhasNome = doc.splitTextToSize(nomeCompleto, 75);
+
+        doc.text(linhasNome, 15, eixoY);
+        doc.text(qtd.toString(), 95, eixoY);
+        doc.text(`R$ ${precoUnit.toFixed(2)}`, 118, eixoY);
+        doc.text(`R$ ${descItem.toFixed(2)}`, 148, eixoY);
+        doc.text(`R$ ${totalItem.toFixed(2)}`, 180, eixoY);
+
+        // Avança o eixoY proporcionalmente ao número de linhas do nome do produto
+        eixoY += (linhasNome.length * 5) + 2;
+      });
+    } else {
+      doc.text("Itens da venda", 15, eixoY);
+      doc.text("1", 95, eixoY);
+      doc.text(`R$ ${Number(venda.total || 0).toFixed(2)}`, 118, eixoY);
+      doc.text("R$ 0.00", 148, eixoY);
+      doc.text(`R$ ${Number(venda.total || 0).toFixed(2)}`, 180, eixoY);
+      eixoY += 6;
+    }
+
+    eixoY += 2;
+    doc.line(15, eixoY, 195, eixoY);
+    eixoY += 6;
+
+    // Extrair totais e parcelas do texto original da nota
+    let subtotalStr = `R$ ${subtotalCalculado.toFixed(2)}`;
+    let descontoStr = `R$ ${descontoItensTotal.toFixed(2)}`;
+    let totalStr = `R$ ${Number(venda.total || 0).toFixed(2)}`;
     let temParcelas = false;
     let listaParcelas = [];
 
-    linhasOriginal.forEach(linha => {
-      if (linha.includes("------") && !extraindoItens) {
-        extraindoItens = true;
-        return;
-      }
-      if (linha.includes("------") && extraindoItens) {
-        extraindoItens = false;
-        return;
-      }
-
+    const linhasTextoOriginal = textoOriginal.split("\n");
+    linhasTextoOriginal.forEach(linha => {
       if (linha.includes("Subtotal:")) {
         subtotalStr = linha.split("Subtotal:")[1].trim();
       }
@@ -2207,57 +2238,11 @@ function baixarPDFNota(id) {
       if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
         totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
       }
-
       if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
         temParcelas = true;
         listaParcelas.push(linha.trim());
       }
-
-      if (extraindoItens && linha.trim() !== "") {
-        // Exemplo: Nome (Cor/Tam) x1 (Desc: R$ 5,00) - R$ 45,00 ou sem desc
-        let nomeEVar = linha;
-        let precoTotalStr = "R$ 0,00";
-        let descontoItemStr = "R$ 0,00";
-        let precoUnitStr = "R$ 0,00";
-        let qtd = "1";
-
-        if (linha.includes(" - ")) {
-          const partes = linha.split(" - ");
-          nomeEVar = partes[0].trim();
-          precoTotalStr = partes[1] ? partes[1].trim() : "R$ 0,00";
-        }
-
-        // Extrair quantidade
-        const matchQtd = nomeEVar.match(/x(\d+)/);
-        if (matchQtd) {
-          qtd = matchQtd[1];
-        }
-
-        // Extrair desconto do item se houver (ex: (Desc: R$ 5.00) ou similar)
-        const matchDesc = nomeEVar.match(/\(Desc:\s*R\$\s*([\d.,]+)\)/i);
-        if (matchDesc) {
-          descontoItemStr = `R$ ${matchDesc[1]}`;
-          // Limpa a tag "(Desc: ...)" do nome do produto para ficar limpo
-          nomeEVar = nomeEVar.replace(/\(Desc:\s*R\$\s*[\d.,]+\)/i, "").trim();
-        }
-
-        // Estimar preço unitário bruto com base no total e desconto
-        // Se a nota guardou o valor unitário ou total original, podemos calcular ou extrair
-        // Como o texto original exibe o valor final do item, extraímos o preço unitário aproximado se necessário
-        const nomeLimitado = nomeEVar.length > 28 ? nomeEVar.substring(0, 25) + "..." : nomeEVar;
-
-        doc.text(nomeLimitado, 15, eixoY);
-        doc.text(qtd, 95, eixoY);
-        doc.text("-", 118, eixoY); // Preço unitário limpo ou "-"
-        doc.text(descontoItemStr, 148, eixoY);
-        doc.text(precoTotalStr, 180, eixoY);
-        eixoY += 6;
-      }
     });
-
-    eixoY += 2;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
 
     doc.setFont("courier", "normal");
     doc.text("Subtotal:", 130, eixoY);
