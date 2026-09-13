@@ -1,0 +1,20 @@
+{
+  "name": "Portal da Vendedora Toque Íntimo",
+  "short_name": "Toque Íntimo",
+  "start_url": "./vendedora.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#70293b",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
