@@ -1,6 +1,6 @@
 {
-  "name": "Portal da Vendedora Toque Íntimo",
-  "short_name": "Toque Íntimo",
+  "name": "Portal da Vendedora Toque Íntimo GS",
+  "short_name": "Toque Íntimo GS",
   "start_url": "./vendedora.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
