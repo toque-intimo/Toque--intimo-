@@ -1,4 +1,4 @@
-const CACHE_NAME = 'toque-intimo-v1';
+const CACHE_NAME = 'toque-intimo-gs-v1';
 const ASSETS = [
   'index.html',
   'catalogo.html', // <-- Adicionado aqui!
