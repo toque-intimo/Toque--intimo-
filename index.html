@@ -10,7 +10,7 @@
  <script>
  if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    navigator.serviceWorker.register('/Toque--intimo-/sw.js')
       .then(reg => console.log('Service Worker ativo com sucesso! Escopo:', reg.scope))
       .catch(err => console.log('Erro no registro do Service Worker:', err));
   });
@@ -43,7 +43,7 @@
         console.log('Permissão de notificação concedida.');
 
         // Usa o service worker específico do messaging que criamos
-        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const registration = await navigator.serviceWorker.register('/Toque--intimo-/firebase-messaging-sw.js');
         
         const token = await getToken(messaging, { 
           vapidKey: 'BD45wEKVV3BaBtCjdh1KrS-SZ7VzDVRSQO2mPFwmAb6M-_CznEEHQxgKf-RRbKOaBAvVvRq2_dVkBne6HB5mKlo',
