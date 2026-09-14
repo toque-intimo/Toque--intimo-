@@ -9,12 +9,12 @@
  <link rel="manifest" href="manifest.json">
  <script>
  if ('serviceWorker' in navigator) {
-   window.addEventListener('load', () => {
-     navigator.serviceWorker.register('sw.js')
-       .then(reg => console.log('Service Worker ativo!', reg))
-       .catch(err => console.log('Erro no Service Worker:', err));
-   });
- }
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => console.log('Service Worker ativo com sucesso! Escopo:', reg.scope))
+      .catch(err => console.log('Erro no registro do Service Worker:', err));
+  });
+}
  </script>
 <!-- Bloco para ativar o Web Push do Firebase -->
 <script type="module">
