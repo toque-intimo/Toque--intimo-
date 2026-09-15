@@ -8,14 +8,19 @@
  <!-- Conexão do PWA -->
  <link rel="manifest" href="manifest.json">
  <script>
- if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .then(reg => console.log('Service Worker ativo com sucesso! Escopo:', reg.scope))
-      .catch(err => console.log('Erro no registro do Service Worker:', err));
+    // Alinhado para procurar o service worker de forma compatível com o GitHub Pages
+    navigator.serviceWorker.register('./firebase-messaging-sw.js')
+    .then(reg => {
+      console.log('Service Worker do Firebase registrado com sucesso! Escopo:', reg.scope);
+    })
+    .catch(err => {
+      console.log('Erro no registro do Service Worker:', err);
+    });
   });
 }
- </script>
+</script>
 <!-- Bloco para ativar o Web Push do Firebase -->
 <script type="module">
   // Certifique-se de usar a mesma versão do Firebase que o restante do seu projeto (ex: 10.7.1)
