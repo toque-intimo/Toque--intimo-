@@ -15,36 +15,14 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Gerencia notificações recebidas quando o app está em segundo plano ou fechado
+// Manipulador para receber as mensagens em segundo plano
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Mensagem recebida em segundo plano: ', payload);
-
-  const notificationTitle = payload.notification.title || "Novo Pedido Chegou! 🚀";
+  console.log('[firebase-messaging-sw.js] Mensagem recebida:', payload);
+  const notificationTitle = payload.notification.title;
   const notificationOptions = {
-    body: payload.notification.body || "Abra o aplicativo para ver os detalhes.",
-    icon: "/icon-192x192.png", // Certifique-se de ter um ícone na pasta
-    badge: "/icon-192x192.png",
-    vibrate: [200, 100, 200, 100, 200], // Vibração forte para chamar atenção
-    tag: "novo-pedido"
+    body: payload.notification.body,
+    icon: './logo.png'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Ação ao clicar na notificação (traz o app para o foco)
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (let i = 0; i < windowClients.length; i++) {
-        let client = windowClients[i];
-        if (client.url === '/' && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
-    })
-  );
 });
