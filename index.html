@@ -1910,36 +1910,39 @@ function alterarEstoqueDireto(idProduto, indexVariacao, delta) {
 
  function venderImediato(id, cor, tamanho, redirecionarParaCarrinho = false) {
    const prod = produtos.find(p => p.id === id);
-   const v = prod.variacoes.find(varItem => varItem.cor === cor && varItem.tamanho === tamanho);
+   if (!prod) return;
    
-   if(v && v.quantidade > 0) {
-     const itemExistente = carrinho.find(i => i.idProd === id && i.cor === cor && i.tamanho === tamanho);
+   const v = prod.variacoes.find(varItem => varItem.cor === cor && varItem.tamanho === tamanho);
+   if (!v) {
+     alert("Variação não encontrada.");
+     return;
+   }
 
-     if (itemExistente) {
-       itemExistente.quantidade++;
-     } else {
-       carrinho.push({ idProd: id, cor, tamanho, nome: prod.nome, preco: v.preco, custo: v.custo, quantidade: 1, descontoItem: 0 });
-     }
-
-     v.quantidade--; 
+   if (v.quantidade > 0) {
+     carrinho.push({ 
+       idProd: prod.id, 
+       cor: v.cor, 
+       tamanho: v.tamanho, 
+       nome: prod.nome, 
+       preco: v.preco, 
+       custo: v.custo, 
+       descontoItem: 0 
+     });
+     
+     v.quantidade--;
      localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
      localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
      sincronizarFirebase(prod);
      
+     alert(`Adicionado: ${prod.nome} (${v.cor}/${v.tamanho}) ao carrinho!`);
+     
      if (redirecionarParaCarrinho) {
        mudarTela('carrinho');
      } else {
-       const telaAtiva = document.querySelector('.app-section.active');
-       if (telaAtiva && telaAtiva.id === 'tela-venda-direta') {
-         abrirVendaDireta(id);
-       } else if (telaAtiva && telaAtiva.id === 'tela-estoque') {
-         carregarEstoque();
-       }
-       alert(`Adicionado ao carrinho: ${prod.nome} (${cor}/${tamanho})`);
+       mudarTela('produtos');
      }
-     atualizarDash();
    } else {
-     alert('Quantidade indisponível no estoque!');
+     alert("Estoque esgotado para esta variação!");
    }
  }
  
