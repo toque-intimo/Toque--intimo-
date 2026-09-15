@@ -1840,766 +1840,527 @@ function renderizarCatalogoVisual() {
   }
 }
 
-// Função auxiliar para aumentar/diminuir quantidade da variação direto na aba estoque
 function alterarEstoqueDireto(idProduto, indexVariacao, delta) {
   const prod = produtos.find(p => p.id === idProduto);
   if (!prod || !prod.variacoes[indexVariacao]) return;
 
-  const novaQtd = prod.variacoes[indexVariacao].quantidade + delta;
-  if (novaQtd < 0) return;
+  const variacao = prod.variacoes[indexVariacao];
+  const novaQtd = variacao.quantidade + delta;
 
-  prod.variacoes[indexVariacao].quantidade = novaQtd;
+  if (novaQtd < 0) {
+    alert("A quantidade em estoque não pode ser menor que zero.");
+    return;
+  }
+
+  variacao.quantidade = novaQtd;
+
   localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
   sincronizarFirebase(prod);
+  
   carregarEstoque();
   atualizarDash();
 }
 
- function abrirVendaDireta(id) {
-  const prod = produtos.find(p => p.id === id);
-  if(!prod) return;
-  
+function abrirVendaDireta(idProduto) {
+  const prod = produtos.find(p => p.id === idProduto);
+  if (!prod) return;
+
   document.getElementById('venda-direta-nome-prod').innerText = prod.nome;
-  const opcoesContainer = document.getElementById('venda-direta-opcoes');
-  opcoesContainer.innerHTML = '';
+  const containerOpcoes = document.getElementById('venda-direta-opcoes');
+  containerOpcoes.innerHTML = '';
 
-  prod.variacoes.forEach(v => {
-    let fotoEstoque = `<div style="width:40px; height:40px; background:#f5f5f5; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#ccc;"><i class="fa-solid fa-image"></i></div>`;
-    if (v.foto) {
-      fotoEstoque = `<img src="${v.foto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="verFotoTelaCheia('${v.foto}', '${prod.id}')">`;
-    }
+  const variacoesDisponiveis = prod.variacoes.filter(v => v.quantidade > 0);
 
-    opcoesContainer.innerHTML += `
-    <div class="prod-list-card" style="flex-direction:row; justify-content:space-between; align-items:center; background:#fdfdfd;">
-      <div style="display:flex; gap:10px; align-items:center;">
-        ${fotoEstoque}
+  if (!variacoesDisponiveis.length) {
+    containerOpcoes.innerHTML = '<p style="color:red; text-align:center;">Todas as variações deste produto estão esgotadas.</p>';
+    mudarTela('venda-direta');
+    return;
+  }
+
+  variacoesDisponiveis.forEach(v => {
+    containerOpcoes.innerHTML += `
+      <div style="background:#fdf8f9; border:1px solid var(--primary); padding:12px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <b>${v.cor} / Tam: ${v.tamanho}</b><br>
-          ${v.descricao ? `<p style="font-size:11px; color:#666; margin: 2px 0;">${v.descricao}</p>` : ''}
-          <small style="color:#888;">Cód: ${v.codigo || 'Sem Código'}</small><br>
-          <span style="font-size:13px; font-weight:bold; color:var(--primary);">R$ ${v.preco.toFixed(2)}</span> 
-          <span style="font-size:11px; color:${v.quantidade > 0 ? 'green' : 'red'}; font-weight:bold;">(Qtd: ${v.quantidade})</span>
+          <b>Cor:</b> ${v.cor} | <b>Tamanho:</b> ${v.tamanho}<br>
+          <small>Disponível: ${v.quantidade} un.</small><br>
+          <b style="color:var(--primary);">R$ ${v.preco.toFixed(2)}</b>
         </div>
+        <button class="btn-sm" style="background:var(--primary); color:white; padding:8px 12px;" onclick="adicionarAoCarrinhoDireto('${prod.id}', '${v.cor}', '${v.tamanho}')">
+          <i class="fa-solid fa-cart-plus"></i> Adicionar
+        </button>
       </div>
-      <button class="btn-sm" style="background:#1e7e48; color:white;" ${v.quantidade <= 0 ? 'disabled style="background:#ccc;"' : ''} onclick="venderImediato('${prod.id}', '${v.cor}', '${v.tamanho}', false)">+ Separar</button>
-    </div>
     `;
   });
 
   mudarTela('venda-direta');
 }
 
- function venderImediato(id, cor, tamanho, redirecionarParaCarrinho = false) {
-   const prod = produtos.find(p => p.id === id);
-   const v = prod.variacoes.find(varItem => varItem.cor === cor && varItem.tamanho === tamanho);
-   
-   if(v && v.quantidade > 0) {
-     const itemExistente = carrinho.find(i => i.idProd === id && i.cor === cor && i.tamanho === tamanho);
+function adicionarAoCarrinhoDireto(idProd, cor, tamanho) {
+  const prod = produtos.find(p => p.id === idProd);
+  if (!prod) return;
 
-     if (itemExistente) {
-       itemExistente.quantidade++;
-     } else {
-       carrinho.push({ idProd: id, cor, tamanho, nome: prod.nome, preco: v.preco, custo: v.custo, quantidade: 1, descontoItem: 0 });
-     }
-
-     v.quantidade--; 
-     localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-     localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
-     sincronizarFirebase(prod);
-     
-     if (redirecionarParaCarrinho) {
-       mudarTela('carrinho');
-     } else {
-       const telaAtiva = document.querySelector('.app-section.active');
-       if (telaAtiva && telaAtiva.id === 'tela-venda-direta') {
-         abrirVendaDireta(id);
-       } else if (telaAtiva && telaAtiva.id === 'tela-estoque') {
-         carregarEstoque();
-       }
-       alert(`Adicionado ao carrinho: ${prod.nome} (${cor}/${tamanho})`);
-     }
-     atualizarDash();
-   } else {
-     alert('Quantidade indisponível no estoque!');
-   }
- }
- 
- function alterarQuantidadeCarrinho(index, delta) {
-   const item = carrinho[index];
-   const prod = produtos.find(p => p.id === item.idProd);
-   const v = prod ? prod.variacoes.find(varItem => varItem.cor === item.cor && varItem.tamanho === item.tamanho) : null;
-
-   if (delta > 0) { 
-     if (v && v.quantidade > 0) {
-       item.quantidade++;
-       v.quantidade--;
-     } else {
-       alert('Limite de estoque atingido para este item!');
-       return;
-     }
-   } else if (delta < 0) { 
-     if (item.quantidade > 1) {
-       item.quantidade--;
-       if (v) v.quantidade++;
-     } else {
-       devolverAoEstoque(index);
-       return;
-     }
-   }
-
-   localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-   localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
-   if (prod) sincronizarFirebase(prod);
-   carregarCarrinho();
-   atualizarDash();
- }
-
- function atualizarDescontoItemCarrinho(index, valor) {
-   const desconto = parseFloat(valor) || 0;
-   carrinho[index].descontoItem = Math.max(0, desconto);
-   localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
-   calcularTotalCarrinho();
- }
-
- function devolverAoEstoque(index) {
-   const item = carrinho[index];
-   const prod = produtos.find(p => p.id === item.idProd);
-   if(prod) {
-     const v = prod.variacoes.find(varItem => varItem.cor === item.cor && varItem.tamanho === item.tamanho);
-     if(v) v.quantidade += (item.quantidade || 1);
-     sincronizarFirebase(prod);
-   }
-   carrinho.splice(index, 1);
-   localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
-   localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
-   carregarCarrinho();
-   atualizarDash();
- }
-
- function carregarCarrinho() {
-   const div = document.getElementById('itens-carrinho');
-   div.innerHTML = carrinho.length ? '' : 'Carrinho vazio.';
-   
-   carrinho.forEach((i, index) => {
-     if (!i.quantidade) i.quantidade = 1;
-     if (i.descontoItem === undefined) i.descontoItem = 0;
-
-     const subtotalItemOriginal = i.preco * i.quantidade;
-     const subtotalItemComDesconto = Math.max(0, subtotalItemOriginal - i.descontoItem);
-
-     div.innerHTML += `
-     <div class="prod-list-card" style="flex-direction:column; gap:8px;">
-       <div style="display:flex; justify-content:space-between; align-items:center;">
-         <div>
-           <b>${i.nome}</b> <small>(${i.cor}/${i.tamanho})</small><br>
-           <span style="font-size:12px; color:#666;">Unitário: R$ ${i.preco.toFixed(2)}</span><br>
-           <b style="color:var(--primary);">Subtotal: R$ ${subtotalItemComDesconto.toFixed(2)}</b>
-         </div>
-         <div style="display:flex; align-items:center; gap:8px;">
-           <div style="display:flex; align-items:center; border:1px solid #ccc; border-radius:6px; overflow:hidden;">
-             <button type="button" onclick="alterarQuantidadeCarrinho(${index}, -1)" style="padding:4px 10px; background:#f0f0f0; border:none; cursor:pointer; font-weight:bold;">-</button>
-             <span style="padding:4px 8px; font-size:13px; font-weight:bold;">${i.quantidade}</span>
-             <button type="button" onclick="alterarQuantidadeCarrinho(${index}, 1)" style="padding:4px 10px; background:#f0f0f0; border:none; cursor:pointer; font-weight:bold;">+</button>
-           </div>
-           <button class="btn-sm" style="background:#dc3545; color:white; padding:6px 8px;" onclick="devolverAoEstoque(${index})"><i class="fa-solid fa-trash"></i></button>
-         </div>
-       </div>
-       <div style="display:flex; align-items:center; gap:8px; background:#f8f9fa; padding:6px 10px; border-radius:8px; border:1px solid #eee;">
-         <label style="font-size:11px; font-weight:bold; color:#555; white-space:nowrap;"><i class="fa-solid fa-tag"></i> Desc. Item (R$):</label>
-         <input type="number" step="0.01" min="0" value="${(i.descontoItem || 0).toFixed(2)}" oninput="atualizarDescontoItemCarrinho(${index}, this.value)" style="padding:4px 8px; font-size:12px; border:1px solid #ccc; border-radius:6px; width:100%;">
-       </div>
-     </div>`;
-   });
-
-   const selectCli = document.getElementById('cart-cliente');
-   selectCli.innerHTML = '<option value="Consumidor Final" data-tel="">Consumidor Final</option>';
-   clientes.forEach(c => {
-     selectCli.innerHTML += `<option value="${c.nome}" data-tel="${c.telefone}">${c.nome} (${c.codigo || '-'})</option>`;
-   });
-
-   document.getElementById('pay-data-primeira').value = new Date().toISOString().split('T')[0];
-
-   toggleCamposPagamento();
-   calcularTotalCarrinho();
- }
-
- function calcularTotalCarrinho() {
-   const subtotalOriginal = carrinho.reduce((a, b) => a + (b.preco * (b.quantidade || 1)), 0);
-   const descontoItens = carrinho.reduce((a, b) => a + (b.descontoItem || 0), 0);
-   const descontoGeral = parseFloat(document.getElementById('cart-desconto').value) || 0;
-   const frete = parseFloat(document.getElementById('cart-frete-valor').value) || 0;
-
-   const descontoTotal = descontoItens + descontoGeral;
-   const totalGeral = Math.max(0, (subtotalOriginal - descontoTotal) + frete);
-
-   document.getElementById('resumo-subtotal').innerText = `R$ ${subtotalOriginal.toFixed(2)}`;
-   document.getElementById('resumo-desconto').innerText = `R$ ${descontoTotal.toFixed(2)}`;
-   document.getElementById('resumo-frete').innerText = `R$ ${frete.toFixed(2)}`;
-   document.getElementById('resumo-total').innerText = `R$ ${totalGeral.toFixed(2)}`;
- }
-
- function finalizarVenda() {
-   if(!carrinho.length) {
-     alert('O carrinho está vazio!');
-     return;
-   }
-   
-   const subtotalOriginal = carrinho.reduce((a, b) => a + (b.preco * b.quantidade), 0);
-   const descontoItens = carrinho.reduce((a, b) => a + (b.descontoItem || 0), 0);
-   const descontoGeral = parseFloat(document.getElementById('cart-desconto').value) || 0;
-   const descontoTotal = descontoItens + descontoGeral;
-   const frete = parseFloat(document.getElementById('cart-frete-valor').value) || 0;
-   const total = Math.max(0, (subtotalOriginal - descontoTotal) + frete);
-
-   const selectCliente = document.getElementById('cart-cliente');
-   const clienteNome = selectCliente.value;
-   const clienteTel = selectCliente.options[selectCliente.selectedIndex].getAttribute('data-tel') || '';
-   const formaPagamento = document.getElementById('cart-pagamento').value;
-   
-   let detalhesEntrega = `Retirada Física`;
-   if (entregaSelecionada === 'enviar') {
-     detalhesEntrega = tipoFreteSelecionado === 'gratis' ? 'Envio (Frete Grátis)' : `Envio (Frete Pago: R$ ${frete.toFixed(2)})`;
-   }
-
-   let detalhesPagamento = `Forma: ${formaPagamento}`;
-   let valorEntrada = 0;
-   if(formaPagamento === 'A prazo') {
-     const parcelas = document.getElementById('pay-parcelas').value;
-     valorEntrada = parseFloat(document.getElementById('pay-entrada').value) || 0;
-     const data1 = document.getElementById('pay-data-primeira').value.split('-').reverse().join('/');
-     detalhesPagamento += ` (${parcelas}x | Entrada: R$ ${valorEntrada.toFixed(2)} | 1ª Parc: ${data1})`;
-   }
-
-   let cupomTexto = `--- TOQUE ÍNTIMO GS ---\n`;
-   cupomTexto += `Data: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
-   cupomTexto += `Cliente: ${clienteNome}\n`;
-   cupomTexto += `-----------------------\n`;
-   carrinho.forEach(item => {
-     const descText = item.descontoItem ? ` (Desc: R$ ${item.descontoItem.toFixed(2)})` : '';
-     const totalItemVal = Math.max(0, (item.preco * item.quantidade) - (item.descontoItem || 0));
-     cupomTexto += `${item.nome} (${item.cor}/${item.tamanho}) x${item.quantidade}${descText} - R$ ${totalItemVal.toFixed(2)}\n`;
-   });
-   cupomTexto += `-----------------------\n`;
-   cupomTexto += `Subtotal: R$ ${subtotalOriginal.toFixed(2)}\n`;
-   cupomTexto += `Desconto Total: R$ ${descontoTotal.toFixed(2)}\n`;
-   cupomTexto += `Entrega: ${detalhesEntrega}\n`;
-   cupomTexto += `Pagamento: ${detalhesPagamento}\n`;
-   cupomTexto += `=======================\n`;
-   cupomTexto += `TOTAL FINAL: R$ ${total.toFixed(2)}\n`;
-
-   const custoTotalVenda = carrinho.reduce((acc, item) => acc + ((item.custo || 0) * item.quantidade), 0);
-   const itensVendidos = JSON.parse(JSON.stringify(carrinho));
-
-   const novaVenda = {
-     id: Date.now().toString(),
-     data: new Date().toLocaleDateString(),
-     total: total,
-     custoTotal: custoTotalVenda,
-     formaPagamento: formaPagamento,
-     valorEntrada: valorEntrada,
-     clienteNome: clienteNome,
-     telefoneCliente: clienteTel,
-     notaCompleta: cupomTexto,
-     itens: itensVendidos
-   };
-
-   vendas.push(novaVenda);
-   localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-   
-   sincronizarVendaFirebase(novaVenda);
-
-   carrinho = [];
-   localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
-   document.getElementById('cart-desconto').value = "0.00";
-   document.getElementById('cart-frete-valor').value = "0.00";
-   setFormaEntrega('retirar');
-
-   alert('Venda finalizada com sucesso! Nota gerada no Histórico.');
-   mudarTela('vendas');
- }
-
- function carregarVendas() {
-   const div = document.getElementById('historico-vendas-lista');
-   div.innerHTML = vendas.length ? '' : 'Nenhuma venda registrada.';
-   
-   [...vendas].reverse().forEach(v => {
-     div.innerHTML += `
-     <div class="prod-list-card">
-     <div id="nota-${v.id}" class="nota-faturamento" style="white-space: pre-wrap; background: #fffdf6; padding: 15px;">${v.notaCompleta || `Data: ${v.data}\nTotal: R$ ${v.total.toFixed(2)}`}</div>
-     
-     <div class="actions-row" style="margin-top: 10px;">
-     <button class="btn-action btn-nota-whatsapp" onclick="enviarWhatsAppNota('${v.id}')">
-     <i class="fa-brands fa-whatsapp"></i> WhatsApp
-     </button>
-     <button class="btn-action btn-nota-pdf" onclick="baixarPDFNota('${v.id}')">
-     <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-     </button>
-     <button class="btn-action btn-nota-excluir" onclick="excluirVenda('${v.id}')">
-     <i class="fa-solid fa-trash"></i> Excluir
-     </button>
-     </div>
-     </div>`;
-   });
- }
-
- function enviarWhatsAppNota(id) {
-   const v = vendas.find(item => item.id === id);
-   if (!v) return;
-   const tel = v.telefoneCliente ? v.telefoneCliente.replace(/\D/g, '') : '';
-   const url = `https://wa.me/${tel ? '55' + tel : ''}?text=${encodeURIComponent(v.notaCompleta)}`;
-   window.open(url, '_blank');
- }
-
-function baixarPDFNota(id) {
-  const venda = vendas.find(v => v.id === id);
-  const elementoNota = document.getElementById(`nota-${id}`);
-  if (!elementoNota || !venda) {
-    alert("Nota ou dados da venda não encontrados!");
+  const v = prod.variacoes.find(item => item.cor === cor && item.tamanho === tamanho);
+  if (!v || v.quantidade <= 0) {
+    alert("Produto esgotado.");
     return;
   }
+
+  carrinho.push({
+    idProd: prod.id,
+    cor: v.cor,
+    tamanho: v.tamanho,
+    nome: prod.nome,
+    preco: v.preco,
+    custo: v.custo,
+    descontoItem: 0
+  });
+
+  v.quantidade--;
+  localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+  localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
+  sincronizarFirebase(prod);
+
+  alert(`Adicionado ao carrinho: ${prod.nome} (${v.cor}/${v.tamanho})`);
+  mudarTela('carrinho');
+}
+
+function carregarCarrinho() {
+  const container = document.getElementById('itens-carrinho');
+  const selectCliente = document.getElementById('cart-cliente');
+  if (!container || !selectCliente) return;
+
+  container.innerHTML = '';
+  selectCliente.innerHTML = '<option value="">Selecione um cliente...</option>';
+
+  clientes.forEach(c => {
+    selectCliente.innerHTML += `<option value="${c.nome}">${c.nome} (${c.telefone})</option>`;
+  });
+
+  if (!carrinho.length) {
+    container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">O carrinho está vazio.</p>';
+    calcularTotalCarrinho();
+    return;
+  }
+
+  carrinho.forEach((item, index) => {
+    container.innerHTML += `
+      <div style="background:#fdfdfd; border:1px solid #eee; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <b>${item.nome}</b><br>
+          <small style="color:#666;">Cor: ${item.cor} | Tam: ${item.tamanho}</small><br>
+          <b style="color:var(--primary);">R$ ${item.preco.toFixed(2)}</b>
+        </div>
+        <button class="btn-action btn-delete" onclick="removerItemCarrinho(${index})">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `;
+  });
+
+  calcularTotalCarrinho();
+}
+
+function removerItemCarrinho(index) {
+  const itemRemovido = carrinho[index];
+  const prod = produtos.find(p => p.id === itemRemovido.idProd);
+
+  if (prod) {
+    const v = prod.variacoes.find(varItem => varItem.cor === itemRemovido.cor && varItem.tamanho === itemRemovido.tamanho);
+    if (v) {
+      v.quantidade++;
+      localStorage.setItem('ti_v4_prod', JSON.stringify(produtos));
+      sincronizarFirebase(prod);
+    }
+  }
+
+  carrinho.splice(index, 1);
+  localStorage.setItem('ti_v4_car', JSON.stringify(carrinho));
+  carregarCarrinho();
+}
+
+function calcularTotalCarrinho() {
+  let subtotal = carrinho.reduce((acc, item) => acc + item.preco, 0);
+  const desconto = parseFloat(document.getElementById('cart-desconto').value) || 0;
+  
+  let frete = 0;
+  if (entregaSelecionada === 'enviar' && tipoFreteSelecionado === 'pago') {
+    frete = parseFloat(document.getElementById('cart-frete-valor').value) || 0;
+  }
+
+  const totalGeral = Math.max(0, subtotal - desconto + frete);
+
+  document.getElementById('resumo-subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
+  document.getElementById('resumo-desconto').innerText = `R$ ${desconto.toFixed(2)}`;
+  document.getElementById('resumo-frete').innerText = `R$ ${frete.toFixed(2)}`;
+  document.getElementById('resumo-total').innerText = `R$ ${totalGeral.toFixed(2)}`;
+}
+
+function finalizarVenda() {
+  if (!carrinho.length) {
+    alert("O carrinho está vazio.");
+    return;
+  }
+
+  const clienteNome = document.getElementById('cart-cliente').value;
+  if (!clienteNome) {
+    alert("Por favor, selecione um cliente para fechar a venda.");
+    return;
+  }
+
+  const formaPagamento = document.getElementById('cart-pagamento').value;
+  const desconto = parseFloat(document.getElementById('cart-desconto').value) || 0;
+  let frete = 0;
+  if (entregaSelecionada === 'enviar' && tipoFreteSelecionado === 'pago') {
+    frete = parseFloat(document.getElementById('cart-frete-valor').value) || 0;
+  }
+
+  const subtotal = carrinho.reduce((acc, item) => acc + item.preco, 0);
+  const totalGeral = Math.max(0, subtotal - desconto + frete);
+  const custoTotal = carrinho.reduce((acc, item) => acc + (item.custo || 0), 0);
+
+  let infoPrazo = '';
+  if (formaPagamento === 'A prazo') {
+    const parcelas = document.getElementById('pay-parcelas').value;
+    const entrada = document.getElementById('pay-entrada').value;
+    const dataPrimeira = document.getElementById('pay-data-primeira').value;
+    infoPrazo = ` | Parcelas: ${parcelas} | Entrada: R$ ${entrada} | 1ª Parc: ${dataPrimeira}`;
+  }
+
+  let itensFormatados = carrinho.map(item => `• ${item.nome} (${item.cor}/${item.tamanho}) - R$ ${item.preco.toFixed(2)}`).join('\n');
+
+  const textoNota = `--- TOQUE ÍNTIMO GS ---
+Cliente: ${clienteNome}
+Data: ${new Date().toLocaleString('pt-BR')}
+-----------------------
+${itensFormatados}
+-----------------------
+Subtotal: R$ ${subtotal.toFixed(2)}
+Desconto: R$ ${desconto.toFixed(2)}
+Frete: R$ ${frete.toFixed(2)}
+TOTAL: R$ ${totalGeral.toFixed(2)}
+Pagamento: ${formaPagamento}${infoPrazo}`;
+
+  const novaVenda = {
+    id: Date.now().toString(),
+    cliente: clienteNome,
+    itens: [...carrinho],
+    subtotal,
+    desconto,
+    frete,
+    totalFinal: totalGeral,
+    custoTotal,
+    formaPagamento,
+    tipoEntrega: entregaSelecionada,
+    textoNota,
+    data: new Date().toLocaleString('pt-BR'),
+    statusPagamento: formaPagamento === 'A prazo' ? 'A prazo' : 'Pago'
+  };
+
+  vendas.push(novaVenda);
+  localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+  sincronizarVendaFirebase(novaVenda);
+
+  carrinho = [];
+  localStorage.removeItem('ti_v4_car');
+
+  alert("Venda realizada com sucesso!");
+  mudarTela('vendas');
+}
+
+function carregarVendas() {
+  const container = document.getElementById('historico-vendas-lista');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!vendas.length) {
+    container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhuma venda registrada.</p>';
+    return;
+  }
+
+  vendas.slice().reverse().forEach(v => {
+    container.innerHTML = `
+      <div class="prod-list-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <b>Cliente: ${v.cliente}</b>
+          <span style="font-size:11px; color:#666;">${v.data}</span>
+        </div>
+        <div class="nota-faturamento" style="white-space: pre-line;">${v.textoNota}</div>
+        <div class="actions-row">
+          <button class="btn-action btn-nota-whatsapp" onclick="compartilharNotaWhatsapp('${encodeURIComponent(v.textoNota)}')">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+          </button>
+          <button class="btn-action btn-nota-pdf" onclick="baixarPDFNota('${v.id}')">
+            <i class="fa-solid fa-file-pdf"></i> PDF
+          </button>
+          <button class="btn-action btn-nota-excluir" onclick="excluirVenda('${v.id}')">
+            <i class="fa-solid fa-trash"></i> Excluir
+          </button>
+        </div>
+      </div>
+    ` + container.innerHTML;
+  });
+}
+
+function compartilharNotaWhatsapp(textoEncoded) {
+  window.open(`https://wa.me/?text=${textoEncoded}`, '_blank');
+}
+
+function baixarPDFNota(idVenda) {
+  const v = vendas.find(item => item.id === idVenda);
+  if (!v) return;
 
   const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
   if (!jsPDFLib) {
-    alert("A biblioteca de PDF ainda está sendo carregada. Por favor, aguarde.");
+    alert("Biblioteca jsPDF indisponível.");
     return;
   }
 
-  try {
-    const doc = new jsPDFLib({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
+  const pdf = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  let y = 15;
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(16);
+  pdf.text("TOQUE ÍNTIMO GS", 105, y, { align: "center" });
+
+  y += 6;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.text("CNPJ: 45.230.643/0001-60", 105, y, { align: "center" });
+
+  y += 7;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text("NOTA DE VENDA", 105, y, { align: "center" });
+
+  y += 5;
+  pdf.setLineWidth(0.3);
+  pdf.line(15, y, 195, y);
+
+  y += 6;
+  pdf.setFontSize(10);
+  pdf.text(`Cliente: ${v.cliente}`, 15, y);
+  pdf.text(`Data: ${v.data}`, 145, y);
+
+  y += 6;
+  pdf.line(15, y, 195, y);
+
+  y += 6;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Produto", 15, y);
+  pdf.text("Preço", 185, y, { align: "right" });
+
+  y += 2;
+  pdf.line(15, y, 195, y);
+
+  pdf.setFont("helvetica", "normal");
+  if (v.itens && Array.isArray(v.itens)) {
+    v.itens.forEach(item => {
+      y += 6;
+      pdf.text(`${item.nome} (${item.cor}/${item.tamanho})`, 15, y);
+      pdf.text(`R$ ${item.preco.toFixed(2)}`, 185, y, { align: "right" });
     });
+  }
 
-    const larguraA4 = 210;
-    let eixoY = 20;
+  y += 4;
+  pdf.line(15, y, 195, y);
 
-    const textoCentralizado = (texto, y, tamanho = 10, estilo = "normal") => {
-      doc.setFont("courier", estilo);
-      doc.setFontSize(tamanho);
-      const larguraTexto = doc.getTextWidth(texto);
-      const x = (larguraA4 - larguraTexto) / 2;
-      doc.text(texto, x, y);
-    };
+  y += 6;
+  pdf.text(`Subtotal: R$ ${(v.subtotal || 0).toFixed(2)}`, 185, y, { align: "right" });
+  y += 5;
+  pdf.text(`Desconto: R$ ${(v.desconto || 0).toFixed(2)}`, 185, y, { align: "right" });
+  y += 5;
+  pdf.text(`Frete: R$ ${(v.frete || 0).toFixed(2)}`, 185, y, { align: "right" });
+  
+  y += 6;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(11);
+  pdf.text(`TOTAL: R$ ${(v.totalFinal || 0).toFixed(2)}`, 185, y, { align: "right" });
 
-    textoCentralizado("TOQUE ÍNTIMO GS", eixoY, 16, "bold");
-    eixoY += 6;
-    textoCentralizado("CNPJ: 45.230.643.0001/60", eixoY, 10, "normal");
-    eixoY += 5;
-    textoCentralizado("E-mail: toqueintimo250@gmail.com | Tel: 11 95119-0804", eixoY, 9, "normal");
-    eixoY += 8;
+  pdf.save(`Nota_${v.cliente.replace(/\s+/g, '_')}.pdf`);
+}
 
-    doc.setLineWidth(0.5);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    textoCentralizado("NOTA DE VENDA", eixoY, 12, "bold");
-    eixoY += 8;
-
-    doc.setFont("courier", "normal");
-    doc.setFontSize(10);
-
-    const textoOriginal = elementoNota.innerText;
-
-    const extrairCampo = (regex, padrao = "Não informado") => {
-      const matches = textoOriginal.match(regex);
-      return matches ? matches[1].trim() : padrao;
-    };
-
-    const cliente = venda.clienteNome || extrairCampo(/Cliente:\s*(.*)/i, "Consumidor Final");
-    const dataOriginal = venda.data || extrairCampo(/Data:\s*([^\n]+)/i, new Date().toLocaleDateString());
-    const entrega = extrairCampo(/Entrega:\s*(.*)/i, "Retirar");
-
-    doc.setFont("courier", "bold"); doc.text("Cliente:", 15, eixoY);
-    doc.setFont("courier", "normal"); doc.text(cliente, 38, eixoY);
-
-    doc.setFont("courier", "bold"); doc.text("Data:", 120, eixoY);
-    doc.setFont("courier", "normal"); doc.text(dataOriginal, 145, eixoY);
-
-    eixoY += 6;
-
-    doc.setFont("courier", "bold"); doc.text("Entrega:", 120, eixoY);
-    doc.setFont("courier", "normal"); doc.text(entrega, 145, eixoY);
-
-    eixoY += 8;
-
-    doc.setLineWidth(0.2);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    // Cabeçalhos das Colunas com a coluna de Desconto
-    doc.setFont("courier", "bold");
-    doc.setFontSize(10);
-    doc.text("Produto", 15, eixoY);
-    doc.text("Qtd", 95, eixoY);
-    doc.text("Preço", 118, eixoY);
-    doc.text("Desconto", 148, eixoY);
-    doc.text("Total", 180, eixoY);
-
-    eixoY += 4;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    doc.setFont("courier", "normal");
-
-    let subtotalCalculado = 0;
-    let descontoItensTotal = 0;
-
-    if (venda.itens && Array.isArray(venda.itens) && venda.itens.length > 0) {
-      venda.itens.forEach(item => {
-        const qtd = Number(item.quantidade || 1);
-        const precoUnit = Number(item.preco || 0);
-        const descItem = Number(item.descontoItem || 0);
-        const totalItem = Math.max(0, (precoUnit * qtd) - descItem);
-
-        subtotalCalculado += (precoUnit * qtd);
-        descontoItensTotal += descItem;
-
-        // Nome completo do produto com variação (cor/tamanho) sem abreviações
-        const nomeCompleto = `${item.nome} (${item.cor || '-'}/${item.tamanho || '-'})`;
-
-        // Se o nome for muito longo, quebra automaticamente em linhas para não truncar nem cortar
-        const linhasNome = doc.splitTextToSize(nomeCompleto, 75);
-
-        doc.text(linhasNome, 15, eixoY);
-        doc.text(qtd.toString(), 95, eixoY);
-        doc.text(`R$ ${precoUnit.toFixed(2)}`, 118, eixoY);
-        doc.text(`R$ ${descItem.toFixed(2)}`, 148, eixoY);
-        doc.text(`R$ ${totalItem.toFixed(2)}`, 180, eixoY);
-
-        // Avança o eixoY proporcionalmente ao número de linhas do nome do produto
-        eixoY += (linhasNome.length * 5) + 2;
-      });
-    } else {
-      doc.text("Itens da venda", 15, eixoY);
-      doc.text("1", 95, eixoY);
-      doc.text(`R$ ${Number(venda.total || 0).toFixed(2)}`, 118, eixoY);
-      doc.text("R$ 0.00", 148, eixoY);
-      doc.text(`R$ ${Number(venda.total || 0).toFixed(2)}`, 180, eixoY);
-      eixoY += 6;
-    }
-
-    eixoY += 2;
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    // Extrair totais e parcelas do texto original da nota
-    let subtotalStr = `R$ ${subtotalCalculado.toFixed(2)}`;
-    let descontoStr = `R$ ${descontoItensTotal.toFixed(2)}`;
-    let totalStr = `R$ ${Number(venda.total || 0).toFixed(2)}`;
-    let temParcelas = false;
-    let listaParcelas = [];
-
-    const linhasTextoOriginal = textoOriginal.split("\n");
-    linhasTextoOriginal.forEach(linha => {
-      if (linha.includes("Subtotal:")) {
-        subtotalStr = linha.split("Subtotal:")[1].trim();
-      }
-      if (linha.includes("Desconto Total:") || linha.includes("Desconto:")) {
-        const parteDesc = linha.split(/Desconto Total:|Desconto:/);
-        if (parteDesc[1]) descontoStr = parteDesc[1].trim();
-      }
-      if (linha.includes("TOTAL FINAL:") || linha.includes("TOTAL:")) {
-        totalStr = (linha.split("TOTAL FINAL:")[1] || linha.split("TOTAL:")[1]).trim();
-      }
-      if (linha.includes("x | Entrada:") || linha.includes("Parcela")) {
-        temParcelas = true;
-        listaParcelas.push(linha.trim());
-      }
-    });
-
-    doc.setFont("courier", "normal");
-    doc.text("Subtotal:", 130, eixoY);
-    doc.text(subtotalStr, 170, eixoY);
-    eixoY += 5;
-
-    doc.text("(-) Desconto:", 130, eixoY);
-    doc.text(descontoStr, 170, eixoY);
-    eixoY += 5;
-
-    doc.setFont("courier", "bold");
-    doc.setFontSize(11);
-    doc.text("TOTAL:", 130, eixoY);
-    doc.text(totalStr, 170, eixoY);
-    eixoY += 10;
-
-    if (temParcelas && listaParcelas.length > 0) {
-      doc.line(15, eixoY, 195, eixoY);
-      eixoY += 6;
-      doc.setFont("courier", "bold");
-      doc.setFontSize(10);
-      doc.text("PARCELAS:", 15, eixoY);
-      eixoY += 6;
-
-      doc.setFont("courier", "normal");
-      listaParcelas.forEach(parc => {
-        doc.text(parc, 15, eixoY);
-        eixoY += 5;
-      });
-      eixoY += 5;
-    }
-
-    eixoY = Math.max(eixoY, 265);
-    doc.setLineWidth(0.2);
-    doc.line(15, eixoY, 195, eixoY);
-    eixoY += 6;
-
-    textoCentralizado("Obrigado pela sua compra!", eixoY, 10, "bold");
-    eixoY += 5;
-    textoCentralizado("Toque Íntimo GS - toqueintimo250@gmail.com - 11 95119-0804", eixoY, 8, "normal");
-
-    doc.save(`Nota_Venda_${id}.pdf`);
-
-  } catch (erro) {
-    console.error("Erro ao gerar PDF:", erro);
-    alert("Erro ao gerar o PDF da nota.");
+function excluirVenda(id) {
+  if (confirm("Deseja realmente excluir esta venda do histórico?")) {
+    vendas = vendas.filter(v => v.id !== id);
+    localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
+    excluirVendaFirebase(id);
+    carregarVendas();
+    atualizarDash();
   }
 }
- 
- function excluirVenda(id) {
-   if (confirm("Deseja realmente excluir esta venda?")) {
-     vendas = vendas.filter(v => v.id !== id);
-     localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-     excluirVendaFirebase(id);
-     carregarVendas();
-     atualizarDash();
-   }
- }
 
- function renderizarClientes() {
+function renderizarClientes() {
   const container = document.getElementById('lista-clientes-container');
   const busca = document.getElementById('buscaCliente').value.toLowerCase();
   if (!container) return;
-
   container.innerHTML = '';
 
-  // Ordena os clientes em ordem alfabética pelo nome
-  const clientesOrdenados = [...clientes].sort((a, b) => {
-    const nomeA = (a.nome || '').toLowerCase();
-    const nomeB = (b.nome || '').toLowerCase();
-    return nomeA.localeCompare(nomeB, 'pt-BR');
-  });
-
-  // Filtra com base na busca (se houver texto digitado)
-  const clientesFiltrados = clientesOrdenados.filter(c => 
-    (c.nome && c.nome.toLowerCase().includes(busca)) ||
-    (c.telefone && c.telefone.toLowerCase().includes(busca)) ||
-    (c.id && c.id.toString().toLowerCase().includes(busca))
+  const filtrados = clientes.filter(c => 
+    c.nome.toLowerCase().includes(busca) || c.telefone.toLowerCase().includes(busca)
   );
 
-  if (clientesFiltrados.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum cliente encontrado.</p>';
+  if (!filtrados.length) {
+    container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhum cliente encontrado.</p>';
     return;
   }
 
-  clientesFiltrados.forEach(c => {
+  filtrados.forEach(c => {
     container.innerHTML += `
       <div class="client-list-card">
-        <div class="item-row">
-          <div>
-            <b style="font-size: 15px; color: var(--primary);">${c.nome}</b>
-            <div style="font-size: 13px; color: #555; margin-top: 3px;">
-              <i class="fa-solid fa-phone" style="font-size: 11px; color: #888;"></i> ${c.telefone || 'Não informado'}
-            </div>
-            ${c.endereco ? `<div style="font-size: 12px; color: #777; margin-top: 2px;"><i class="fa-solid fa-location-dot" style="font-size: 11px; color: #888;"></i> ${c.endereco}</div>` : ''}
-          </div>
+        <div>
+          <b style="font-size:15px; color:var(--primary);">${c.nome}</b><br>
+          <small style="color:#666;"><i class="fa-solid fa-phone"></i> ${c.telefone} | <i class="fa-solid fa-envelope"></i> ${c.email || 'Não informado'}</small><br>
+          <small style="color:#666;"><i class="fa-solid fa-location-dot"></i> ${c.endereco || 'Endereço não informado'}</small>
         </div>
         <div class="actions-row">
           <button class="btn-action btn-edit" onclick="editarCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-          <button class="btn-action btn-delete" onclick="deletarCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
+          <button class="btn-action btn-delete" onclick="excluirCliente('${c.id}')"><i class="fa-solid fa-trash"></i> Excluir</button>
         </div>
       </div>
     `;
   });
 }
 
- function abrirCadastroCliente() {
-   document.getElementById('formCliente').reset();
-   document.getElementById('cli-id').value = '';
-   document.getElementById('cli-data').value = new Date().toISOString().split('T')[0];
-   document.getElementById('titulo-cadastro-cliente').innerText = 'Novo Cliente';
-   mudarTela('cadastro-cliente');
- }
+function abrirCadastroCliente() {
+  document.getElementById('formCliente').reset();
+  document.getElementById('cli-id').value = '';
+  document.getElementById('titulo-cadastro-cliente').innerText = 'Novo Cliente';
+  document.getElementById('cli-data').valueAsDate = new Date();
+  mudarTela('cadastro-cliente');
+}
 
- document.getElementById('formCliente').addEventListener('submit', function(e) {
-   e.preventDefault();
-   const id = document.getElementById('cli-id').value;
-   const nome = document.getElementById('cli-nome').value;
-   const telefone = document.getElementById('cli-telefone').value;
-   const email = document.getElementById('cli-email').value;
-   const endereco = document.getElementById('cli-endereco').value;
-   const data = document.getElementById('cli-data').value;
+document.getElementById('formCliente').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const id = document.getElementById('cli-id').value;
+  const clienteData = {
+    id: id || Date.now().toString(),
+    nome: document.getElementById('cli-nome').value,
+    telefone: document.getElementById('cli-telefone').value,
+    email: document.getElementById('cli-email').value,
+    endereco: document.getElementById('cli-endereco').value,
+    data: document.getElementById('cli-data').value
+  };
 
-   const clienteData = {
-     id: id || Date.now().toString(),
-     codigo: 'CLI' + Math.floor(1000 + Math.random() * 9000),
-     nome, telefone, email, endereco, data
-   };
+  if (id) {
+    const index = clientes.findIndex(c => c.id === id);
+    clientes[index] = clienteData;
+    alert("Cliente atualizado com sucesso!");
+  } else {
+    clientes.push(clienteData);
+    alert("Cliente cadastrado com sucesso!");
+  }
 
-   if (id) {
-     const idx = clientes.findIndex(c => c.id === id);
-     if (idx !== -1) clientes[idx] = clienteData;
-   } else {
-     clientes.push(clienteData);
-   }
+  localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
+  sincronizarClienteFirebase(clienteData);
+  mudarTela('clientes');
+});
 
-   localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-   if (typeof firebase !== 'undefined' && firebase.apps.length) {
-     db.collection("clientes").doc(clienteData.id).set(clienteData);
-   }
+function sincronizarClienteFirebase(cliente) {
+  if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    db.collection("clientes").doc(cliente.id).set(cliente)
+      .catch(err => console.error("Erro ao sincronizar cliente:", err));
+  }
+}
 
-   alert("Cliente salvo com sucesso!");
-   mudarTela('clientes');
- });
+function editarCliente(id) {
+  const c = clientes.find(item => item.id === id);
+  if (!c) return;
 
- function editarCliente(id) {
-   const c = clientes.find(item => item.id === id);
-   if (!c) return;
+  document.getElementById('cli-id').value = c.id;
+  document.getElementById('cli-nome').value = c.nome;
+  document.getElementById('cli-telefone').value = c.telefone;
+  document.getElementById('cli-email').value = c.email || '';
+  document.getElementById('cli-endereco').value = c.endereco || '';
+  document.getElementById('cli-data').value = c.data || '';
 
-   document.getElementById('cli-id').value = c.id;
-   document.getElementById('cli-nome').value = c.nome;
-   document.getElementById('cli-telefone').value = c.telefone;
-   document.getElementById('cli-email').value = c.email || '';
-   document.getElementById('cli-endereco').value = c.endereco || '';
-   document.getElementById('cli-data').value = c.data || new Date().toISOString().split('T')[0];
+  document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
+  mudarTela('cadastro-cliente');
+}
 
-   document.getElementById('titulo-cadastro-cliente').innerText = 'Editar Cliente';
-   mudarTela('cadastro-cliente');
- }
-
- function excluirCliente(id) {
-   if (confirm("Excluir este cliente?")) {
-     clientes = clientes.filter(c => c.id !== id);
-     localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
-     if (typeof firebase !== 'undefined' && firebase.apps.length) {
-       db.collection("clientes").doc(id).delete();
-     }
-     renderizarClientes();
-     atualizarDash();
-   }
- }
-
- /* --- MÓDULO FINANCEIRO --- */
- function carregarFinanceiro() {
-   let faturamento = 0;
-   let custoTotalEstoque = 0;
-   let lucroLiquido = 0;
-   let aReceber = 0;
-
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       faturamento += (v.preco * v.quantidade);
-       custoTotalEstoque += (v.custo * v.quantidade);
-     });
-   });
-
-   vendas.forEach(v => {
-     if (v.formaPagamento === 'A prazo') {
-       aReceber += (v.total - (v.valorEntrada || 0));
-     }
-   });
-
-   lucroLiquido = faturamento - custoTotalEstoque;
-
-   document.getElementById('fin-card-faturamento').innerText = `R$ ${faturamento.toFixed(2)}`;
-   document.getElementById('fin-card-custo').innerText = `R$ ${custoTotalEstoque.toFixed(2)}`;
-   document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquido.toFixed(2)}`;
-   document.getElementById('fin-card-receber').innerText = `R$ ${aReceber.toFixed(2)}`;
-
-   const tabelaCorpo = document.getElementById('fin-tabela-corpo');
-   if (!tabelaCorpo) return;
-
-   tabelaCorpo.innerHTML = '';
-   if (!vendas.length) {
-     tabelaCorpo.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Sem registros.</td></tr>';
-     return;
-   }
-
-   [...vendas].reverse().forEach(v => {
-     const statusBadge = v.formaPagamento === 'A prazo' 
-       ? `<span class="badge-prazo">A prazo</span>` 
-       : `<span class="badge-pago">Pago</span>`;
-
-     // Botão de dar baixa se for "A prazo"
-     const botaoAcao = v.formaPagamento === 'A prazo' 
-       ? `<button class="btn-action btn-sell-direct" onclick="darBaixaVenda('${v.id}')"><i class="fa-solid fa-check"></i> Dar Baixa</button>` 
-       : `<span style="color:#aaa; font-size:11px;">Quitado</span>`;
-
-     tabelaCorpo.innerHTML += `
-       <tr>
-         <td>${v.data || '-'}</td>
-         <td>${v.clienteNome || 'Consumidor Final'}</td>
-         <td>${statusBadge}</td>
-         <td><b>R$ ${v.total.toFixed(2)}</b></td>
-         <td>${botaoAcao}</td>
-       </tr>
-     `;
-   });
- }
- 
- function darBaixaVenda(idVenda) {
-  const venda = vendas.find(v => v.id === idVenda);
-  if (!venda) return;
-
-  if (confirm(`Deseja dar baixa no pagamento da venda de R$ ${venda.total.toFixed(2)} de ${venda.clienteNome || 'Consumidor Final'}?`)) {
-    // Altera o status da forma de pagamento localmente
-    venda.formaPagamento = 'Pago';
-    venda.valorEntrada = venda.total; // Atualiza o valor recebido
-
-    // Atualiza a nota/cupom com o status quitado
-    if (venda.notaCompleta) {
-      venda.notaCompleta = venda.notaCompleta.replace(/Pagamento: Forma: A prazo.*/, "Pagamento: Forma: Pago (Quitado)");
-    }
-
-    // Salva no LocalStorage
-    localStorage.setItem('ti_v4_vend', JSON.stringify(vendas));
-
-    // Atualiza no Firebase Firestore
+function excluirCliente(id) {
+  if (confirm("Deseja excluir este cliente?")) {
+    clientes = clientes.filter(c => c.id !== id);
+    localStorage.setItem('ti_v4_cli', JSON.stringify(clientes));
     if (typeof firebase !== 'undefined' && firebase.apps.length) {
-      db.collection("vendas").doc(idVenda.toString()).update({
-        formaPagamento: 'Pago',
-        valorEntrada: venda.total,
-        notaCompleta: venda.notaCompleta || ''
-      }).then(() => {
-        console.log("Venda quitada no Firebase");
-      }).catch(err => {
-        console.error("Erro ao atualizar no Firebase:", err);
-      });
+      db.collection("clientes").doc(id).delete();
     }
-
-    alert("Pagamento registrado e nota quitada com sucesso!");
-    carregarFinanceiro();
+    renderizarClientes();
     atualizarDash();
   }
 }
 
- function atualizarDash() {
-   let totalProdutos = produtos.length;
-   let valorEstoque = 0;
-   produtos.forEach(p => {
-     p.variacoes.forEach(v => {
-       valorEstoque += (v.preco * v.quantidade);
-     });
-   });
+function carregarFinanceiro() {
+  const filtro = document.getElementById('fin-filtro-periodo').value;
+  const corpoTabela = document.getElementById('fin-tabela-corpo');
+  if (!corpoTabela) return;
+  corpoTabela.innerHTML = '';
 
-   let totalVendas = vendas.reduce((acc, v) => acc + (v.total || 0), 0);
-   let totalClientes = clientes.length;
+  let faturamentoTotal = 0;
+  let custoInvestido = 0;
+  let aReceber = 0;
 
-   document.getElementById('dash-produtos-qtd').innerText = totalProdutos;
-   document.getElementById('dash-estoque-val').innerText = `R$ ${valorEstoque.toFixed(2)}`;
-   document.getElementById('dash-vendas-val').innerText = `R$ ${totalVendas.toFixed(2)}`;
-   document.getElementById('dash-clientes-qtd').innerText = totalClientes;
- }
+  produtos.forEach(p => {
+    p.variacoes.forEach(v => {
+      custoInvestido += (v.custo || 0) * v.quantidade;
+    });
+  });
 
- window.onload = function() {
-   carregarProdutosDoFirebase();
-   carregarClientesDoFirebase();
-   carregarVendasDoFirebase();
-   carregarVendedoras();
-   carregarPedidos();
-   atualizarDash();
- };
+  vendas.forEach(v => {
+    faturamentoTotal += v.totalFinal || 0;
+    if (v.statusPagamento === 'A prazo') {
+      aReceber += v.totalFinal || 0;
+    }
+
+    corpoTabela.innerHTML += `
+      <tr>
+        <td>${v.data}</td>
+        <td>${v.cliente}</td>
+        <td><span class="${v.statusPagamento === 'A prazo' ? 'badge-prazo' : 'badge-pago'}">${v.statusPagamento || 'Pago'}</span></td>
+        <td><b>R$ ${(v.totalFinal || 0).toFixed(2)}</b></td>
+        <td><button class="btn-action btn-delete" onclick="excluirVenda('${v.id}')"><i class="fa-solid fa-trash"></i></button></td>
+      </tr>
+    `;
+  });
+
+  const lucroLiquido = faturamentoTotal - custoInvestido;
+
+  document.getElementById('fin-card-faturamento').innerText = `R$ ${faturamentoTotal.toFixed(2)}`;
+  document.getElementById('fin-card-custo').innerText = `R$ ${custoInvestido.toFixed(2)}`;
+  document.getElementById('fin-card-lucro').innerText = `R$ ${lucroLiquido.toFixed(2)}`;
+  document.getElementById('fin-card-receber').innerText = `R$ ${aReceber.toFixed(2)}`;
+}
+
+function atualizarDash() {
+  let totalProdutosQtd = 0;
+  let valorEstoque = 0;
+
+  produtos.forEach(p => {
+    p.variacoes.forEach(v => {
+      totalProdutosQtd += v.quantidade;
+      valorEstoque += v.preco * v.quantidade;
+    });
+  });
+
+  let totalVendasVal = vendas.reduce((acc, v) => acc + (v.totalFinal || 0), 0);
+
+  const dashProdQtd = document.getElementById('dash-produtos-qtd');
+  const dashEstoqueVal = document.getElementById('dash-estoque-val');
+  const dashVendasVal = document.getElementById('dash-vendas-val');
+  const dashClientesQtd = document.getElementById('dash-clientes-qtd');
+
+  if (dashProdQtd) dashProdQtd.innerText = totalProdutosQtd;
+  if (dashEstoqueVal) dashEstoqueVal.innerText = `R$ ${valorEstoque.toFixed(2)}`;
+  if (dashVendasVal) dashVendasVal.innerText = `R$ ${totalVendasVal.toFixed(2)}`;
+  if (dashClientesQtd) dashClientesQtd.innerText = clientes.length;
+}
+
+// Inicialização Geral da Aplicação
+window.addEventListener('load', () => {
+  carregarProdutosDoFirebase();
+  carregarClientesDoFirebase();
+  carregarVendasDoFirebase();
+  atualizarDash();
+});
 </script>
-
 </body>
 </html>
