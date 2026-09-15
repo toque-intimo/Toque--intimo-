@@ -11,7 +11,7 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Alinhado para procurar o service worker de forma compatível com o GitHub Pages
-    navigator.serviceWorker.register('./firebase-messaging-sw.js')
+    navigator.serviceWorker.register('/Toque--intimo-/firebase-messaging-sw.js', { scope: '/Toque--intimo-/' })
     .then(reg => {
       console.log('Service Worker do Firebase registrado com sucesso! Escopo:', reg.scope);
     })
