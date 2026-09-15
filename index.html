@@ -726,6 +726,25 @@ function tocarSomNotificacao() {
     console.log("Erro ao reproduzir som de notificação:", e);
   }
 }
+
+ function dispararAlertaNovoPedido() {
+  // Toca o som normal que já existe
+  tocarSomNotificacao();
+
+  // Dispara a notificação na tela de bloqueio do Android
+  if ("Notification" in window && Notification.permission === "granted") {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification("Novo Pedido Recebido! 🍔", {
+        body: "Há um novo pedido aguardando confirmação no sistema.",
+        icon: "/icon.png",
+        tag: "novo-pedido",
+        renotify: true,
+        vibrate: [200, 100, 200, 100, 500],
+        requireInteraction: true
+      });
+    });
+  }
+}
  
 function carregarPedidos() {
   const container = document.getElementById('lista-pedidos');
@@ -755,9 +774,9 @@ function carregarPedidos() {
       }
     }
 
-    if (!primeiraCargaPedidos && snapshot.docChanges().some(change => change.type === 'added')) {
-      tocarSomNotificacao();
-    }
+   if (!primeiraCargaPedidos && snapshot.docChanges().some(change => change.type === 'added')) {
+  dispararAlertaNovoPedido(); // <--- Substituído para tocar o som E mandar a notificação na tela de bloqueio
+}
     primeiraCargaPedidos = false;
 
     container.innerHTML = '';
@@ -2598,7 +2617,13 @@ function baixarPDFNota(id) {
    carregarVendedoras();
    carregarPedidos();
    atualizarDash();
- };
+  if ("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      console.log("Permissão de notificação concedida!");
+    }
+  });
+}
 </script>
 
 </body>
