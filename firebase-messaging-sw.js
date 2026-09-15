@@ -10,7 +10,6 @@ firebase.initializeApp({
    storageBucket: "meucatalogoapp-c7e39.appspot.com",
    messagingSenderId: "311764083576",
    appId: "1:311764083576:web:2630353079ec5294031e8d", 
-   measurementId: "G-N3DFKJG9FP"
 });
 
 const messaging = firebase.messaging();
