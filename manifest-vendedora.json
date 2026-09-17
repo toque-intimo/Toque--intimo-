@@ -1,6 +1,6 @@
 {
   "name": "Portal da Vendedora Toque Íntimo GS",
-  "short_name": "Toque Íntimo GS",
+  "short_name": "Vendedora",
   "start_url": "https://toque-intimo.github.io/Toque--intimo-/vendedora.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
