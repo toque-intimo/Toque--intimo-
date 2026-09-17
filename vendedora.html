@@ -766,7 +766,19 @@ function enviarPedidoParaLojaPrincipal() {
     status: 'Pendente'
   }).then(() => {
     alert("Pedido enviado com sucesso para a loja!");
-    venCarrinho = [];
+    
+    // COLE O WEBHOOK AQUI:
+    fetch('COLE_O_LINK_DO_WEBHOOK_AQUI', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vendedora: venDados.nome || 'Vendedora',
+        total: totalPedido,
+        data: new Date().toLocaleString()
+      })
+    }).catch(err => console.error('Erro no webhook:', err));
+
+   venCarrinho = [];
     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
     
     document.getElementById('carrinho-cliente-nome').value = '';
