@@ -766,18 +766,18 @@ function enviarPedidoParaLojaPrincipal() {
     status: 'Pendente'
   }).then(() => {
     alert("Pedido enviado com sucesso para a loja!");
-    
-    // COLE O WEBHOOK AQUI:
-    fetch('https://hook.us2.make.com/z6xnbxruk7kuzsxdxo7i9oitw02dkvks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        vendedora: venDados.nome || 'Vendedora',
-        total: totalPedido,
-        data: new Date().toLocaleString()
-      })
-    }).catch(err => console.error('Erro no webhook:', err));
+   
+   // Abre o WhatsApp diretamente com os dados do pedido
+const numeroLoja = "5511951190804"; // Coloque o número da loja com DDI e DDD
+const textoMensagem = 
+    `📦 *Novo Pedido Recebido!*\n\n` +
+    `👩‍💼 *Vendedora:* ${venDados.nome || 'Vendedora'}\n` +
+    `💰 *Total:* R$ ${totalPedido}\n` +
+    `📅 *Data:* ${new Date().toLocaleDateString('pt-BR')}`;
 
+const urlWhatsApp = `https://wa.me/${numeroLoja}?text=${encodeURIComponent(textoMensagem)}`;
+window.open(urlWhatsApp, '_blank');
+   
    venCarrinho = [];
     localStorage.setItem('ven_carrinho', JSON.stringify(venCarrinho));
     
