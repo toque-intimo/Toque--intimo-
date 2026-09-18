@@ -552,8 +552,13 @@ function renderizarCardsVendedora(lista) {
 
     if (variacoesDisponiveis.length === 0) return;
 
-    // Pega a descrição cadastrada no Firebase
-    const descProduto = p.descricao || p.descrição || p.obs || p.observacao || 'Nenhuma descrição cadastrada para este produto.';
+    // Pega a descrição da primeira variação ou do produto principal
+    let descProduto = 'Nenhuma descrição cadastrada para este produto.';
+    if (p.descricao || p.descrição || p.obs || p.observacao) {
+      descProduto = p.descricao || p.descrição || p.obs || p.observacao;
+    } else if (variacoesDisponiveis[0] && variacoesDisponiveis[0].descricao) {
+      descProduto = variacoesDisponiveis[0].descricao;
+    }
 
     mapaProdutosVen[p.id] = { 
       nome: p.nome, 
