@@ -543,7 +543,7 @@ function renderizarCardsVendedora(lista) {
 
     if (variacoesDisponiveis.length === 0) return;
 
-    mapaProdutosVen[p.id] = { nome: p.nome, variacoes: variacoesDisponiveis, fotos: [] };
+    mapaProdutosVen[p.id] = { nome: p.nome, descrição: p.descrição || 'sem descrição disponível.' variacoes: variacoesDisponiveis, fotos: [] };
 
     let listaFotos = [];
     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
