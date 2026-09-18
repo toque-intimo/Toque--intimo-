@@ -137,7 +137,10 @@
      <div class="user-badge">
        <span class="user-name" id="ven-nome-exibicao">Gisele</span>
        <span class="user-code-badge" id="ven-codigo-exibicao">Cód: GS-0000</span>
-       <button class="btn-logout" onclick="logoutVendedora()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+       <div style="display: flex; gap: 6px; margin-top: 4px;">
+         <button onclick="abrirModalPerfil()" style="background: #e2e8f0; color: #333; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-user-pen"></i> Perfil / Senha</button>
+         <button class="btn-logout" onclick="logoutVendedora()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+       </div>
      </div>
    </header>
 
@@ -290,6 +293,34 @@
     <button onclick="fecharModalDescricao()" style="position: absolute; top: 12px; right: 15px; background: none; border: none; font-size: 22px; font-weight: bold; cursor: pointer; color: #555;">&times;</button>
     <h3 id="modal-desc-titulo" style="font-size: 16px; color: var(--primary-dark); margin-bottom: 10px; padding-right: 20px;">Título do Produto</h3>
     <div id="modal-desc-texto" style="font-size: 13px; color: #444; line-height: 1.5; max-height: 60vh; overflow-y: auto; white-space: pre-wrap; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #eee;"></div>
+  </div>
+</div>
+<!-- Modal de Perfil e Alteração de Senha -->
+<div id="ven-modal-perfil" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center; padding: 15px;">
+  <div style="background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative; max-height: 90vh; overflow-y: auto;">
+    <button onclick="fecharModalPerfil()" style="position: absolute; top: 12px; right: 15px; background: none; border: none; font-size: 22px; font-weight: bold; cursor: pointer; color: #555;">&times;</button>
+    
+    <h3 style="font-size: 18px; color: var(--primary-dark); margin-bottom: 15px;"><i class="fa-solid fa-user-gear"></i> Meu Perfil & Senha</h3>
+    
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; font-size: 13px; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #eee;">
+      <div><b>Nome:</b> <span id="perfil-txt-nome"></span></div>
+      <div><b>Código:</b> <span id="perfil-txt-codigo"></span></div>
+      <div><b>WhatsApp:</b> <span id="perfil-txt-tel"></span></div>
+      <div><b>E-mail:</b> <span id="perfil-txt-email"></span></div>
+      <div><b>Endereço:</b> <span id="perfil-txt-endereco"></span></div>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">
+
+    <h4 style="font-size: 14px; color: var(--primary-dark); margin-bottom: 10px;">Alterar Senha de Acesso</h4>
+    
+    <div class="grid-form">
+      <div class="form-group">
+        <label>Nova Senha</label>
+        <input type="password" id="perfil-nova-senha" placeholder="Digite a nova senha">
+      </div>
+      <button class="btn-action" style="margin-top: 5px; padding: 12px;" onclick="salvarNovaSenhaVendedora()">Salvar Nova Senha</button>
+    </div>
   </div>
 </div>
  
@@ -1199,6 +1230,47 @@ function alternarCampoVencimento(valor) {
     document.getElementById('carrinho-data-vencimento').value = '';
   }
 } 
+
+ function abrirModalPerfil() {
+  if (!venDados) return alert("Sessão não encontrada.");
+
+  document.getElementById('perfil-txt-nome').innerText = venDados.nome || '-';
+  document.getElementById('perfil-txt-codigo').innerText = venDados.codigo || '-';
+  document.getElementById('perfil-txt-tel').innerText = venDados.telefone || venDados.tel || '-';
+  document.getElementById('perfil-txt-email').innerText = venDados.email || 'Não informado';
+  document.getElementById('perfil-txt-endereco').innerText = `${venDados.endereco || ''}, nº ${venDados.numero || ''}`.trim() || '-';
+  
+  document.getElementById('perfil-nova-senha').value = '';
+  document.getElementById('ven-modal-perfil').style.display = 'flex';
+}
+
+function fecharModalPerfil() {
+  document.getElementById('ven-modal-perfil').style.display = 'none';
+}
+
+function salvarNovaSenhaVendedora() {
+  const novaSenha = document.getElementById('perfil-nova-senha').value.trim();
+  if (!novaSenha) {
+    return alert("Por favor, digite a nova senha!");
+  }
+
+  const docId = venDados.id;
+  if (!docId) {
+    return alert("Erro: ID da vendedora não identificado.");
+  }
+
+  db.collection("vendedoras").doc(docId).update({
+    senha: novaSenha
+  }).then(() => {
+    venDados.senha = novaSenha;
+    localStorage.setItem('ven_dados', JSON.stringify(venDados));
+    alert("Senha alterada com sucesso!");
+    fecharModalPerfil();
+  }).catch(err => {
+    console.error("Erro ao alterar senha:", err);
+    alert("Ocorreu um erro ao atualizar a senha. Tente novamente.");
+  });
+}
 </script>
 </body>
 </html>
