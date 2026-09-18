@@ -543,7 +543,15 @@ function renderizarCardsVendedora(lista) {
 
     if (variacoesDisponiveis.length === 0) return;
 
-    mapaProdutosVen[p.id] = { nome: p.nome, descricao: p.descricao || 'sem descrição disponível.', variacoes: variacoesDisponiveis, fotos: [] };
+      // Procura a descrição em diferentes variações possíveis do campo no banco
+    const descProduto = p.descricao || p.descrição || p.obs || p.observacao || 'Nenhuma descrição cadastrada para este produto.';
+
+    mapaProdutosVen[p.id] = { 
+      nome: p.nome, 
+      descricao: descProduto, 
+      variacoes: variacoesDisponiveis, 
+      fotos: [] 
+    };
 
     let listaFotos = [];
     if (p.foto || p.imagem || p.fotoUrl) listaFotos.push(p.foto || p.imagem || p.fotoUrl);
@@ -584,9 +592,7 @@ function abrirGaleriaPorId(pId) {
   const prod = mapaProdutosVen[pId];
   if (!prod) return;
 
-  // Você pode criar um alerta simples ou um modal dedicado na tela. 
-  // Usar o alert é a forma mais rápida e prática de exibir o texto completo:
-  alert(`📝 Descrição de ${prod.nome}:\n\n${prod.descricao || 'Nenhuma descrição cadastrada para este produto.'}`);
+  alert(`📝 Descrição de ${prod.nome}:\n\n${prod.descricao}`);
 }
 
 function atualizarModalFoto() {
