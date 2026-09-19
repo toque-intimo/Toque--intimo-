@@ -1129,6 +1129,7 @@ async function registrarBaixaVendedora(vendedoraCodigo, pedidoId) {
     const novoValorPago = valorPagoAtual + valorPago;
     const novoSaldoDevedor = Math.max(0, valorLiquidoPedido - novoValorPago);
 
+    // Se o saldo devedor zerar, muda de 'Baixado' para 'Quitado'
     const novoStatus = novoSaldoDevedor <= 0 ? 'Quitado' : 'Baixado';
 
     let itensFormatados = "";
@@ -1178,7 +1179,7 @@ TOTAL FINAL: R$ ${valorLiquidoPedido.toFixed(2)}`;
     alert("Erro ao processar a baixa da vendedora.");
   }
 }
- 
+
 function atualizarStatusPedido(id, novoStatus) {
   db.collection("pedidos").doc(id).get().then((doc) => {
     if (!doc.exists) {
