@@ -1130,7 +1130,6 @@ async function registrarBaixaVendedora(vendedoraCodigo, pedidoId) {
     const novoValorPago = valorPagoAtual + valorPago;
     const novoSaldoDevedor = Math.max(0, valorLiquidoPedido - novoValorPago);
 
-    // Define se o status muda para Quitado ou continua Baixado/Parcial
     const novoStatus = novoSaldoDevedor <= 0 ? 'Quitado' : 'Baixado';
 
     let itensFormatados = "";
@@ -1175,7 +1174,7 @@ TOTAL FINAL: R$ ${valorLiquidoPedido.toFixed(2)}`;
     alert(`Baixa registrada com sucesso! Status atualizado para: ${novoStatus}`);
     if (typeof carregarPedidos === 'function') carregarPedidos();
 
-  } chorarexec => {
+  } catch (erro) {
     console.error("Erro ao registrar baixa:", erro);
     alert("Erro ao processar a baixa da vendedora.");
   }
