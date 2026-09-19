@@ -743,7 +743,9 @@ function carregarPedidos() {
     window.unsubscribePedidos();
   }
 
-  window.unsubscribePedidos = db.collection("pedidos").onSnapshot((snapshot) => {
+  // Ordenando por data/hora de criação de forma decrescente (o mais novo fica no topo) ou crescente conforme o seu gosto.
+  // Para organizar de cima para baixo por ordem de chegada (antigos em cima, novos embaixo, ou vice-versa):
+  window.unsubscribePedidos = db.collection("pedidos").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     let pendentesQtd = 0;
     snapshot.docs.forEach(doc => {
       const data = doc.data();
@@ -790,11 +792,18 @@ function carregarPedidos() {
       const valorPagoNoPedido = Number(p.valorPagoVendedora || 0);
       const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
 
+      // Define o status exibido dinamicamente se o débito estiver zerado
+      let statusExibido = p.status || 'Pendente';
+      if (saldoDevedor <= 0 && (p.status === 'Baixado' || p.status === 'Aprovado' || valorPagoNoPedido > 0)) {
+        statusExibido = 'Quitado';
+      }
+
       let badgeCor = '#b57c1e';
       let badgeBg = '#fff8eb';
 
-      if (p.status === 'Aprovado') { badgeCor = '#1e7e48'; badgeBg = '#e8f8f0'; }
-      if (p.status === 'Recusado') { badgeCor = '#a8324e'; badgeBg = '#fdf0f2'; }
+      if (statusExibido === 'Aprovado') { badgeCor = '#1e7e48'; badgeBg = '#e8f8f0'; }
+      if (statusExibido === 'Quitado') { badgeCor = '#0d6efd'; badgeBg = '#e7f1ff'; }
+      if (statusExibido === 'Recusado') { badgeCor = '#a8324e'; badgeBg = '#fdf0f2'; }
 
       let itensHtml = '';
       if (p.itens && Array.isArray(p.itens)) {
@@ -804,7 +813,7 @@ function carregarPedidos() {
       }
 
       let botoesAcao = '';
-      if (p.status === 'Aprovado') {
+      if (p.status === 'Aprovado' || statusExibido === 'Quitado') {
         botoesAcao = `
           <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -846,7 +855,7 @@ function carregarPedidos() {
         <div class="prod-list-card" style="border-left: 4px solid ${badgeCor};">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <b style="font-size: 14px; color: var(--primary);">${vendedoraNome} (Cód: ${vendedoraCodigo})</b>
-            <span style="background: ${badgeBg}; color: ${badgeCor}; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">${p.status || 'Pendente'}</span>
+            <span style="background: ${badgeBg}; color: ${badgeCor}; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">${statusExibido}</span>
           </div>
 
           <div style="font-size: 12px; color: #777; margin-top: 4px;">
@@ -1117,6 +1126,13 @@ async function registrarBaixaVendedora(vendedoraCodigo, pedidoId) {
     const comissaoPedido = totalPedido * taxaComissao;
     const valorLiquidoPedido = totalPedido - comissaoPedido;
 
+    const valorPagoAtual = Number(p.valorPagoVendedora || 0);
+    const novoValorPago = valorPagoAtual + valorPago;
+    const novoSaldoDevedor = Math.max(0, valorLiquidoPedido - novoValorPago);
+
+    // Define se o status muda para Quitado ou continua Baixado/Parcial
+    const novoStatus = novoSaldoDevedor <= 0 ? 'Quitado' : 'Baixado';
+
     let itensFormatados = "";
     if (p.itens && Array.isArray(p.itens)) {
       itensFormatados = p.itens.map(item => {
@@ -1151,16 +1167,15 @@ TOTAL FINAL: R$ ${valorLiquidoPedido.toFixed(2)}`;
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    const valorPagoAtual = Number(p.valorPagoVendedora || 0);
     await docRef.update({
-      valorPagoVendedora: valorPagoAtual + valorPago,
-      status: 'Baixado'
+      valorPagoVendedora: novoValorPago,
+      status: novoStatus
     });
 
-    alert("Baixa registrada e nota adicionada à aba Vendas com sucesso!");
+    alert(`Baixa registrada com sucesso! Status atualizado para: ${novoStatus}`);
     if (typeof carregarPedidos === 'function') carregarPedidos();
 
-  } catch (erro) {
+  } chorarexec => {
     console.error("Erro ao registrar baixa:", erro);
     alert("Erro ao processar a baixa da vendedora.");
   }
