@@ -2507,6 +2507,7 @@ function baixarPDFNota(id) {
    document.getElementById('fin-card-receber').innerText = `R$ ${aReceber.toFixed(2)}`;
 
    const tabelaCorpo = document.getElementById('fin-tabela-corpo');
+   const filtro = document.getElementById('fin-filtro-periodo').value;
    if (!tabelaCorpo) return;
 
    tabelaCorpo.innerHTML = '';
