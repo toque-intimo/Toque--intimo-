@@ -743,8 +743,7 @@ function carregarPedidos() {
     window.unsubscribePedidos();
   }
 
-  // Ordenando por data/hora de criação de forma decrescente (o mais novo fica no topo) ou crescente conforme o seu gosto.
-  // Para organizar de cima para baixo por ordem de chegada (antigos em cima, novos embaixo, ou vice-versa):
+  // Ordenado por timestamp decrescente para organizar de cima para baixo por ordem de chegada
   window.unsubscribePedidos = db.collection("pedidos").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     let pendentesQtd = 0;
     snapshot.docs.forEach(doc => {
@@ -792,7 +791,7 @@ function carregarPedidos() {
       const valorPagoNoPedido = Number(p.valorPagoVendedora || 0);
       const saldoDevedor = Math.max(0, valorLiquidoPedido - valorPagoNoPedido);
 
-      // Define o status exibido dinamicamente se o débito estiver zerado
+      // Define o status exibido: muda para "Quitado" se o débito zerar
       let statusExibido = p.status || 'Pendente';
       if (saldoDevedor <= 0 && (p.status === 'Baixado' || p.status === 'Aprovado' || valorPagoNoPedido > 0)) {
         statusExibido = 'Quitado';
@@ -890,7 +889,7 @@ function carregarPedidos() {
     console.error("Erro ao carregar pedidos:", err);
     container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar pedidos.</p>';
   });
-}
+}  
 
 function toggleDataVencimento(id) {
   const select = document.getElementById(`forma-pagamento-${id}`);
